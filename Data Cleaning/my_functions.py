@@ -29,6 +29,13 @@ def get_logged_incident_ids_list():
     logged_ids_list = sorted(list(df['incident_id'].unique()))
     return logged_ids_list
 
+def get_original_incident_ids_list():
+    # format all ids from original github file into a list
+    # added this sequence for final scrape check
+    # because all ids not containing participants were removed from final dataframe
+    original_incident_ids = pd.read_pickle('../Pickles/original_incident_ids.pkl')
+    return original_incident_ids
+
 def get_id_status_queue(maximum_id):
     # instantiating get_incident_file_list and get_logged_incident_ids_list
     # for computation of new variables
