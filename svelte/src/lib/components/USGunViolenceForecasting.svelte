@@ -3,19 +3,28 @@
 
   let width
   let height
+  let svgWidth
+  let svgHeight
+  let graphStrokeSize = 2.5
   $: {
     if (width && height) {
-      console.log("hi")
+      svgWidth = (width - graphStrokeSize * 2) * 0.65
+      svgHeight = (height - graphStrokeSize * 2) * 0.65
     }
   }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
-  <div class="flex flex-col w-3/4 h-3/4 justify-center items-center">
-    <svg class="w-full h-full" id="graph">
-      <g>
-        <rect {width} {height} fill="blue"></rect>
-      </g>
-    </svg>
+  <div class="flex flex-col w-full h-full justify-center items-center">
+    {#if svgWidth && svgHeight}
+      <svg
+        class="flex flex-col justify-center items-center overflow-hidden"
+        width={svgWidth}
+        height={svgHeight}
+        id="graph"
+      >
+        <rect class="w-full h-full" fill="transparent" stroke="black" stroke-width={graphStrokeSize}></rect>
+      </svg>
+    {/if}
   </div>
 </div>
