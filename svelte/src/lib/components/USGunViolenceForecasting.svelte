@@ -50,6 +50,19 @@
       >
         <rect class="w-full h-full" fill="transparent" stroke="black" stroke-width={graphStrokeSize}></rect>
       </svg>
+      <div class="grid grid-cols-2" width={svgWidth}>
+        <div class="flex mt-9">
+          <span>Metrics</span>
+        </div>
+        <div class="grid grid-cols-2">
+          <div class="flex w-60 mt-9">
+            <span>Slider 1</span>
+          </div>
+          <div class="flex w-60 mt-9">
+            <span>Slider 2</span>
+          </div>
+        </div>
+      </div>
     {/if}
   </div>
 </div>
