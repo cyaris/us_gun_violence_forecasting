@@ -1,5 +1,6 @@
 <script>
   import * as d3 from "d3"
+  import { Slider } from "svelte-lib"
 
   let width
   let height
@@ -12,6 +13,8 @@
       svgHeight = (height - graphStrokeSize * 2) * 0.65
     }
   }
+
+  let data
   fetch(
     "https://raw.githubusercontent.com/cyaris/us_gun_violence_forecasting/refs/heads/master/Web%20Interface/assets/csv/us_gun_violence_forecasting/us_harmed_victim_forecast_data.csv"
   )
@@ -22,7 +25,7 @@
 
       let json = rows.map(row => {
         let values = row.split(",")
-        return headers.reduce((acc, header, i) => {
+        data = headers.reduce((acc, header, i) => {
           acc[header] =
             header == "date"
               ? Date(values[i])
@@ -30,7 +33,7 @@
                 ? parseInt(values[i])
                 : parseFloat(values[i])
           acc.index = i
-          return acc
+          // return acc
         }, {})
       })
 
@@ -56,10 +59,31 @@
         </div>
         <div class="grid grid-cols-2">
           <div class="flex w-60 mt-9">
-            <span>Slider 1</span>
+            <div class="flex flex-col items-end self-end mt-6">
+              <Slider
+                wrapperClasses="w-64"
+                title="Moving Average"
+                step={1}
+                min={0}
+                max={0}
+                float={false}
+                labels={false}
+              />
+            </div>
           </div>
           <div class="flex w-60 mt-9">
-            <span>Slider 2</span>
+            <div class="flex flex-col items-end self-end mt-6">
+              <Slider
+                wrapperClasses="w-64"
+                title="Slider 2"
+                {values}
+                step={1}
+                min={0}
+                max={0}
+                float={false}
+                labels={false}
+              />
+            </div>
           </div>
         </div>
       </div>
