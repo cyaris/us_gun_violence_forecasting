@@ -1,6 +1,6 @@
 <script>
   import * as d3 from "d3"
-  import { Slider } from "svelte-lib"
+  import { Slider } from "svelte-lib/components"
 
   let width
   let height
@@ -21,23 +21,23 @@
     .then(response => response.text())
     .then(csvText => {
       let rows = csvText.trim().split("\n")
-      let headers = rows.shift().split(",")
+      let columns = rows.shift().split(",")
 
-      let json = rows.map(row => {
+      data = rows.map(row => {
         let values = row.split(",")
-        data = headers.reduce((acc, header, i) => {
-          acc[header] =
-            header == "date"
+        return columns.reduce((row, column, i) => {
+          row[column] =
+            column == "date"
               ? Date(values[i])
-              : ["num_harmed", "year"].includes(header)
+              : ["num_harmed", "year"].includes(column)
                 ? parseInt(values[i])
                 : parseFloat(values[i])
-          acc.index = i
-          // return acc
+          row.index = i
+          return row
         }, {})
       })
 
-      console.log(json)
+      console.log(data)
     })
     .catch(error => console.error("Error fetching CSV:", error))
 </script>
@@ -59,10 +59,11 @@
         </div>
         <div class="grid grid-cols-2">
           <div class="flex w-60 mt-9">
-            <div class="flex flex-col items-end self-end mt-6">
+            <div class="flex flex-col items-end mt-6">
               <Slider
                 wrapperClasses="w-64"
                 title="Moving Average"
+                value={[]}
                 step={1}
                 min={0}
                 max={0}
@@ -76,7 +77,7 @@
               <Slider
                 wrapperClasses="w-64"
                 title="Slider 2"
-                {values}
+                value={[]}
                 step={1}
                 min={0}
                 max={0}
