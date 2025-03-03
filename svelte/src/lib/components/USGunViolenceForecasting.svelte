@@ -1,6 +1,6 @@
 <script>
   import * as d3 from "d3"
-  import { Slider } from "svelte-lib/components"
+  import { Select, Slider } from "svelte-lib/components"
   import data from "../static/data.json"
   // /Users/charlie.yaris/Documents/personal/projects/us_gun_violence_forecasting/svelte/src/lib/static
 
@@ -42,6 +42,19 @@
   //     console.log(data)
   //   })
   //   .catch(error => console.error("Error fetching CSV:", error))
+
+  let sliderItems = [
+    { value: 0, label: 0 },
+    { value: 1, label: 5 },
+    { value: 2, label: 10 },
+    { value: 3, label: 15 },
+    { value: 4, label: 20 },
+    { value: 5, label: 25 },
+    { value: 6, label: 30 },
+  ]
+
+  let selectItems = [{value: 'Past', label: 'Past'},{value: 'Future', label: 'Future'}]
+  let selectValue = {value: 'Past', label: 'Past'}
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -58,33 +71,48 @@
       <div class="grid grid-cols-2" width={svgWidth}>
         <div class="flex mt-9">
           <span>Metrics</span>
+                    <div class="w-24">
+              <Select
+                items={selectItems}
+                value={selectValue}
+                isClearable={false}
+                centeredValue={true}
+                centeredItems={true}
+                hideCaret={true}
+                on:valueChange={({ detail: e }) => (selectValue.wrapBody = e.d)}
+              />
+            </div>
         </div>
         <div class="grid grid-cols-2">
           <div class="flex w-60 mt-9">
             <div class="flex flex-col items-end mt-6">
               <Slider
-                wrapperClasses="w-64"
-                title="Moving Average"
-                value={[]}
+                wrapperClasses="w-fit"
+                title="Moving Avergage for Daily Observations"
+                items={sliderItems}
+                value={0}
                 step={1}
                 min={0}
-                max={0}
-                float={false}
-                labels={false}
+                max={sliderItems.length - 1}
+                float={true}
+                labels={true}
+                middle={false}
               />
             </div>
           </div>
           <div class="flex w-60 mt-9">
             <div class="flex flex-col items-end self-end mt-6">
               <Slider
-                wrapperClasses="w-64"
-                title="Slider 2"
-                value={[]}
+                wrapperClasses="w-fit"
+                title="Moving Avergage for Time Series Models"
+                items={sliderItems}
+                value={0}
                 step={1}
                 min={0}
-                max={0}
-                float={false}
-                labels={false}
+                max={sliderItems.length - 1}
+                float={true}
+                labels={true}
+                middle={false}
               />
             </div>
           </div>
