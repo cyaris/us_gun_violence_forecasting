@@ -1,6 +1,8 @@
 <script>
   import * as d3 from "d3"
   import { Slider } from "svelte-lib/components"
+  import data from "../static/data.json"
+  // /Users/charlie.yaris/Documents/personal/projects/us_gun_violence_forecasting/svelte/src/lib/static
 
   let width
   let height
@@ -14,32 +16,32 @@
     }
   }
 
-  let data
-  fetch(
-    "https://raw.githubusercontent.com/cyaris/us_gun_violence_forecasting/refs/heads/master/Web%20Interface/assets/csv/us_gun_violence_forecasting/us_harmed_victim_forecast_data.csv"
-  )
-    .then(response => response.text())
-    .then(csvText => {
-      let rows = csvText.trim().split("\n")
-      let columns = rows.shift().split(",")
+  console.log(data)
+  // fetch(
+  //   "https://raw.githubusercontent.com/cyaris/us_gun_violence_forecasting/refs/heads/master/Web%20Interface/assets/csv/us_gun_violence_forecasting/us_harmed_victim_forecast_data.csv"
+  // )
+  //   .then(response => response.text())
+  //   .then(csvText => {
+  //     let rows = csvText.trim().split("\n")
+  //     let columns = rows.shift().split(",")
 
-      data = rows.map(row => {
-        let values = row.split(",")
-        return columns.reduce((row, column, i) => {
-          row[column] =
-            column == "date"
-              ? Date(values[i])
-              : ["num_harmed", "year"].includes(column)
-                ? parseInt(values[i])
-                : parseFloat(values[i])
-          row.index = i
-          return row
-        }, {})
-      })
+  //     data = rows.map(row => {
+  //       let values = row.split(",")
+  //       return columns.reduce((row, column, i) => {
+  //         row[column] =
+  //           column == "date"
+  //             ? Date(values[i])
+  //             : ["num_harmed", "year"].includes(column)
+  //               ? parseInt(values[i])
+  //               : parseFloat(values[i])
+  //         row.index = i
+  //         return row
+  //       }, {})
+  //     })
 
-      console.log(data)
-    })
-    .catch(error => console.error("Error fetching CSV:", error))
+  //     console.log(data)
+  //   })
+  //   .catch(error => console.error("Error fetching CSV:", error))
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
