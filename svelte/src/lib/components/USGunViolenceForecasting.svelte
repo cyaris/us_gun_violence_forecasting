@@ -9,12 +9,10 @@
   let height
   let svgWidth
   let svgHeight
-  let graphStrokeSize = 2.5
+  let graphStrokeSize = 1
   $: {
-    if (width && height) {
-      svgWidth = (width - graphStrokeSize * 2) * 0.65
-      svgHeight = (height - graphStrokeSize * 2) * 0.65
-    }
+    svgWidth = (width - graphStrokeSize * 2) * 0.65
+    svgHeight = (height - graphStrokeSize * 2) * 0.65
   }
 
   // fetch(
@@ -69,24 +67,20 @@
         height={svgHeight}
         id="graph"
       >
-        <rect class="w-full h-full" fill="transparent" stroke="black" stroke-width={graphStrokeSize}></rect>
+        <rect
+          width={svgWidth - graphStrokeSize * 2}
+          height={svgHeight - graphStrokeSize * 2}
+          x={graphStrokeSize}
+          y={graphStrokeSize}
+          fill="transparent"
+          stroke="black"
+          stroke-width={graphStrokeSize}
+        ></rect>
       </svg>
       <div class="absolute">
-        <CheckboxFilter
-          value={true}
-          label="Las Vegas Shooting"
-          selection={[true]}
-        />
-        <CheckboxFilter
-          value={true}
-          label="Display Observations"
-          selection={[true]}
-        />
-        <CheckboxFilter
-          value={true}
-          label="Display Forecasts"
-          selection={[true]}
-        />
+        <CheckboxFilter value={true} label="Las Vegas Shooting" selection={[true]} />
+        <CheckboxFilter value={true} label="Display Observations" selection={[true]} />
+        <CheckboxFilter value={true} label="Display Forecasts" selection={[true]} />
       </div>
       <div class="grid grid-cols-2" width={svgWidth}>
         <div class="flex mt-9">
