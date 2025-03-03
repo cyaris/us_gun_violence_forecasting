@@ -29,19 +29,25 @@
     right: 1,
     bottom: 1,
   }
-  let years = []
   let xAxisMargin = 30
   let xAxisHeight = xAxisVerticalOffset + xTickVerticalOffset + xTickHeight + xTickLabelSize
+  let totalDays
   $: {
     svgWidth = width * 0.65
     svgHeight = height * 0.65
 
     xAxisWidth = svgWidth - graphStrokeSize * 2 - xAxisMargin * 2
 
-    years = data.map(v => v.date).filter(filterUnique)
-    console.log("years length: " + years.length)
+    totalDays =
+      (Math.max(...data.map(v => new Date(v.date).getTime())) -
+        Math.min(...data.map(v => new Date(v.date).getTime()))) /
+      (1000 * 60 * 60 * 24)
+    console.log("total Days:" + totalDays)
 
-    xScale = d3.scaleLinear().domain([0, years.length]).range([0, xAxisWidth])
+    xScale = d3.scaleTime(
+      d3.extent(data, d => new Date(d.date)),
+      [0, xAxisWidth]
+    )
 
     xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
 
@@ -123,8 +129,8 @@
                   width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
                   height={xTickLabelSize + xTickHeight + xTickVerticalOffset + svgMargin.bottom}
                   bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(years[xTick], xTickLabelSize)
-                    ? years[xTick]
+                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                    ? String(xTick.getFullYear())
                     : ""}
                 />
               </g>
