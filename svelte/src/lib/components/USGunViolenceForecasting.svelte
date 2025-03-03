@@ -81,10 +81,10 @@
   //   .catch(error => console.error("Error fetching CSV:", error))
 
   let selectItems = [
-    { value: "Past", label: "Past" },
-    { value: "Future", label: "Future" },
+    { value: "Past - Present", label: "Past - Present" },
+    { value: "Next 365 Days", label: "Next 365 Days" },
   ]
-  let selectValue = { value: "Past", label: "Past" }
+  let selectValue = { value: "Past - Present", label: "Past - Present" }
 
   let sliderItems = [
     { value: 0, label: 0 },
@@ -149,7 +149,7 @@
       <div class="grid grid-cols-2" width={svgWidth}>
         <div class="flex mt-9">
           <span>Metrics</span>
-          <div class="w-24">
+          <div class="w-36">
             <Select
               items={selectItems}
               value={selectValue}
