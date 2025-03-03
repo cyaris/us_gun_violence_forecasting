@@ -101,7 +101,7 @@
   <div class="flex flex-col w-full h-full justify-center items-center">
     {#if svgWidth && svgHeight}
       <svg
-        class="flex flex-col justify-center items-center overflow-visible"
+        class="flex flex-col justify-center items-center overflow-hidden"
         width={svgWidth}
         height={svgHeight}
         id="graph"
