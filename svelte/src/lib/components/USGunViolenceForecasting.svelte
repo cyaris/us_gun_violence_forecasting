@@ -1,6 +1,7 @@
 <script>
   import * as d3 from "d3"
-  import { CheckboxFilter, Select, Slider } from "svelte-lib/components"
+  import { CheckboxFilter, Select, Slider, Text } from "svelte-lib/components"
+  import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
 
   console.log(data)
@@ -10,9 +11,41 @@
   let svgWidth
   let svgHeight
   let graphStrokeSize = 1
+
+  let xScale
+  let xTickLength
+  let xAxisWidth
+  // the vertical distance between the bottom bar and the x axis.
+  let xAxisVerticalOffset = 13.5
+  // the height of the x axis ticks.
+  let xTickHeight = 10
+  // the vertical distance between each xTick and xTick label.
+  let xTickVerticalOffset = 17
+  // the font size for the x tick labels.
+  let xTickLabelSize = 14
+  // minor margin adjustments for fitting elements within the svg.
+  let svgMargin = {
+    top: 1,
+    right: 1,
+    bottom: 1,
+  }
+  let years = []
+  let xAxisMargin = 30
+  let xAxisHeight = xAxisVerticalOffset + xTickVerticalOffset + xTickHeight + xTickLabelSize
   $: {
-    svgWidth = (width - graphStrokeSize * 2) * 0.65
-    svgHeight = (height - graphStrokeSize * 2) * 0.65
+    svgWidth = width * 0.65
+    svgHeight = height * 0.65
+
+    xAxisWidth = svgWidth - graphStrokeSize * 2 - xAxisMargin * 2
+
+    years = data.map(v => v.date).filter(filterUnique)
+    console.log("years length: " + years.length)
+
+    xScale = d3.scaleLinear().domain([0, years.length]).range([0, xAxisWidth])
+
+    xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
+
+    console.log("total xticks: " + xScale.ticks().length)
   }
 
   // fetch(
@@ -62,7 +95,7 @@
   <div class="flex flex-col w-full h-full justify-center items-center">
     {#if svgWidth && svgHeight}
       <svg
-        class="flex flex-col justify-center items-center overflow-hidden"
+        class="flex flex-col justify-center items-center overflow-visible"
         width={svgWidth}
         height={svgHeight}
         id="graph"
@@ -76,6 +109,28 @@
           stroke="black"
           stroke-width={graphStrokeSize}
         ></rect>
+        {#if data.length}
+          <g class="non-reactive text-sm" transform="translate({xAxisMargin}, {svgHeight - xAxisHeight})">
+            <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
+            {#each xScale.ticks() as xTick}
+              <g transform="translate({xScale(xTick)}, {0})">
+                <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
+                <Text
+                  classes="text-center"
+                  overflowBody={false}
+                  wrapBody={false}
+                  x={-xTickLength / 2}
+                  width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                  height={xTickLabelSize + xTickHeight + xTickVerticalOffset + svgMargin.bottom}
+                  bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(years[xTick], xTickLabelSize)
+                    ? years[xTick]
+                    : ""}
+                />
+              </g>
+            {/each}
+          </g>
+        {/if}
       </svg>
       <div class="absolute">
         <CheckboxFilter value={true} label="Las Vegas Shooting" selection={[true]} />
