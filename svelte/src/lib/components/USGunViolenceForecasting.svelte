@@ -15,12 +15,12 @@
   let xScale
   let xTickLength
   let xAxisWidth
-  // the vertical distance between the bottom bar and the x axis.
-  let xAxisVerticalOffset = 13.5
+  // the vertical distance between the bottom border and the x axis labels.
+  let xAxisVerticalOffset = 10
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
-  let xTickVerticalOffset = 17
+  let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
   let xTickLabelSize = 14
   // minor margin adjustments for fitting elements within the svg.
@@ -116,7 +116,10 @@
           stroke-width={graphStrokeSize}
         ></rect>
         {#if data.length}
-          <g class="non-reactive text-sm" transform="translate({xAxisMargin}, {svgHeight - xAxisHeight})">
+          <g
+            class="non-reactive text-sm"
+            transform="translate({xAxisMargin}, {svgHeight - xAxisHeight - xAxisVerticalOffset})"
+          >
             <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
             {#each xScale.ticks() as xTick}
               <g transform="translate({xScale(xTick)}, {0})">
@@ -127,7 +130,7 @@
                   wrapBody={false}
                   x={-xTickLength / 2}
                   width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                  height={xTickLabelSize + xTickHeight + xTickVerticalOffset + svgMargin.bottom}
+                  height={xAxisHeight}
                   bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
                   bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
                     ? String(xTick.getFullYear())
