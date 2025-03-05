@@ -88,7 +88,6 @@
   let selectValue = { value: "Past - Present", label: "Past - Present" }
 
   let sliderItems = [
-    { value: 0, label: 0 },
     { value: 1, label: 5 },
     { value: 2, label: 10 },
     { value: 3, label: 15 },
