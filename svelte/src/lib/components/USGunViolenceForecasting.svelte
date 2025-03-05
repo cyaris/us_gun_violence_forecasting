@@ -40,7 +40,7 @@
   let height
   let svgWidth
   let svgHeight
-  let graphStrokeSize = 1
+  let graphStrokeWidth = 1
 
   let xScale
   let yScale
@@ -69,7 +69,7 @@
       svgWidth = width * 0.8
       svgHeight = height * 0.65
 
-      xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeSize * 2
+      xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
 
       if (data.length) {
         totalDays =
@@ -149,13 +149,13 @@
           id="graph"
         >
           <rect
-            width={svgWidth - graphStrokeSize * 2}
-            height={svgHeight - graphStrokeSize * 2}
-            x={graphStrokeSize}
-            y={graphStrokeSize}
+            width={svgWidth - graphStrokeWidth * 2}
+            height={svgHeight - graphStrokeWidth * 2}
+            x={graphStrokeWidth}
+            y={graphStrokeWidth}
             fill="transparent"
             stroke="black"
-            stroke-width={graphStrokeSize}
+            stroke-width={graphStrokeWidth}
           ></rect>
           {#if data.length}
             {#if checkboxFilters.displayObservations}
