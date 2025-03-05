@@ -103,15 +103,42 @@
     { value: 5, label: 25 },
     { value: 6, label: 30 },
   ]
+
+  let checkboxFilters = {
+    lasVegasScale: true,
+    displayObservations: true,
+    displayModels: true,
+  }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
   <div class="flex flex-col w-full h-full justify-center items-center mb-10">
     <div>
       <div class="flex flex-col self-start mt-4 mb-8">
-        <CheckboxFilter value={true} label="Scale to Include the Las Vegas Shooting" selection={[true]} />
-        <CheckboxFilter value={true} label="Display Daily Observations" selection={[true]} />
-        <CheckboxFilter value={true} label="Display Time Series Models" selection={[true]} />
+        <CheckboxFilter
+          labelClasses="font-medium"
+          label="Scale to Include the Las Vegas Shooting"
+          value={checkboxFilters.lasVegasScale}
+          selection={checkboxFilters.lasVegasScale ? [true] : []}
+          deselection={checkboxFilters.lasVegasScale ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
+        />
+        <CheckboxFilter
+          labelClasses="font-medium"
+          label="Display Daily Observations"
+          value={checkboxFilters.displayObservations}
+          selection={checkboxFilters.displayObservations ? [true] : []}
+          deselection={checkboxFilters.displayObservations ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
+        />
+        <CheckboxFilter
+          labelClasses="font-medium"
+          label="Display Time Series Models"
+          value={checkboxFilters.displayModels}
+          selection={checkboxFilters.displayModels ? [true] : []}
+          deselection={checkboxFilters.displayModels ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
+        />
       </div>
       {#if svgWidth && svgHeight}
         <svg
@@ -130,13 +157,15 @@
             stroke-width={graphStrokeSize}
           ></rect>
           {#if data.length}
-            <g transform="translate({graphPadding.left}, {0})">
-              {#each data as d}
-                {#if d.num_harmed}
-                  <circle stroke="teal" fill="teal" r={3} cx={xScale(new Date(d.date))} cy={yScale(d.num_harmed)} />
-                {/if}
-              {/each}
-            </g>
+            {#if checkboxFilters.displayObservations}
+              <g transform="translate({graphPadding.left}, {0})">
+                {#each data as d}
+                  {#if d.num_harmed}
+                    <circle stroke="teal" fill="teal" r={3} cx={xScale(new Date(d.date))} cy={yScale(d.num_harmed)} />
+                  {/if}
+                {/each}
+              </g>
+            {/if}
             <g
               class="non-reactive text-sm"
               transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
