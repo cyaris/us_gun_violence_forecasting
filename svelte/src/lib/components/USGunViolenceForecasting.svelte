@@ -163,7 +163,7 @@
                 {#each data as d}
                   {#if d.num_harmed}
                     <circle
-                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black"
+                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
                       fill="teal"
                       r={4}
                       cx={xScale(new Date(d.date))}
