@@ -162,31 +162,34 @@
               />
             </div>
           </div>
-          <div class="grid grid-cols-2">
-            <Slider
-              wrapperClasses="w-fit mt-9"
-              title="Moving Avergage for Daily Observations"
-              items={sliderItems}
-              value={0}
-              step={1}
-              min={0}
-              max={sliderItems.length - 1}
-              float={true}
-              labels={true}
-              middle={true}
-            />
-            <Slider
-              wrapperClasses="w-fit mt-9"
-              title="Moving Avergage for Time Series Models"
-              items={sliderItems}
-              value={0}
-              step={1}
-              min={0}
-              max={sliderItems.length - 1}
-              float={true}
-              labels={true}
-              middle={true}
-            />
+          <div>
+            <span class="flex flex-col text-center text-xl font-medium mt-7">Moving Averages</span>
+            <div class="grid grid-cols-2 mt-5">
+              <Slider
+                wrapperClasses="w-full"
+                title="Daily Observations"
+                items={sliderItems}
+                value={0}
+                step={1}
+                min={0}
+                max={sliderItems.length - 1}
+                float={true}
+                labels={true}
+                middle={true}
+              />
+              <Slider
+                wrapperClasses="w-full"
+                title="Time Series Models"
+                items={sliderItems}
+                value={0}
+                step={1}
+                min={0}
+                max={sliderItems.length - 1}
+                float={true}
+                labels={true}
+                middle={true}
+              />
+            </div>
           </div>
         </div>
       {/if}
