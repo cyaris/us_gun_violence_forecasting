@@ -6,55 +6,7 @@
 
   console.log(data)
 
-  let width
-  let height
-  let svgWidth
-  let svgHeight
-  let graphStrokeSize = 1
-
-  let xScale
-  let xTickLength
-  let xAxisWidth
-  // the vertical distance between the bottom border and the x axis labels.
-  let graphPaddingBottom = 15
-  // the height of the x axis ticks.
-  let xTickHeight = 10
-  // the vertical distance between each xTick and xTick label.
-  let xTickVerticalOffset = 8.5
-  // the font size for the x tick labels.
-  let xTickLabelSize = 14
-  // minor margin adjustments for fitting elements within the svg.
-  let svgMargin = {
-    top: 1,
-    right: 1,
-    bottom: 1,
-  }
-  let graphPaddingLeft = 20
-  let graphPaddingRight = 20
-  let xAxisHeight = graphPaddingBottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
-  let totalDays
-  $: {
-    svgWidth = width * 0.8
-    svgHeight = height * 0.65
-
-    xAxisWidth = svgWidth - graphPaddingRight - graphPaddingLeft - graphStrokeSize * 2
-
-    totalDays =
-      (Math.max(...data.map(v => new Date(v.date).getTime())) -
-        Math.min(...data.map(v => new Date(v.date).getTime()))) /
-      (1000 * 60 * 60 * 24)
-    console.log("total Days:" + totalDays)
-
-    xScale = d3.scaleTime(
-      d3.extent(data, d => new Date(d.date)),
-      [0, xAxisWidth]
-    )
-
-    xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
-
-    console.log("total xticks: " + xScale.ticks().length)
-  }
-
+  // let data
   // fetch(
   //   "https://raw.githubusercontent.com/cyaris/us_gun_violence_forecasting/refs/heads/master/Web%20Interface/assets/csv/us_gun_violence_forecasting/us_harmed_victim_forecast_data.csv"
   // )
@@ -62,13 +14,14 @@
   //   .then(csvText => {
   //     let rows = csvText.trim().split("\n")
   //     let columns = rows.shift().split(",")
+  //     console.log("here: ", columns)
 
   //     data = rows.map(row => {
   //       let values = row.split(",")
   //       return columns.reduce((row, column, i) => {
   //         row[column] =
   //           column == "date"
-  //             ? Date(values[i])
+  //             ? new Date(values[i])
   //             : ["num_harmed", "year"].includes(column)
   //               ? parseInt(values[i])
   //               : parseFloat(values[i])
@@ -77,9 +30,64 @@
   //       }, {})
   //     })
 
+  //     // console.log('data2', data2)
   //     console.log(data)
   //   })
   //   .catch(error => console.error("Error fetching CSV:", error))
+
+  let width
+  let height
+  let svgWidth
+  let svgHeight
+  let graphStrokeSize = 1
+
+  let xScale
+  let yScale
+  let xTickLength
+  let xAxisWidth
+  // the vertical distance between the bottom border and the x axis labels.
+  let graphPadding = { top: 0, right: 20, bottom: 15, left: 20 }
+  // the height of the x axis ticks.
+  let xTickHeight = 10
+  // the vertical distance between each xTick and xTick label.
+  let xTickVerticalOffset = 8.5
+  // the font size for the x tick labels.
+  let xTickLabelSize = 14
+  let xAxisHeight = graphPadding.bottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
+  // minor margin adjustments for fitting elements within the svg.
+  // let svgMargin = {
+  //   top: 1,
+  //   right: 1,
+  //   bottom: 1,
+  //   left: 0,
+  // }
+
+  let totalDays
+  $: {
+    if (width) {
+      svgWidth = width * 0.8
+      svgHeight = height * 0.65
+
+      xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeSize * 2
+
+      if (data.length) {
+        totalDays =
+          (Math.max(...data.map(v => new Date(v.date).getTime())) -
+            Math.min(...data.map(v => new Date(v.date).getTime()))) /
+          (1000 * 60 * 60 * 24)
+        console.log("total Days: " + totalDays)
+
+        xScale = d3.scaleTime(
+          d3.extent(data, d => new Date(d.date)),
+          [0, xAxisWidth]
+        )
+        xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
+        console.log("total xticks: " + xScale.ticks().length)
+
+        yScale = d3.scaleLinear([0, d3.max(data, d => d.num_harmed)], [svgHeight - xAxisHeight, graphPadding.top])
+      }
+    }
+  }
 
   let selectItems = [
     { value: "Past - Present", label: "Past - Present" },
@@ -122,9 +130,16 @@
             stroke-width={graphStrokeSize}
           ></rect>
           {#if data.length}
+            {#each data as d}
+              {#if d.num_harmed}
+                <g transform="translate({graphPadding.left}, {0})">
+                  <circle stroke="teal" fill="teal" r={3} cx={xScale(new Date(d.date))} cy={yScale(d.num_harmed)} />
+                </g>
+              {/if}
+            {/each}
             <g
               class="non-reactive text-sm"
-              transform="translate({graphPaddingLeft}, {svgHeight - xAxisHeight - graphPaddingBottom})"
+              transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
             >
               <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
               {#each xScale.ticks() as xTick}
