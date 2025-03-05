@@ -16,7 +16,7 @@
   let xTickLength
   let xAxisWidth
   // the vertical distance between the bottom border and the x axis labels.
-  let xAxisVerticalOffset = 10
+  let graphPaddingBottom = 15
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
@@ -29,14 +29,15 @@
     right: 1,
     bottom: 1,
   }
-  let xAxisMargin = 30
-  let xAxisHeight = xAxisVerticalOffset + xTickVerticalOffset + xTickHeight + xTickLabelSize
+  let graphPaddingLeft = 20
+  let graphPaddingRight = 20
+  let xAxisHeight = graphPaddingBottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
   let totalDays
   $: {
-    svgWidth = width * 0.65
+    svgWidth = width * 0.8
     svgHeight = height * 0.65
 
-    xAxisWidth = svgWidth - graphStrokeSize * 2 - xAxisMargin * 2
+    xAxisWidth = svgWidth - graphPaddingRight - graphPaddingLeft - graphStrokeSize * 2
 
     totalDays =
       (Math.max(...data.map(v => new Date(v.date).getTime())) -
@@ -98,72 +99,72 @@
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
-  <div class="flex flex-col w-full h-full justify-center items-center">
-    {#if svgWidth && svgHeight}
-      <svg
-        class="flex flex-col justify-center items-center overflow-hidden"
-        width={svgWidth}
-        height={svgHeight}
-        id="graph"
-      >
-        <rect
-          width={svgWidth - graphStrokeSize * 2}
-          height={svgHeight - graphStrokeSize * 2}
-          x={graphStrokeSize}
-          y={graphStrokeSize}
-          fill="transparent"
-          stroke="black"
-          stroke-width={graphStrokeSize}
-        ></rect>
-        {#if data.length}
-          <g
-            class="non-reactive text-sm"
-            transform="translate({xAxisMargin}, {svgHeight - xAxisHeight - xAxisVerticalOffset})"
-          >
-            <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-            {#each xScale.ticks() as xTick}
-              <g transform="translate({xScale(xTick)}, {0})">
-                <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
-                <Text
-                  classes="text-center"
-                  overflowBody={false}
-                  wrapBody={false}
-                  x={-xTickLength / 2}
-                  width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                  height={xAxisHeight}
-                  bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                    ? String(xTick.getFullYear())
-                    : ""}
-                />
-              </g>
-            {/each}
-          </g>
-        {/if}
-      </svg>
-      <div class="absolute">
-        <CheckboxFilter value={true} label="Las Vegas Shooting" selection={[true]} />
-        <CheckboxFilter value={true} label="Display Observations" selection={[true]} />
-        <CheckboxFilter value={true} label="Display Forecasts" selection={[true]} />
+  <div class="flex flex-col w-full h-full justify-center items-center mb-10">
+    <div>
+      <div class="flex flex-col self-start mt-4 mb-8">
+        <CheckboxFilter value={true} label="Scale to Include the Las Vegas Shooting" selection={[true]} />
+        <CheckboxFilter value={true} label="Display Daily Observations" selection={[true]} />
+        <CheckboxFilter value={true} label="Display Time Series Models" selection={[true]} />
       </div>
-      <div class="grid grid-cols-2" width={svgWidth}>
-        <div class="flex mt-9">
-          <span>Metrics</span>
-          <div class="w-36">
-            <Select
-              items={selectItems}
-              value={selectValue}
-              clearable={false}
-              centeredValue={true}
-              centeredItems={true}
-              on:valueChange={({ detail: e }) => (selectValue = e.d)}
-            />
+      {#if svgWidth && svgHeight}
+        <svg
+          class="flex flex-col justify-center items-center overflow-hidden"
+          width={svgWidth}
+          height={svgHeight}
+          id="graph"
+        >
+          <rect
+            width={svgWidth - graphStrokeSize * 2}
+            height={svgHeight - graphStrokeSize * 2}
+            x={graphStrokeSize}
+            y={graphStrokeSize}
+            fill="transparent"
+            stroke="black"
+            stroke-width={graphStrokeSize}
+          ></rect>
+          {#if data.length}
+            <g
+              class="non-reactive text-sm"
+              transform="translate({graphPaddingLeft}, {svgHeight - xAxisHeight - graphPaddingBottom})"
+            >
+              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
+              {#each xScale.ticks() as xTick}
+                <g transform="translate({xScale(xTick)}, {0})">
+                  <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
+                  <Text
+                    classes="text-center"
+                    overflowBody={false}
+                    wrapBody={false}
+                    x={-xTickLength / 2}
+                    width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                    height={xAxisHeight}
+                    bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                    bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                      ? String(xTick.getFullYear())
+                      : ""}
+                  />
+                </g>
+              {/each}
+            </g>
+          {/if}
+        </svg>
+        <div class="grid grid-cols-2" width={svgWidth}>
+          <div class="mt-9">
+            <div class="mb-5">Prediction Timeframe</div>
+            <div class="w-36">
+              <Select
+                items={selectItems}
+                value={selectValue}
+                clearable={false}
+                centeredValue={true}
+                centeredItems={true}
+                on:valueChange={({ detail: e }) => (selectValue = e.d)}
+              />
+            </div>
           </div>
-        </div>
-        <div class="grid grid-cols-2">
-          <div class="w-60 mt-9">
+          <div class="grid grid-cols-2">
             <Slider
-              wrapperClasses="w-fit"
+              wrapperClasses="w-fit mt-9"
               title="Moving Avergage for Daily Observations"
               items={sliderItems}
               value={0}
@@ -172,12 +173,10 @@
               max={sliderItems.length - 1}
               float={true}
               labels={true}
-              middle={false}
+              middle={true}
             />
-          </div>
-          <div class="w-60 mt-9">
             <Slider
-              wrapperClasses="w-fit"
+              wrapperClasses="w-fit mt-9"
               title="Moving Avergage for Time Series Models"
               items={sliderItems}
               value={0}
@@ -186,11 +185,11 @@
               max={sliderItems.length - 1}
               float={true}
               labels={true}
-              middle={false}
+              middle={true}
             />
           </div>
         </div>
-      </div>
-    {/if}
+      {/if}
+    </div>
   </div>
 </div>
