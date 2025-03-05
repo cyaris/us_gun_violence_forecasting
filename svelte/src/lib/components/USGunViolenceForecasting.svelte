@@ -130,13 +130,13 @@
             stroke-width={graphStrokeSize}
           ></rect>
           {#if data.length}
-            {#each data as d}
-              {#if d.num_harmed}
-                <g transform="translate({graphPadding.left}, {0})">
+            <g transform="translate({graphPadding.left}, {0})">
+              {#each data as d}
+                {#if d.num_harmed}
                   <circle stroke="teal" fill="teal" r={3} cx={xScale(new Date(d.date))} cy={yScale(d.num_harmed)} />
-                </g>
-              {/if}
-            {/each}
+                {/if}
+              {/each}
+            </g>
             <g
               class="non-reactive text-sm"
               transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
