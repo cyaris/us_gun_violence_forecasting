@@ -1,5 +1,6 @@
 <script>
   import * as d3 from "d3"
+  import { format } from "date-fns"
   import { CheckboxFilter, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
@@ -161,7 +162,15 @@
               <g transform="translate({graphPadding.left}, {0})">
                 {#each data as d}
                   {#if d.num_harmed}
-                    <circle stroke="teal" fill="teal" r={3} cx={xScale(new Date(d.date))} cy={yScale(d.num_harmed)} />
+                    <circle
+                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black"
+                      fill="teal"
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d.num_harmed)}
+                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      use:tooltip
+                    />
                   {/if}
                 {/each}
               </g>
