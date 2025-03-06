@@ -1,6 +1,7 @@
 <script>
   import * as d3 from "d3"
   import { format } from "date-fns"
+  import sma from "sma"
   import { CheckboxFilter, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
@@ -63,7 +64,9 @@
   //   left: 0,
   // }
 
-  let totalDays
+  let filteredData
+  // let totalDays
+  let observationsMovingAverage
   $: {
     if (width) {
       svgWidth = width * 0.8
@@ -72,20 +75,35 @@
       xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
 
       if (data.length) {
-        totalDays =
-          (Math.max(...data.map(v => new Date(v.date).getTime())) -
-            Math.min(...data.map(v => new Date(v.date).getTime()))) /
-          (1000 * 60 * 60 * 24)
-        console.log("total Days: " + totalDays)
+        filteredData = data.sort((a, b) => b.num_harmed - a.num_harmed).slice(checkboxFilters.lasVegasScale ? 0 : 1)
+        filteredData = filteredData.sort((a, b) => new Date(a.date) - new Date(b.date))
+
+        observationsMovingAverage = sma(
+          filteredData.filter(v => v.num_harmed).map(v => v.num_harmed),
+          sliders.dailyObservations * 5
+        ).map(v => parseFloat(v))
+        // console.log("here", sliders.dailyObservations)
+        console.log("observationsMovingAverage: ", observationsMovingAverage)
+        filteredData.forEach((d, i) => (d.num_harmed_moving_average = observationsMovingAverage[i]))
+
+        // totalDays =
+        //   (Math.max(...filteredData.map(v => new Date(v.date).getTime())) -
+        //     Math.min(...filteredData.map(v => new Date(v.date).getTime()))) /
+        //   (1000 * 60 * 60 * 24)
+        // console.log("total Days: " + totalDays)
 
         xScale = d3.scaleTime(
-          d3.extent(data, d => new Date(d.date)),
+          d3.extent(filteredData, d => new Date(d.date)),
           [0, xAxisWidth]
         )
-        xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
-        console.log("total xticks: " + xScale.ticks().length)
 
-        yScale = d3.scaleLinear([0, d3.max(data, d => d.num_harmed)], [svgHeight - xAxisHeight, graphPadding.top])
+        xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
+        // console.log("total xticks: " + xScale.ticks().length)
+
+        yScale = d3.scaleLinear(
+          [0, d3.max(filteredData, d => (sliders.dailyObservations > 0 ? d.num_harmed_moving_average : d.num_harmed))],
+          [svgHeight - xAxisHeight, graphPadding.top]
+        )
       }
     }
   }
@@ -97,6 +115,7 @@
   let selectValue = { value: "Past - Present", label: "Past - Present" }
 
   let sliderItems = [
+    { value: 0, label: 0 },
     { value: 1, label: 5 },
     { value: 2, label: 10 },
     { value: 3, label: 15 },
@@ -110,6 +129,8 @@
     displayObservations: true,
     displayModels: true,
   }
+
+  let sliders = { dailyObservations: 0 }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -157,18 +178,28 @@
             stroke="black"
             stroke-width={graphStrokeWidth}
           ></rect>
-          {#if data.length}
+          {#if filteredData.length}
             {#if checkboxFilters.displayObservations}
               <g transform="translate({graphPadding.left}, {0})">
-                {#each data as d}
+                {#each filteredData as d, i}
                   {#if d.num_harmed}
                     <circle
                       class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
                       fill="teal"
                       r={4}
                       cx={xScale(new Date(d.date))}
-                      cy={yScale(d.num_harmed)}
-                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      cy={yScale(
+                        sliders.dailyObservations > 0 && d.num_harmed_moving_average
+                          ? d.num_harmed_moving_average
+                          : d.num_harmed
+                      )}
+                      title={"Date: " +
+                        format(d.date, "yyyy-MM-dd") +
+                        "\nVictims: " +
+                        d.num_harmed.toLocaleString() +
+                        (d.num_harmed_moving_average
+                          ? "\nMoving Average: " + d.num_harmed_moving_average.toLocaleString()
+                          : "")}
                       use:tooltip
                     />
                   {/if}
@@ -221,13 +252,14 @@
                 wrapperClasses="w-full"
                 title="Daily Observations"
                 items={sliderItems}
-                value={0}
+                value={sliders.dailyObservations}
                 step={1}
                 min={0}
                 max={sliderItems.length - 1}
                 float={true}
                 labels={true}
                 middle={true}
+                on:valueChange={({ detail: e }) => (sliders.dailyObservations = e.d)}
               />
               <Slider
                 wrapperClasses="w-full"
