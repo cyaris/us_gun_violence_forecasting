@@ -68,14 +68,10 @@
   // let totalDays
   let observationsMovingAverage
 
-  let line = d3
-    .line()
-    .x(d => xScale(new Date(d.date)))
-    .y(d => yScale(d.num_harmed_moving_average))
+  let line
 
   $: {
     if (width) {
-
       svgWidth = width * 0.8
       svgHeight = height * 0.65
 
@@ -112,6 +108,10 @@
           [0, d3.max(filteredData, d => (sliders.dailyObservations > 0 ? d.num_harmed_moving_average : d.num_harmed))],
           [svgHeight - xAxisHeight, graphPadding.top]
         )
+        line = d3
+          .line() //.curve(d3.curveNatural)
+          .x(d => xScale(new Date(d.date)))
+          .y(d => yScale(d.num_harmed_moving_average))
       }
     }
   }
@@ -188,9 +188,16 @@
           ></rect>
           {#if checkboxFilters.displayObservations}
             <g transform="translate({graphPadding.left}, {0})">
+              {#if sliders.dailyObservations}
+                <path
+                  class="hover:stroke-4 hover:stroke-teal"
+                  fill="transparent"
+                  stroke="teal"
+                  stroke-width={3}
+                  d={line(filteredData.filter(v => v.num_harmed_moving_average))}
+                />
+              {/if}
               {#each filteredData as d}
-                {console.log("hi")}
-
                 {#if d.num_harmed && sliders.dailyObservations == 0}
                   <circle
                     class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
@@ -199,22 +206,6 @@
                     cx={xScale(new Date(d.date))}
                     cy={yScale(d.num_harmed)}
                     title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                    use:tooltip
-                  />
-               {:else if d.num_harmed_moving_average}
-                  <path
-                    class="hover:stroke-2 hover:stroke-black hover:cursor-help"
-                    fill="red"
-                    stroke="red"
-                    r={10}
-                    stroke-width={32}
-                    d={line(d)}
-                    title={"Date: " +
-                      format(d.date, "yyyy-MM-dd") +
-                      "\nVictims: " +
-                      d.num_harmed.toLocaleString() +
-                      "\nMoving Average: " +
-                      d.num_harmed_moving_average.toLocaleString()}
                     use:tooltip
                   />
                 {/if}
