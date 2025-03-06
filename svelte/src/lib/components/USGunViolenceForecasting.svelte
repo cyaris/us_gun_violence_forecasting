@@ -117,7 +117,8 @@
 
         line = function (field) {
           return d3
-            .line() //.curve(d3.curveNatural)
+            .line()
+            .curve(d3.curveNatural)
             .x(d => xScale(new Date(d.date)))
             .y(d => yScale(d[field]))
         }
@@ -228,7 +229,7 @@
                   stroke-width={3}
                   d={line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))}
                 />
-                <!-- {:else if sliders.timeSeriesModels == 0}
+              {:else if sliders.timeSeriesModels == 0}
                 {#each filteredData as d}
                   {#if d.pred_2019}
                     <circle
@@ -239,7 +240,7 @@
                       cy={yScale(d.pred_2019)}
                     />
                   {/if}
-                {/each} -->
+                {/each}
               {/if}
             </g>
             <g
@@ -299,15 +300,15 @@
                 <Slider
                   wrapperClasses="w-full"
                   title="Time Series Models"
-                  items={sliderItems.slice(1)}
+                  items={sliderItems}
                   value={sliders.timeSeriesModels}
                   step={1}
                   min={0}
-                  max={sliderItems.length - 2}
+                  max={sliderItems.length - 1}
                   float={true}
                   labels={true}
                   middle={true}
-                  on:valueChange={({ detail: e }) => (sliders.timeSeriesModels = sliderItems.slice(1)[e.d].value)}
+                  on:valueChange={({ detail: e }) => (sliders.timeSeriesModels = sliderItems[e.d].value)}
                 />
               </div>
             </div>
