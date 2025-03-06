@@ -227,7 +227,7 @@
               {/if}
               {#if checkboxFilters.displayModels && sliders.timeSeriesModels}
                 <path
-                  class="hover:stroke-4 hover:stroke-teal"
+                  class="hover:stroke-4 hover:stroke-orange"
                   fill="transparent"
                   stroke="orange"
                   stroke-width={3}
