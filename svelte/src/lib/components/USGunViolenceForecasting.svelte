@@ -67,12 +67,7 @@
   let filteredData
   // let totalDays
 
-  let line = function (d, field) {
-    return d3
-      .line() //.curve(d3.curveNatural)
-      .x(d => xScale(new Date(d.date)))
-      .y(d => yScale(d[field]))
-  }
+  let line
   $: {
     if (width) {
       svgWidth = width * 0.8
