@@ -67,8 +67,15 @@
   let filteredData
   // let totalDays
   let observationsMovingAverage
+
+  let line = d3
+    .line()
+    .x(d => xScale(new Date(d.date)))
+    .y(d => yScale(d.num_harmed_moving_average))
+
   $: {
     if (width) {
+
       svgWidth = width * 0.8
       svgHeight = height * 0.65
 
@@ -179,58 +186,64 @@
             stroke="black"
             stroke-width={graphStrokeWidth}
           ></rect>
-          {#if filteredData.length}
-            {#if checkboxFilters.displayObservations}
-              <g transform="translate({graphPadding.left}, {0})">
-                {#each filteredData as d, i}
-                  {#if d.num_harmed}
-                    <circle
-                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                      fill="teal"
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(
-                        sliders.dailyObservations > 0 && d.num_harmed_moving_average
-                          ? d.num_harmed_moving_average
-                          : d.num_harmed
-                      )}
-                      title={"Date: " +
-                        format(d.date, "yyyy-MM-dd") +
-                        "\nVictims: " +
-                        d.num_harmed.toLocaleString() +
-                        (d.num_harmed_moving_average
-                          ? "\nMoving Average: " + d.num_harmed_moving_average.toLocaleString()
-                          : "")}
-                      use:tooltip
-                    />
-                  {/if}
-                {/each}
-              </g>
-            {/if}
-            <g
-              class="non-reactive text-sm"
-              transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
-            >
-              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-              {#each xScale.ticks() as xTick}
-                <g transform="translate({xScale(xTick)}, {0})">
-                  <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
-                  <Text
-                    classes="text-center"
-                    overflowBody={false}
-                    wrapBody={false}
-                    x={-xTickLength / 2}
-                    width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                    height={xAxisHeight}
-                    bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                    bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                      ? String(xTick.getFullYear())
-                      : ""}
+          {#if checkboxFilters.displayObservations}
+            <g transform="translate({graphPadding.left}, {0})">
+              {#each filteredData as d}
+                {console.log("hi")}
+
+                {#if d.num_harmed && sliders.dailyObservations == 0}
+                  <circle
+                    class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
+                    fill="teal"
+                    r={4}
+                    cx={xScale(new Date(d.date))}
+                    cy={yScale(d.num_harmed)}
+                    title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                    use:tooltip
                   />
-                </g>
+               {:else if d.num_harmed_moving_average}
+                  <path
+                    class="hover:stroke-2 hover:stroke-black hover:cursor-help"
+                    fill="red"
+                    stroke="red"
+                    r={10}
+                    stroke-width={32}
+                    d={line(d)}
+                    title={"Date: " +
+                      format(d.date, "yyyy-MM-dd") +
+                      "\nVictims: " +
+                      d.num_harmed.toLocaleString() +
+                      "\nMoving Average: " +
+                      d.num_harmed_moving_average.toLocaleString()}
+                    use:tooltip
+                  />
+                {/if}
               {/each}
             </g>
           {/if}
+          <g
+            class="non-reactive text-sm"
+            transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
+          >
+            <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
+            {#each xScale.ticks() as xTick}
+              <g transform="translate({xScale(xTick)}, {0})">
+                <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
+                <Text
+                  classes="text-center"
+                  overflowBody={false}
+                  wrapBody={false}
+                  x={-xTickLength / 2}
+                  width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                  height={xAxisHeight}
+                  bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                    ? String(xTick.getFullYear())
+                    : ""}
+                />
+              </g>
+            {/each}
+          </g>
         </svg>
         <div class="grid grid-cols-2" width={svgWidth}>
           <div class="mt-9">
