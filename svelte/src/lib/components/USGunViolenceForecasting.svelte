@@ -75,14 +75,14 @@
   // TODO: combine paths into one variable.
   let dailyObservationsPath = tweened(null, {
     interpolate: interpolateString,
-    duration: 650,
+    duration: 500,
     delay: 0,
     cubicInOut,
   })
 
   let timeSeriesModelsPath = tweened(null, {
     interpolate: interpolateString,
-    duration: 650,
+    duration: 500,
     delay: 0,
     cubicInOut,
   })
