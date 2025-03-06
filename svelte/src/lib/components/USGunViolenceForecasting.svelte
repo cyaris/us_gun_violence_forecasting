@@ -4,7 +4,7 @@
   import { format } from "date-fns"
   import sma from "sma"
   import { tweened } from "svelte/motion"
-  import { cubicInOut as easing } from "svelte/easing"
+  import { cubicInOut } from "svelte/easing"
   import { CheckboxFilter, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
@@ -77,14 +77,14 @@
     interpolate: interpolateString,
     duration: 650,
     delay: 0,
-    easing,
+    cubicInOut,
   })
 
   let timeSeriesModelsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 650,
     delay: 0,
-    easing,
+    cubicInOut,
   })
   $: {
     if (width) {
