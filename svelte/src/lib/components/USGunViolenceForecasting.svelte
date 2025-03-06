@@ -152,9 +152,15 @@
             .y(d => yScale(d[field]))
         }
         dailyObservationsPath.set(
-          line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+          sliders.dailyObservations
+            ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+            : line("num_harmed")(filteredData.filter(v => v.num_harmed))
         )
-        timeSeriesModelsPath.set(line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average)))
+        timeSeriesModelsPath.set(
+          sliders.timeSeriesModels
+            ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+            : line("pred_2019")(filteredData.filter(v => v.num_harmed))
+        )
       }
     }
   }
@@ -233,52 +239,50 @@
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
               {#if checkboxFilters.displayObservations}
-                {#if sliders.dailyObservations}
-                  <path
-                    class="hover:stroke-4 hover:stroke-teal"
-                    fill="transparent"
-                    stroke="teal"
-                    stroke-width={3}
-                    d={$dailyObservationsPath}
-                  />
-                {:else}
-                  {#each filteredData as d}
-                    {#if d.num_harmed}
-                      <circle
-                        class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                        fill="teal"
-                        r={4}
-                        cx={xScale(new Date(d.date))}
-                        cy={yScale(d.num_harmed)}
-                        title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                        use:tooltip
-                      />
-                    {/if}
-                  {/each}
-                {/if}
+                <path
+                  class={sliders.dailyObservations ? "hover:stroke-4 hover:stroke-teal" : "non-reactive"}
+                  fill="transparent"
+                  stroke={sliders.dailyObservations ? "teal" : "transparent"}
+                  stroke-width={3}
+                  d={$dailyObservationsPath}
+                />
+                {#each filteredData as d}
+                  {#if d.num_harmed}
+                    <circle
+                      class={sliders.dailyObservations
+                        ? "non-reactive"
+                        : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={sliders.dailyObservations ? "transparent" : "teal"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
+                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      use:tooltip
+                    />
+                  {/if}
+                {/each}
               {/if}
               {#if checkboxFilters.displayModels}
-                {#if sliders.timeSeriesModels}
-                  <path
-                    class="hover:stroke-4 hover:stroke-orange"
-                    fill="transparent"
-                    stroke="orange"
-                    stroke-width={3}
-                    d={$timeSeriesModelsPath}
-                  />
-                {:else}
-                  {#each filteredData as d}
-                    {#if d.pred_2019}
-                      <circle
-                        class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                        fill="orange"
-                        r={4}
-                        cx={xScale(new Date(d.date))}
-                        cy={yScale(d.pred_2019)}
-                      />
-                    {/if}
-                  {/each}
-                {/if}
+                <path
+                  class={sliders.timeSeriesModels ? "hover:stroke-4 hover:stroke-orange" : "non-reactive"}
+                  fill="transparent"
+                  stroke={sliders.timeSeriesModels ? "orange" : "transparent"}
+                  stroke-width={3}
+                  d={$timeSeriesModelsPath}
+                />
+                {#each filteredData as d}
+                  {#if d.pred_2019}
+                    <circle
+                      class={sliders.timeSeriesModels
+                        ? "non-reactive"
+                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={sliders.timeSeriesModels ? "transparent" : "orange"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
+                    />
+                  {/if}
+                {/each}
               {/if}
             </g>
             <g
