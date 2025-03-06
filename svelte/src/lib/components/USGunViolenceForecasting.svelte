@@ -84,6 +84,7 @@
         ).map(v => parseFloat(v))
         // console.log("here", sliders.dailyObservations)
         console.log("observationsMovingAverage: ", observationsMovingAverage)
+        // TODO: fix process so it is not based on an iterator.
         filteredData.forEach((d, i) => (d.num_harmed_moving_average = observationsMovingAverage[i]))
 
         // totalDays =
