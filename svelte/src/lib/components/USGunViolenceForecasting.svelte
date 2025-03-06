@@ -1,7 +1,10 @@
 <script>
   import * as d3 from "d3"
+  import { interpolateString } from "d3-interpolate"
   import { format } from "date-fns"
   import sma from "sma"
+  import { tweened } from "svelte/motion"
+  import { cubicInOut as easing } from "svelte/easing"
   import { CheckboxFilter, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
@@ -68,6 +71,21 @@
   // let totalDays
 
   let line
+
+  // TODO: combine paths into one variable.
+  let dailyObservationsPath = tweened(null, {
+    interpolate: interpolateString,
+    duration: 450,
+    delay: 0,
+    easing,
+  })
+
+  let timeSeriesModelsPath = tweened(null, {
+    interpolate: interpolateString,
+    duration: 450,
+    delay: 0,
+    easing,
+  })
   $: {
     if (width) {
       svgWidth = width * 0.8
@@ -133,6 +151,10 @@
             .x(d => xScale(new Date(d.date)))
             .y(d => yScale(d[field]))
         }
+        dailyObservationsPath.set(
+          line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+        )
+        timeSeriesModelsPath.set(line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average)))
       }
     }
   }
@@ -217,7 +239,7 @@
                     fill="transparent"
                     stroke="teal"
                     stroke-width={3}
-                    d={line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))}
+                    d={$dailyObservationsPath}
                   />
                 {:else}
                   {#each filteredData as d}
@@ -242,7 +264,7 @@
                     fill="transparent"
                     stroke="orange"
                     stroke-width={3}
-                    d={line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))}
+                    d={$timeSeriesModelsPath}
                   />
                 {:else}
                   {#each filteredData as d}
