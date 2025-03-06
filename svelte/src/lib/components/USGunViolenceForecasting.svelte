@@ -148,7 +148,7 @@
     displayModels: true,
   }
 
-  let sliders = { dailyObservations: 0, timeSeriesModels: 1 }
+  let sliders = { dailyObservations: 0, timeSeriesModels: 2 }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
