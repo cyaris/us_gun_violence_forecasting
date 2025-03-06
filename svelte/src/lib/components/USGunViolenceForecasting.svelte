@@ -155,7 +155,7 @@
   <div class="flex flex-col w-full h-full justify-center items-center mb-10">
     <div>
       {#if filteredData}
-        <div class="flex flex-col self-start mt-4 mb-8">
+        <div class="flex flex-col self-start mt-4 mb-3">
           <CheckboxFilter
             labelClasses="font-medium"
             label="Scale to Include the Las Vegas Shooting"
@@ -180,6 +180,7 @@
             deselection={checkboxFilters.displayModels ? [] : [true]}
             on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
           />
+          <span class="flex flex-col items-center text-lg">Hover to Compare Historical Forecasts</span>
         </div>
         {#if svgWidth && svgHeight}
           <svg
