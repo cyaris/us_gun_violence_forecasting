@@ -48,7 +48,7 @@
   let xTickLength
   let xAxisWidth
   // the vertical distance between the bottom border and the x axis labels.
-  let graphPadding = { top: 35, right: 50, bottom: 17.5, left: 50 }
+  let graphPadding = { top: 50, right: 50, bottom: 17.5, left: 50 }
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
