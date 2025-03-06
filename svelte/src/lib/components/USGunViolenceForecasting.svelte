@@ -285,7 +285,7 @@
           </svg>
           <div class="grid grid-cols-2" width={svgWidth}>
             <div class="mt-9">
-              <div class="mb-5">Prediction Timeframe</div>
+              <div class="mb-2">Prediction Timeframe</div>
               <div class="w-36">
                 <Select
                   items={selectItems}
