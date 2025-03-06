@@ -90,7 +90,7 @@
         let timeSeriesModels = getMovingAverage("pred_2019", sliders.timeSeriesModels * 5)
         // console.log("observationsMovingAverage: ", observationsMovingAverage)
 
-        // TODO: fix process so it is not based on an iterator.
+        // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
           d.num_harmed_moving_average = observationsMovingAverage[i]
           d.pred_2019_moving_average = timeSeriesModels[i]
