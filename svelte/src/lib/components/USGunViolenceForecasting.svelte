@@ -66,10 +66,13 @@
 
   let filteredData
   // let totalDays
-  let observationsMovingAverage
 
-  let line
-
+  let line = function (d, field) {
+    return d3
+      .line() //.curve(d3.curveNatural)
+      .x(d => xScale(new Date(d.date)))
+      .y(d => yScale(d[field]))
+  }
   $: {
     if (width) {
       svgWidth = width * 0.8
@@ -81,14 +84,22 @@
         filteredData = data.sort((a, b) => b.num_harmed - a.num_harmed).slice(checkboxFilters.lasVegasScale ? 0 : 1)
         filteredData = filteredData.sort((a, b) => new Date(a.date) - new Date(b.date))
 
-        observationsMovingAverage = sma(
-          filteredData.filter(v => v.num_harmed).map(v => v.num_harmed),
-          sliders.dailyObservations * 5
-        ).map(v => parseFloat(v))
+        let getMovingAverage = function (field, range) {
+          return sma(
+            filteredData.filter(v => v[field]).map(v => v[field]),
+            range
+          ).map(v => parseFloat(v))
+        }
+
+        let observationsMovingAverage = getMovingAverage("num_harmed", sliders.dailyObservations * 5)
+        let timeSeriesModels = getMovingAverage("pred_2019", sliders.timeSeriesModels * 5)
         // console.log("observationsMovingAverage: ", observationsMovingAverage)
 
         // TODO: fix process so it is not based on an iterator.
-        filteredData.forEach((d, i) => (d.num_harmed_moving_average = observationsMovingAverage[i]))
+        filteredData.forEach((d, i) => {
+          d.num_harmed_moving_average = observationsMovingAverage[i]
+          d.pred_2019_moving_average = timeSeriesModels[i]
+        })
 
         // totalDays =
         //   (Math.max(...filteredData.map(v => new Date(v.date).getTime())) -
@@ -108,10 +119,13 @@
           [0, d3.max(filteredData, d => (sliders.dailyObservations > 0 ? d.num_harmed_moving_average : d.num_harmed))],
           [svgHeight - xAxisHeight, graphPadding.top]
         )
-        line = d3
-          .line() //.curve(d3.curveNatural)
-          .x(d => xScale(new Date(d.date)))
-          .y(d => yScale(d.num_harmed_moving_average))
+
+        line = function (field) {
+          return d3
+            .line() //.curve(d3.curveNatural)
+            .x(d => xScale(new Date(d.date)))
+            .y(d => yScale(d[field]))
+        }
       }
     }
   }
@@ -138,149 +152,172 @@
     displayModels: true,
   }
 
-  let sliders = { dailyObservations: 0 }
+  let sliders = { dailyObservations: 0, timeSeriesModels: 1 }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
   <div class="flex flex-col w-full h-full justify-center items-center mb-10">
     <div>
-      <div class="flex flex-col self-start mt-4 mb-8">
-        <CheckboxFilter
-          labelClasses="font-medium"
-          label="Scale to Include the Las Vegas Shooting"
-          value={checkboxFilters.lasVegasScale}
-          selection={checkboxFilters.lasVegasScale ? [true] : []}
-          deselection={checkboxFilters.lasVegasScale ? [] : [true]}
-          on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
-        />
-        <CheckboxFilter
-          labelClasses="font-medium"
-          label="Display Daily Observations"
-          value={checkboxFilters.displayObservations}
-          selection={checkboxFilters.displayObservations ? [true] : []}
-          deselection={checkboxFilters.displayObservations ? [] : [true]}
-          on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
-        />
-        <CheckboxFilter
-          labelClasses="font-medium"
-          label="Display Time Series Models"
-          value={checkboxFilters.displayModels}
-          selection={checkboxFilters.displayModels ? [true] : []}
-          deselection={checkboxFilters.displayModels ? [] : [true]}
-          on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
-        />
-      </div>
-      {#if svgWidth && svgHeight}
-        <svg
-          class="flex flex-col justify-center items-center overflow-hidden"
-          width={svgWidth}
-          height={svgHeight}
-          id="graph"
-        >
-          <rect
-            width={svgWidth - graphStrokeWidth * 2}
-            height={svgHeight - graphStrokeWidth * 2}
-            x={graphStrokeWidth}
-            y={graphStrokeWidth}
-            fill="transparent"
-            stroke="black"
-            stroke-width={graphStrokeWidth}
-          ></rect>
-          {#if checkboxFilters.displayObservations}
+      {#if filteredData}
+        <div class="flex flex-col self-start mt-4 mb-8">
+          <CheckboxFilter
+            labelClasses="font-medium"
+            label="Scale to Include the Las Vegas Shooting"
+            value={checkboxFilters.lasVegasScale}
+            selection={checkboxFilters.lasVegasScale ? [true] : []}
+            deselection={checkboxFilters.lasVegasScale ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
+          />
+          <CheckboxFilter
+            labelClasses="font-medium"
+            label="Display Daily Observations"
+            value={checkboxFilters.displayObservations}
+            selection={checkboxFilters.displayObservations ? [true] : []}
+            deselection={checkboxFilters.displayObservations ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
+          />
+          <CheckboxFilter
+            labelClasses="font-medium"
+            label="Display Time Series Models"
+            value={checkboxFilters.displayModels}
+            selection={checkboxFilters.displayModels ? [true] : []}
+            deselection={checkboxFilters.displayModels ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
+          />
+        </div>
+        {#if svgWidth && svgHeight}
+          <svg
+            class="flex flex-col justify-center items-center overflow-hidden"
+            width={svgWidth}
+            height={svgHeight}
+            id="graph"
+          >
+            <rect
+              width={svgWidth - graphStrokeWidth * 2}
+              height={svgHeight - graphStrokeWidth * 2}
+              x={graphStrokeWidth}
+              y={graphStrokeWidth}
+              fill="transparent"
+              stroke="black"
+              stroke-width={graphStrokeWidth}
+            ></rect>
             <g transform="translate({graphPadding.left}, {0})">
-              {#if sliders.dailyObservations}
+              {#if checkboxFilters.displayObservations && sliders.dailyObservations}
                 <path
                   class="hover:stroke-4 hover:stroke-teal"
                   fill="transparent"
                   stroke="teal"
                   stroke-width={3}
-                  d={line(filteredData.filter(v => v.num_harmed_moving_average))}
+                  d={line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))}
                 />
+              {:else if sliders.dailyObservations == 0}
+                {#each filteredData as d}
+                  {#if d.num_harmed}
+                    <circle
+                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
+                      fill="teal"
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d.num_harmed)}
+                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      use:tooltip
+                    />
+                  {/if}
+                {/each}
               {/if}
-              {#each filteredData as d}
-                {#if d.num_harmed && sliders.dailyObservations == 0}
-                  <circle
-                    class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                    fill="teal"
-                    r={4}
-                    cx={xScale(new Date(d.date))}
-                    cy={yScale(d.num_harmed)}
-                    title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                    use:tooltip
+              {#if checkboxFilters.displayModels && sliders.timeSeriesModels}
+                <path
+                  class="hover:stroke-4 hover:stroke-teal"
+                  fill="transparent"
+                  stroke="orange"
+                  stroke-width={3}
+                  d={line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))}
+                />
+                <!-- {:else if sliders.timeSeriesModels == 0}
+                {#each filteredData as d}
+                  {#if d.pred_2019}
+                    <circle
+                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
+                      fill="orange"
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d.pred_2019)}
+                    />
+                  {/if}
+                {/each} -->
+              {/if}
+            </g>
+            <g
+              class="non-reactive text-sm"
+              transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
+            >
+              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
+              {#each xScale.ticks() as xTick}
+                <g transform="translate({xScale(xTick)}, {0})">
+                  <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
+                  <Text
+                    classes="text-center"
+                    overflowBody={false}
+                    wrapBody={false}
+                    x={-xTickLength / 2}
+                    width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                    height={xAxisHeight}
+                    bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                    bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                      ? String(xTick.getFullYear())
+                      : ""}
                   />
-                {/if}
+                </g>
               {/each}
             </g>
-          {/if}
-          <g
-            class="non-reactive text-sm"
-            transform="translate({graphPadding.left}, {svgHeight - xAxisHeight - graphPadding.bottom})"
-          >
-            <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-            {#each xScale.ticks() as xTick}
-              <g transform="translate({xScale(xTick)}, {0})">
-                <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
-                <Text
-                  classes="text-center"
-                  overflowBody={false}
-                  wrapBody={false}
-                  x={-xTickLength / 2}
-                  width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                  height={xAxisHeight}
-                  bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                  bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                    ? String(xTick.getFullYear())
-                    : ""}
+          </svg>
+          <div class="grid grid-cols-2" width={svgWidth}>
+            <div class="mt-9">
+              <div class="mb-5">Prediction Timeframe</div>
+              <div class="w-36">
+                <Select
+                  items={selectItems}
+                  value={selectValue}
+                  clearable={false}
+                  centeredValue={true}
+                  centeredItems={true}
+                  on:valueChange={({ detail: e }) => (selectValue = e.d)}
                 />
-              </g>
-            {/each}
-          </g>
-        </svg>
-        <div class="grid grid-cols-2" width={svgWidth}>
-          <div class="mt-9">
-            <div class="mb-5">Prediction Timeframe</div>
-            <div class="w-36">
-              <Select
-                items={selectItems}
-                value={selectValue}
-                clearable={false}
-                centeredValue={true}
-                centeredItems={true}
-                on:valueChange={({ detail: e }) => (selectValue = e.d)}
-              />
+              </div>
+            </div>
+            <div>
+              <span class="flex flex-col text-center text-xl font-medium mt-7">Moving Averages</span>
+              <div class="grid grid-cols-2 mt-5">
+                <Slider
+                  wrapperClasses="w-full"
+                  title="Daily Observations"
+                  items={sliderItems}
+                  value={sliders.dailyObservations}
+                  step={1}
+                  min={0}
+                  max={sliderItems.length - 1}
+                  float={true}
+                  labels={true}
+                  middle={true}
+                  on:valueChange={({ detail: e }) => (sliders.dailyObservations = e.d)}
+                />
+                <Slider
+                  wrapperClasses="w-full"
+                  title="Time Series Models"
+                  items={sliderItems.slice(1)}
+                  value={sliders.timeSeriesModels}
+                  step={1}
+                  min={0}
+                  max={sliderItems.length - 2}
+                  float={true}
+                  labels={true}
+                  middle={true}
+                  on:valueChange={({ detail: e }) => (sliders.timeSeriesModels = sliderItems.slice(1)[e.d].value)}
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <span class="flex flex-col text-center text-xl font-medium mt-7">Moving Averages</span>
-            <div class="grid grid-cols-2 mt-5">
-              <Slider
-                wrapperClasses="w-full"
-                title="Daily Observations"
-                items={sliderItems}
-                value={sliders.dailyObservations}
-                step={1}
-                min={0}
-                max={sliderItems.length - 1}
-                float={true}
-                labels={true}
-                middle={true}
-                on:valueChange={({ detail: e }) => (sliders.dailyObservations = e.d)}
-              />
-              <Slider
-                wrapperClasses="w-full"
-                title="Time Series Models"
-                items={sliderItems}
-                value={0}
-                step={1}
-                min={0}
-                max={sliderItems.length - 1}
-                float={true}
-                labels={true}
-                middle={true}
-              />
-            </div>
-          </div>
-        </div>
+        {/if}
       {/if}
     </div>
   </div>
