@@ -86,8 +86,8 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage("num_harmed", sliders.dailyObservations * 5)
-        let timeSeriesModels = getMovingAverage("pred_2019", sliders.timeSeriesModels * 5)
+        let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.dailyObservations].label)
+        let timeSeriesModels = getMovingAverage("pred_2019", sliderItems[sliders.timeSeriesModels].label)
         // console.log("observationsMovingAverage: ", observationsMovingAverage)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
