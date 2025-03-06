@@ -111,7 +111,18 @@
         // console.log("total xticks: " + xScale.ticks().length)
 
         yScale = d3.scaleLinear(
-          [0, d3.max(filteredData, d => (sliders.dailyObservations > 0 ? d.num_harmed_moving_average : d.num_harmed))],
+          [
+            0,
+            d3.max(filteredData, d =>
+              sliders.dailyObservations && sliders.timeSeriesModels
+                ? Math.max(d.num_harmed_moving_average, d.pred_2019_moving_average)
+                : sliders.dailyObservations
+                  ? Math.max(d.num_harmed_moving_average, d.pred_2019)
+                  : sliders.timeSeriesModels
+                    ? Math.max(d.num_harmed, d.pred_2019_moving_average)
+                    : Math.max(d.num_harmed, d.pred_2019)
+            ),
+          ],
           [svgHeight - xAxisHeight, graphPadding.top]
         )
 
@@ -199,49 +210,53 @@
               stroke-width={graphStrokeWidth}
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
-              {#if checkboxFilters.displayObservations && sliders.dailyObservations}
-                <path
-                  class="hover:stroke-4 hover:stroke-teal"
-                  fill="transparent"
-                  stroke="teal"
-                  stroke-width={3}
-                  d={line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))}
-                />
-              {:else if sliders.dailyObservations == 0}
-                {#each filteredData as d}
-                  {#if d.num_harmed}
-                    <circle
-                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                      fill="teal"
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(d.num_harmed)}
-                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                      use:tooltip
-                    />
-                  {/if}
-                {/each}
+              {#if checkboxFilters.displayObservations}
+                {#if sliders.dailyObservations}
+                  <path
+                    class="hover:stroke-4 hover:stroke-teal"
+                    fill="transparent"
+                    stroke="teal"
+                    stroke-width={3}
+                    d={line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))}
+                  />
+                {:else}
+                  {#each filteredData as d}
+                    {#if d.num_harmed}
+                      <circle
+                        class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
+                        fill="teal"
+                        r={4}
+                        cx={xScale(new Date(d.date))}
+                        cy={yScale(d.num_harmed)}
+                        title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                        use:tooltip
+                      />
+                    {/if}
+                  {/each}
+                {/if}
               {/if}
-              {#if checkboxFilters.displayModels && sliders.timeSeriesModels}
-                <path
-                  class="hover:stroke-4 hover:stroke-orange"
-                  fill="transparent"
-                  stroke="orange"
-                  stroke-width={3}
-                  d={line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))}
-                />
-              {:else if sliders.timeSeriesModels == 0}
-                {#each filteredData as d}
-                  {#if d.pred_2019}
-                    <circle
-                      class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
-                      fill="orange"
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(d.pred_2019)}
-                    />
-                  {/if}
-                {/each}
+              {#if checkboxFilters.displayModels}
+                {#if sliders.timeSeriesModels}
+                  <path
+                    class="hover:stroke-4 hover:stroke-orange"
+                    fill="transparent"
+                    stroke="orange"
+                    stroke-width={3}
+                    d={line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))}
+                  />
+                {:else}
+                  {#each filteredData as d}
+                    {#if d.pred_2019}
+                      <circle
+                        class="stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"
+                        fill="orange"
+                        r={4}
+                        cx={xScale(new Date(d.date))}
+                        cy={yScale(d.pred_2019)}
+                      />
+                    {/if}
+                  {/each}
+                {/if}
               {/if}
             </g>
             <g
