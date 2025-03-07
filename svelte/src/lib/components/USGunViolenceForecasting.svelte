@@ -76,14 +76,14 @@
   let dailyObservationsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 600,
-    delay: 98,
+    delay: 100,
     cubicInOut,
   })
 
   let timeSeriesModelsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 600,
-    delay: 98,
+    delay: 100,
     cubicInOut,
   })
   $: {
@@ -239,16 +239,21 @@
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
               {#each filteredData as d}
-                {#if sliders.dailyObservations <= 1 && d.num_harmed}
-                  <g class="group">
+                {#if sliders.dailyObservations <= 1 && (d.num_harmed || d.num_harmed_moving_average)}
+                  <g
+                    class="group"
+                    transform="translate({xScale(new Date(d.date))}, {yScale(
+                      sliders.dailyObservations && d.num_harmed_moving_average
+                        ? d.num_harmed_moving_average
+                        : d.num_harmed
+                    )})"
+                  >
                     <circle
                       class={!checkboxFilters.displayObservations || sliders.dailyObservations
                         ? "non-reactive"
                         : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
                       fill={!checkboxFilters.displayObservations || sliders.dailyObservations ? "transparent" : "teal"}
                       r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
                       title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
                       use:tooltip
                     />
@@ -265,16 +270,19 @@
                 d={$dailyObservationsPath}
               />
               {#each filteredData as d}
-                {#if sliders.timeSeriesModels <= 1 && d.pred_2019}
-                  <g class="group">
+                {#if sliders.timeSeriesModels <= 1 && (d.pred_2019 || d.pred_2019_moving_average)}
+                  <g
+                    class="group"
+                    transform="translate({xScale(new Date(d.date))}, {yScale(
+                      sliders.timeSeriesModels && d.pred_2019_moving_average ? d.pred_2019_moving_average : d.pred_2019
+                    )})"
+                  >
                     <circle
                       class={!checkboxFilters.displayModels || sliders.timeSeriesModels
                         ? "non-reactive"
                         : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
                       fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
                       r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
                     />
                   </g>
                 {/if}
@@ -367,12 +375,15 @@
 <svelte:head>
   <style>
     g.group {
-      transition: transform 700ms;
+      transition: transform 600ms cubic-bezier(0.65, 0, 0.35, 1);
+      transition-delay: 100ms;
+      /* will-change: transform; */
     }
 
-    .group circle {
+    /* .group circle {
       transition: cy 600ms cubic-bezier(0.65, 0, 0.35, 1);
       transition-delay: 100ms;
-    }
+      will-change: transform, cy;
+    } */
   </style>
 </svelte:head>
