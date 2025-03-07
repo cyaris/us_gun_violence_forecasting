@@ -239,30 +239,32 @@
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
               {#each filteredData as d}
-                {#if d.num_harmed}
-                  <circle
-                    class={!checkboxFilters.displayObservations || sliders.dailyObservations
-                      ? "non-reactive"
-                      : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                    fill={!checkboxFilters.displayObservations || sliders.dailyObservations ? "transparent" : "teal"}
-                    r={4}
-                    cx={xScale(new Date(d.date))}
-                    cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
-                    title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                    use:tooltip
-                  />
-                {/if}
-                {#if d.pred_2019}
-                  <circle
-                    class={!checkboxFilters.displayModels || sliders.timeSeriesModels
-                      ? "non-reactive"
-                      : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                    fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
-                    r={4}
-                    cx={xScale(new Date(d.date))}
-                    cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
-                  />
-                {/if}
+                <g class="group">
+                  {#if d.num_harmed}
+                    <circle
+                      class={!checkboxFilters.displayObservations || sliders.dailyObservations
+                        ? "non-reactive"
+                        : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={!checkboxFilters.displayObservations || sliders.dailyObservations ? "transparent" : "teal"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
+                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      use:tooltip
+                    />
+                  {/if}
+                  {#if d.pred_2019}
+                    <circle
+                      class={!checkboxFilters.displayModels || sliders.timeSeriesModels
+                        ? "non-reactive"
+                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
+                    />
+                  {/if}
+                </g>
               {/each}
               <path
                 class={checkboxFilters.displayObservations && sliders.dailyObservations
@@ -358,3 +360,15 @@
     </div>
   </div>
 </div>
+<svelte:head>
+  <style>
+    g.group {
+      transition: transform 450ms;
+    }
+
+    .group circle {
+      transition-delay: 450ms;
+      transition: cy 450ms;
+    }
+  </style>
+</svelte:head>
