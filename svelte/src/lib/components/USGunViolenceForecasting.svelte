@@ -76,14 +76,14 @@
   let dailyObservationsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 500,
-    delay: 0,
+    delay: 100,
     cubicInOut,
   })
 
   let timeSeriesModelsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 500,
-    delay: 0,
+    delay: 100,
     cubicInOut,
   })
   $: {
@@ -239,8 +239,8 @@
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
               {#each filteredData as d}
-                <g class="group">
-                  {#if d.num_harmed}
+                {#if sliders.dailyObservations <= 1 && d.num_harmed}
+                  <g class="group">
                     <circle
                       class={!checkboxFilters.displayObservations || sliders.dailyObservations
                         ? "non-reactive"
@@ -252,19 +252,8 @@
                       title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
                       use:tooltip
                     />
-                  {/if}
-                  {#if d.pred_2019}
-                    <circle
-                      class={!checkboxFilters.displayModels || sliders.timeSeriesModels
-                        ? "non-reactive"
-                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
-                    />
-                  {/if}
-                </g>
+                  </g>
+                {/if}
               {/each}
               <path
                 class={checkboxFilters.displayObservations && sliders.dailyObservations
@@ -275,6 +264,21 @@
                 stroke-width={3}
                 d={$dailyObservationsPath}
               />
+              {#each filteredData as d}
+                {#if sliders.timeSeriesModels <= 1 && d.pred_2019}
+                  <g class="group">
+                    <circle
+                      class={!checkboxFilters.displayModels || sliders.timeSeriesModels
+                        ? "non-reactive"
+                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
+                    />
+                  </g>
+                {/if}
+              {/each}
               <path
                 class={checkboxFilters.displayModels && sliders.timeSeriesModels
                   ? "hover:stroke-4 hover:stroke-orange"
@@ -363,12 +367,12 @@
 <svelte:head>
   <style>
     g.group {
-      transition: transform 450ms;
+      transition: transform 600ms;
     }
 
     .group circle {
-      transition-delay: 450ms;
-      transition: cy 450ms;
+      transition-delay: 100ms;
+      transition: cy 500ms;
     }
   </style>
 </svelte:head>
