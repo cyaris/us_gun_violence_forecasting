@@ -238,52 +238,50 @@
               stroke-width={graphStrokeWidth}
             ></rect>
             <g transform="translate({graphPadding.left}, {0})">
-              {#if checkboxFilters.displayObservations}
-                <path
-                  class={sliders.dailyObservations ? "hover:stroke-4 hover:stroke-teal" : "non-reactive"}
-                  fill="transparent"
-                  stroke={sliders.dailyObservations ? "teal" : "transparent"}
-                  stroke-width={3}
-                  d={$dailyObservationsPath}
-                />
-                {#each filteredData as d}
-                  {#if d.num_harmed}
-                    <circle
-                      class={sliders.dailyObservations
-                        ? "non-reactive"
-                        : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={sliders.dailyObservations ? "transparent" : "teal"}
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
-                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                      use:tooltip
-                    />
-                  {/if}
-                {/each}
-              {/if}
-              {#if checkboxFilters.displayModels}
-                <path
-                  class={sliders.timeSeriesModels ? "hover:stroke-4 hover:stroke-orange" : "non-reactive"}
-                  fill="transparent"
-                  stroke={sliders.timeSeriesModels ? "orange" : "transparent"}
-                  stroke-width={3}
-                  d={$timeSeriesModelsPath}
-                />
-                {#each filteredData as d}
-                  {#if d.pred_2019}
-                    <circle
-                      class={sliders.timeSeriesModels
-                        ? "non-reactive"
-                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={sliders.timeSeriesModels ? "transparent" : "orange"}
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
-                    />
-                  {/if}
-                {/each}
-              {/if}
+              {#each filteredData as d}
+                {#if d.num_harmed}
+                  <circle
+                    class={!checkboxFilters.displayObservations || sliders.dailyObservations
+                      ? "non-reactive"
+                      : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                    fill={!checkboxFilters.displayObservations || sliders.dailyObservations ? "transparent" : "teal"}
+                    r={4}
+                    cx={xScale(new Date(d.date))}
+                    cy={yScale(sliders.dailyObservations ? d.num_harmed_moving_average : d.num_harmed)}
+                    title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                    use:tooltip
+                  />
+                {/if}
+                {#if d.pred_2019}
+                  <circle
+                    class={!checkboxFilters.displayModels || sliders.timeSeriesModels
+                      ? "non-reactive"
+                      : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                    fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
+                    r={4}
+                    cx={xScale(new Date(d.date))}
+                    cy={yScale(sliders.timeSeriesModels ? d.pred_2019_moving_average : d.pred_2019)}
+                  />
+                {/if}
+              {/each}
+              <path
+                class={checkboxFilters.displayObservations && sliders.dailyObservations
+                  ? "hover:stroke-4 hover:stroke-teal"
+                  : "non-reactive"}
+                fill="transparent"
+                stroke={checkboxFilters.displayObservations && sliders.dailyObservations ? "teal" : "transparent"}
+                stroke-width={3}
+                d={$dailyObservationsPath}
+              />
+              <path
+                class={checkboxFilters.displayModels && sliders.timeSeriesModels
+                  ? "hover:stroke-4 hover:stroke-orange"
+                  : "non-reactive"}
+                fill="transparent"
+                stroke={checkboxFilters.displayModels && sliders.timeSeriesModels ? "orange" : "transparent"}
+                stroke-width={3}
+                d={$timeSeriesModelsPath}
+              />
             </g>
             <g
               class="non-reactive text-sm"
