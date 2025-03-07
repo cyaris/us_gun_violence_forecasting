@@ -75,15 +75,15 @@
   // TODO: combine paths into one variable.
   let dailyObservationsPath = tweened(null, {
     interpolate: interpolateString,
-    duration: 500,
-    delay: 100,
+    duration: 600,
+    delay: 98,
     cubicInOut,
   })
 
   let timeSeriesModelsPath = tweened(null, {
     interpolate: interpolateString,
-    duration: 500,
-    delay: 100,
+    duration: 600,
+    delay: 98,
     cubicInOut,
   })
   $: {
@@ -367,12 +367,12 @@
 <svelte:head>
   <style>
     g.group {
-      transition: transform 600ms;
+      transition: transform 700ms;
     }
 
     .group circle {
+      transition: cy 600ms cubic-bezier(0.65, 0, 0.35, 1);
       transition-delay: 100ms;
-      transition: cy 500ms;
     }
   </style>
 </svelte:head>
