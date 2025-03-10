@@ -73,6 +73,10 @@
 
   let line
 
+  let pxPerD = 2
+  let graphWidth
+  let visibleXAxisWidth
+
   // TODO: combine paths into one variable.
   let dailyObservationsPath = tweened(null, {
     interpolate: interpolateString,
@@ -87,13 +91,14 @@
     delay: 100,
     cubicInOut,
   })
-  let pxPerD = 2
   $: {
     if (width) {
       visibleSVGWidth = width * 0.8
       svgHeight = height * 0.65
-      svgWidth = data.length * pxPerD
+      graphWidth = data.length * pxPerD
+      svgWidth = graphWidth + graphPadding.left + graphPadding.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
+      visibleXAxisWidth = visibleSVGWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
 
       if (data.length) {
         filteredData = data.sort((a, b) => b.num_harmed - a.num_harmed).slice(checkboxFilters.lasVegasScale ? 0 : 1)
@@ -153,17 +158,18 @@
             .x(d => xScale(new Date(d.date)))
             .y(d => yScale(d[field]))
         }
-        dailyObservationsPath.set(
-          sliders.dailyObservations
-            ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
-            : line("num_harmed")(filteredData.filter(v => v.num_harmed))
-        )
-        timeSeriesModelsPath.set(
-          sliders.timeSeriesModels
-            ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-            : line("pred_2019")(filteredData.filter(v => v.num_harmed))
-        )
       }
+
+      dailyObservationsPath.set(
+        sliders.dailyObservations
+          ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+          : line("num_harmed")(filteredData.filter(v => v.num_harmed))
+      )
+      timeSeriesModelsPath.set(
+        sliders.timeSeriesModels
+          ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+          : line("pred_2019")(filteredData.filter(v => v.num_harmed))
+      )
     }
   }
 
@@ -195,7 +201,7 @@
 
   let startIndex = 0
   let visibleDates = 0
-  let endIndex = 40
+  let endIndex
   let indexFilteredData = []
   function handleScroll(event) {
     console.log("")
@@ -205,7 +211,7 @@
     scrollX = event.target.scrollLeft
     console.log("event.target.scrollLeft, ", scrollX)
 
-    visibleDates = Math.floor(visibleSVGWidth / pxPerD)
+    visibleDates = Math.floor(visibleXAxisWidth / pxPerD)
     console.log("visibleDates", visibleDates)
 
     startIndex = Math.floor(scrollX / pxPerD)
@@ -213,7 +219,7 @@
 
     let endIndex = startIndex + visibleDates
     console.log("endIndex, ", endIndex)
-    indexFilteredData = filteredData.sort((a, b) => new Date(a.date) - new Date(b.date)).slice(startIndex, endIndex)
+    indexFilteredData = filteredData.slice(startIndex, endIndex)
     console.log("indexFilteredData.length", indexFilteredData.length)
   }
 </script>
@@ -266,29 +272,23 @@
                 {#if sliders.dailyObservations <= 1}
                   {#each indexFilteredData as d}
                     {#if d.num_harmed || d.num_harmed_moving_average}
-                      <g
-                        class="group"
-                        transform="translate({xScale(new Date(d.date))}, {yScale(
+                      <circle
+                        class={!checkboxFilters.displayObservations || sliders.dailyObservations
+                          ? "non-reactive"
+                          : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                        fill={!checkboxFilters.displayObservations || sliders.dailyObservations
+                          ? "transparent"
+                          : "teal"}
+                        r={4}
+                        cx={xScale(new Date(d.date))}
+                        cy={yScale(
                           sliders.dailyObservations && d.num_harmed_moving_average
                             ? d.num_harmed_moving_average
                             : d.num_harmed
-                        )})"
-                      >
-                        <circle
-                          class={!checkboxFilters.displayObservations || sliders.dailyObservations
-                            ? "non-reactive"
-                            : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                          fill={!checkboxFilters.displayObservations || sliders.dailyObservations
-                            ? "transparent"
-                            : "teal"}
-                          r={4}
-                          title={"Date: " +
-                            format(d.date, "yyyy-MM-dd") +
-                            "\nVictims: " +
-                            d.num_harmed.toLocaleString()}
-                          use:tooltip
-                        />
-                      </g>
+                        )}
+                        title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                        use:tooltip
+                      />
                     {/if}
                   {/each}
                 {/if}
@@ -304,22 +304,19 @@
                 {#if sliders.timeSeriesModels <= 1}
                   {#each indexFilteredData as d}
                     {#if d.pred_2019 || d.pred_2019_moving_average}
-                      <g
-                        class="group"
-                        transform="translate({xScale(new Date(d.date))}, {yScale(
+                      <circle
+                        class={!checkboxFilters.displayModels || sliders.timeSeriesModels
+                          ? "non-reactive"
+                          : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                        fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
+                        r={4}
+                        cx={xScale(new Date(d.date))}
+                        cy="{yScale(
                           sliders.timeSeriesModels && d.pred_2019_moving_average
                             ? d.pred_2019_moving_average
                             : d.pred_2019
-                        )})"
-                      >
-                        <circle
-                          class={!checkboxFilters.displayModels || sliders.timeSeriesModels
-                            ? "non-reactive"
-                            : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                          fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
-                          r={4}
-                        />
-                      </g>
+                        )}}"
+                      />
                     {/if}
                   {/each}
                 {/if}
@@ -412,8 +409,8 @@
 <svelte:head>
   <style>
     g.group {
-      /* transition: transform 600ms cubic-bezier(0.65, 0, 0.35, 1); */
-      /* transition-delay: 100ms; */
+      transition: d 600ms cubic-bezier(0.65, 0, 0.35, 1);
+      transition-delay: 100ms;
       /* will-change: transform; */
     }
 
