@@ -73,7 +73,7 @@
 
   let line
 
-  let pxPerD = 2
+  let pxPerD = 0.4
   let graphWidth
   let visibleXAxisWidth
 
@@ -161,14 +161,16 @@
       }
 
       dailyObservationsPath.set(
-        sliders.dailyObservations
-          ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
-          : line("num_harmed")(filteredData.filter(v => v.num_harmed))
+        line("num_harmed")(filteredData.filter(v => v.num_harmed))
+        // sliders.dailyObservations
+        //   ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+        //   : line("num_harmed")(filteredData.filter(v => v.num_harmed))
       )
       timeSeriesModelsPath.set(
-        sliders.timeSeriesModels
-          ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-          : line("pred_2019")(filteredData.filter(v => v.num_harmed))
+        line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+        // sliders.timeSeriesModels
+        //   ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+        //   : line("pred_2019")(filteredData.filter(v => v.num_harmed))
       )
     }
   }
@@ -197,31 +199,31 @@
 
   let sliders = { dailyObservations: 0, timeSeriesModels: 2 }
 
-  let scrollX
+  // let scrollX
 
-  let startIndex = 0
-  let visibleDates = 0
-  let endIndex
-  let indexFilteredData = []
-  function handleScroll(event) {
-    console.log("")
+  // let startIndex = 0
+  // let visibleDates = 0
+  // let endIndex
+  // let indexFilteredData = []
+  // function handleScroll(event) {
+  //   console.log("")
 
-    console.log("event.target.scrollWidth, ", event.target.scrollWidth)
-    console.log("event.target.clientWidth, ", event.target.clientWidth)
-    scrollX = event.target.scrollLeft
-    console.log("event.target.scrollLeft, ", scrollX)
+  //   console.log("event.target.scrollWidth, ", event.target.scrollWidth)
+  //   console.log("event.target.clientWidth, ", event.target.clientWidth)
+  //   scrollX = event.target.scrollLeft
+  //   console.log("event.target.scrollLeft, ", scrollX)
 
-    visibleDates = Math.floor(visibleXAxisWidth / pxPerD)
-    console.log("visibleDates", visibleDates)
+  //   visibleDates = Math.floor(visibleXAxisWidth / pxPerD)
+  //   console.log("visibleDates", visibleDates)
 
-    startIndex = Math.floor(scrollX / pxPerD)
-    console.log("startIndex", startIndex)
+  //   startIndex = Math.floor(scrollX / pxPerD)
+  //   console.log("startIndex", startIndex)
 
-    let endIndex = startIndex + visibleDates
-    console.log("endIndex, ", endIndex)
-    indexFilteredData = filteredData.slice(startIndex, endIndex)
-    console.log("indexFilteredData.length", indexFilteredData.length)
-  }
+  //   let endIndex = startIndex + visibleDates
+  //   console.log("endIndex, ", endIndex)
+  //   indexFilteredData = filteredData.slice(startIndex, endIndex)
+  //   console.log("indexFilteredData.length", indexFilteredData.length)
+  // }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -260,7 +262,6 @@
             class="overflow-scroll w-full border-solid border-black"
             width={visibleSVGWidth}
             style="max-width:{visibleSVGWidth}px"
-            on:scroll={handleScroll}
           >
             <svg
               class="flex flex-col justify-center items-center overflow-x-scroll"
@@ -270,8 +271,8 @@
             >
               <g transform="translate({graphPadding.left}, {0})">
                 {#if sliders.dailyObservations <= 1}
-                  {#each indexFilteredData as d}
-                    {#if d.num_harmed || d.num_harmed_moving_average}
+                  {#each filteredData as d}
+                    {#if d.num_harmed}
                       <circle
                         class={!checkboxFilters.displayObservations || sliders.dailyObservations
                           ? "non-reactive"
@@ -282,9 +283,7 @@
                         r={4}
                         cx={xScale(new Date(d.date))}
                         cy={yScale(
-                          sliders.dailyObservations && d.num_harmed_moving_average
-                            ? d.num_harmed_moving_average
-                            : d.num_harmed
+                       d.num_harmed
                         )}
                         title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
                         use:tooltip
@@ -302,8 +301,8 @@
                   d={$dailyObservationsPath}
                 />
                 {#if sliders.timeSeriesModels <= 1}
-                  {#each indexFilteredData as d}
-                    {#if d.pred_2019 || d.pred_2019_moving_average}
+                  {#each filteredData as d}
+                    {#if d.pred_2019}
                       <circle
                         class={!checkboxFilters.displayModels || sliders.timeSeriesModels
                           ? "non-reactive"
@@ -312,9 +311,7 @@
                         r={4}
                         cx={xScale(new Date(d.date))}
                         cy="{yScale(
-                          sliders.timeSeriesModels && d.pred_2019_moving_average
-                            ? d.pred_2019_moving_average
-                            : d.pred_2019
+                          d.pred_2019
                         )}}"
                       />
                     {/if}
