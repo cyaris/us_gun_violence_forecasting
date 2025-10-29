@@ -134,7 +134,7 @@
     { value: "Past - Present", label: "Past - Present" },
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
-  let selectValue = { value: "Past - Present", label: "Past - Present" }
+  let selectValue = selectItems[0]
 
   let sliderItems = [
     { value: 0, label: 0 },
