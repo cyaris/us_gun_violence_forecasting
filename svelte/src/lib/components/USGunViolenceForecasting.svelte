@@ -11,35 +11,6 @@
 
   console.log(data)
 
-  // let data
-  // fetch(
-  //   "https://raw.githubusercontent.com/cyaris/us_gun_violence_forecasting/refs/heads/master/Web%20Interface/assets/csv/us_gun_violence_forecasting/us_harmed_victim_forecast_data.csv"
-  // )
-  //   .then(response => response.text())
-  //   .then(csvText => {
-  //     let rows = csvText.trim().split("\n")
-  //     let columns = rows.shift().split(",")
-  //     console.log("here: ", columns)
-
-  //     data = rows.map(row => {
-  //       let values = row.split(",")
-  //       return columns.reduce((row, column, i) => {
-  //         row[column] =
-  //           column == "date"
-  //             ? new Date(values[i])
-  //             : ["num_harmed", "year"].includes(column)
-  //               ? parseInt(values[i])
-  //               : parseFloat(values[i])
-  //         row.index = i
-  //         return row
-  //       }, {})
-  //     })
-
-  //     // console.log('data2', data2)
-  //     console.log(data)
-  //   })
-  //   .catch(error => console.error("Error fetching CSV:", error))
-
   let width
   let height
   let svgWidth
@@ -60,16 +31,8 @@
   // the font size for the x tick labels.
   let xTickLabelSize = 14
   let xAxisHeight = graphPadding.bottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
-  // minor margin adjustments for fitting elements within the svg.
-  // let svgMargin = {
-  //   top: 1,
-  //   right: 1,
-  //   bottom: 1,
-  //   left: 0,
-  // }
 
   let filteredData
-  // let totalDays
 
   let line
 
@@ -113,7 +76,6 @@
 
         let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.dailyObservations].label)
         let timeSeriesModels = getMovingAverage("pred_2019", sliderItems[sliders.timeSeriesModels].label)
-        // console.log("observationsMovingAverage: ", observationsMovingAverage)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
@@ -121,19 +83,12 @@
           d.pred_2019_moving_average = timeSeriesModels[i]
         })
 
-        // totalDays =
-        //   (Math.max(...filteredData.map(v => new Date(v.date).getTime())) -
-        //     Math.min(...filteredData.map(v => new Date(v.date).getTime()))) /
-        //   (1000 * 60 * 60 * 24)
-        // console.log("total Days: " + totalDays)
-
         xScale = d3.scaleTime(
           d3.extent(filteredData, d => new Date(d.date)),
           [0, xAxisWidth]
         )
 
         xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
-        // console.log("total xticks: " + xScale.ticks().length)
 
         yScale = d3.scaleLinear(
           [
@@ -160,18 +115,8 @@
         }
       }
 
-      dailyObservationsPath.set(
-        line("num_harmed")(filteredData.filter(v => v.num_harmed))
-        // sliders.dailyObservations
-        //   ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
-        //   : line("num_harmed")(filteredData.filter(v => v.num_harmed))
-      )
-      timeSeriesModelsPath.set(
-        line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-        // sliders.timeSeriesModels
-        //   ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-        //   : line("pred_2019")(filteredData.filter(v => v.num_harmed))
-      )
+      dailyObservationsPath.set(line("num_harmed")(filteredData.filter(v => v.num_harmed)))
+      timeSeriesModelsPath.set(line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average)))
     }
   }
 
@@ -198,32 +143,6 @@
   }
 
   let sliders = { dailyObservations: 0, timeSeriesModels: 2 }
-
-  // let scrollX
-
-  // let startIndex = 0
-  // let visibleDates = 0
-  // let endIndex
-  // let indexFilteredData = []
-  // function handleScroll(event) {
-  //   console.log("")
-
-  //   console.log("event.target.scrollWidth, ", event.target.scrollWidth)
-  //   console.log("event.target.clientWidth, ", event.target.clientWidth)
-  //   scrollX = event.target.scrollLeft
-  //   console.log("event.target.scrollLeft, ", scrollX)
-
-  //   visibleDates = Math.floor(visibleXAxisWidth / pxPerD)
-  //   console.log("visibleDates", visibleDates)
-
-  //   startIndex = Math.floor(scrollX / pxPerD)
-  //   console.log("startIndex", startIndex)
-
-  //   let endIndex = startIndex + visibleDates
-  //   console.log("endIndex, ", endIndex)
-  //   indexFilteredData = filteredData.slice(startIndex, endIndex)
-  //   console.log("indexFilteredData.length", indexFilteredData.length)
-  // }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -282,9 +201,7 @@
                           : "teal"}
                         r={4}
                         cx={xScale(new Date(d.date))}
-                        cy={yScale(
-                       d.num_harmed
-                        )}
+                        cy={yScale(d.num_harmed)}
                         title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
                         use:tooltip
                       />
@@ -310,9 +227,7 @@
                         fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
                         r={4}
                         cx={xScale(new Date(d.date))}
-                        cy="{yScale(
-                          d.pred_2019
-                        )}}"
+                        cy="{yScale(d.pred_2019)}}"
                       />
                     {/if}
                   {/each}
