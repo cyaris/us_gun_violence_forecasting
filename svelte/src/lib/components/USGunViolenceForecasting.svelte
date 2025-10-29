@@ -115,8 +115,18 @@
         }
       }
 
-      dailyObservationsPath.set(line("num_harmed")(filteredData.filter(v => v.num_harmed)))
-      timeSeriesModelsPath.set(line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average)))
+      dailyObservationsPath.set(
+        // line("num_harmed")(filteredData.filter(v => v.num_harmed))
+        sliders.dailyObservations
+          ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
+          : line("num_harmed")(filteredData.filter(v => v.num_harmed))
+      )
+      timeSeriesModelsPath.set(
+        line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+        // sliders.timeSeriesModels
+        //   ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+        //   : line("pred_2019")(filteredData.filter(v => v.num_harmed))
+      )
     }
   }
 
