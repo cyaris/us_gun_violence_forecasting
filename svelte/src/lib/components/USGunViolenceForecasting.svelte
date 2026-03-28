@@ -237,7 +237,7 @@
                         fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
                         r={4}
                         cx={xScale(new Date(d.date))}
-                        cy="{yScale(d.pred_2019)}}"
+                        cy={yScale(d.pred_2019)}
                       />
                     {/if}
                   {/each}
