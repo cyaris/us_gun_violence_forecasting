@@ -30,6 +30,7 @@
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
   let xTickLabelSize = 14
+
   let xAxisHeight = graphPadding.bottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
 
   let filteredData
@@ -41,7 +42,7 @@
   let visibleXAxisWidth
 
   // TODO: combine paths into one variable.
-  let dailyObservationsPath = tweened(null, {
+  let observationsPath = tweened(null, {
     interpolate: interpolateString,
     duration: 600,
     delay: 100,
@@ -54,6 +55,7 @@
     delay: 100,
     cubicInOut,
   })
+
   $: {
     if (width) {
       visibleSVGWidth = width * 0.8
@@ -74,7 +76,7 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.dailyObservations].label)
+        let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.observations].label)
         let timeSeries = getMovingAverage("pred_2019", sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
@@ -94,9 +96,9 @@
           [
             0,
             d3.max(filteredData, d =>
-              sliders.dailyObservations && sliders.timeSeries
+              sliders.observations && sliders.timeSeries
                 ? Math.max(d.num_harmed_moving_average, d.pred_2019_moving_average)
-                : sliders.dailyObservations
+                : sliders.observations
                   ? Math.max(d.num_harmed_moving_average, d.pred_2019)
                   : sliders.timeSeries
                     ? Math.max(d.num_harmed, d.pred_2019_moving_average)
@@ -115,12 +117,13 @@
         }
       }
 
-      dailyObservationsPath.set(
+      observationsPath.set(
         // line("num_harmed")(filteredData.filter(v => v.num_harmed))
-        sliders.dailyObservations
+        sliders.observations
           ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
           : line("num_harmed")(filteredData.filter(v => v.num_harmed))
       )
+
       timeSeriesPath.set(
         line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
         // sliders.timeSeries
@@ -134,6 +137,7 @@
     { value: "Past - Present", label: "Past - Present" },
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
+
   let selectValue = selectItems[0]
 
   let sliderItems = [
@@ -152,7 +156,7 @@
     displayModels: true,
   }
 
-  let sliders = { dailyObservations: 0, timeSeries: 2 }
+  let sliders = { observations: 0, timeSeries: 2 }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -199,16 +203,14 @@
               id="graph"
             >
               <g transform="translate({graphPadding.left}, {0})">
-                {#if sliders.dailyObservations <= 1}
+                {#if sliders.observations <= 1}
                   {#each filteredData as d}
                     {#if d.num_harmed}
                       <circle
-                        class={!checkboxFilters.displayObservations || sliders.dailyObservations
+                        class={!checkboxFilters.displayObservations || sliders.observations
                           ? "non-reactive"
                           : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                        fill={!checkboxFilters.displayObservations || sliders.dailyObservations
-                          ? "transparent"
-                          : "teal"}
+                        fill={!checkboxFilters.displayObservations || sliders.observations ? "transparent" : "teal"}
                         r={4}
                         cx={xScale(new Date(d.date))}
                         cy={yScale(d.num_harmed)}
@@ -219,13 +221,13 @@
                   {/each}
                 {/if}
                 <path
-                  class={checkboxFilters.displayObservations && sliders.dailyObservations
+                  class={checkboxFilters.displayObservations && sliders.observations
                     ? "hover:stroke-4 hover:stroke-teal"
                     : "non-reactive"}
                   fill="transparent"
-                  stroke={checkboxFilters.displayObservations && sliders.dailyObservations ? "teal" : "transparent"}
+                  stroke={checkboxFilters.displayObservations && sliders.observations ? "teal" : "transparent"}
                   stroke-width={3}
-                  d={$dailyObservationsPath}
+                  d={$observationsPath}
                 />
                 {#if sliders.timeSeries <= 1}
                   {#each filteredData as d}
@@ -299,14 +301,14 @@
                 wrapperClasses="w-full"
                 title="Daily Observations"
                 items={sliderItems}
-                value={sliders.dailyObservations}
+                value={sliders.observations}
                 step={1}
                 min={0}
                 max={sliderItems.length - 1}
                 float={true}
                 labels={true}
                 middle={true}
-                on:valueChange={({ detail: e }) => (sliders.dailyObservations = e.d)}
+                on:valueChange={({ detail: e }) => (sliders.observations = e.d)}
               />
               <Slider
                 wrapperClasses="w-full"
