@@ -48,7 +48,7 @@
     cubicInOut,
   })
 
-  let timeSeriesModelsPath = tweened(null, {
+  let timeSeriesPath = tweened(null, {
     interpolate: interpolateString,
     duration: 600,
     delay: 100,
@@ -75,12 +75,12 @@
         }
 
         let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.dailyObservations].label)
-        let timeSeriesModels = getMovingAverage("pred_2019", sliderItems[sliders.timeSeriesModels].label)
+        let timeSeries = getMovingAverage("pred_2019", sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
           d.num_harmed_moving_average = observationsMovingAverage[i]
-          d.pred_2019_moving_average = timeSeriesModels[i]
+          d.pred_2019_moving_average = timeSeries[i]
         })
 
         xScale = d3.scaleTime(
@@ -94,11 +94,11 @@
           [
             0,
             d3.max(filteredData, d =>
-              sliders.dailyObservations && sliders.timeSeriesModels
+              sliders.dailyObservations && sliders.timeSeries
                 ? Math.max(d.num_harmed_moving_average, d.pred_2019_moving_average)
                 : sliders.dailyObservations
                   ? Math.max(d.num_harmed_moving_average, d.pred_2019)
-                  : sliders.timeSeriesModels
+                  : sliders.timeSeries
                     ? Math.max(d.num_harmed, d.pred_2019_moving_average)
                     : Math.max(d.num_harmed, d.pred_2019)
             ),
@@ -121,9 +121,9 @@
           ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
           : line("num_harmed")(filteredData.filter(v => v.num_harmed))
       )
-      timeSeriesModelsPath.set(
+      timeSeriesPath.set(
         line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-        // sliders.timeSeriesModels
+        // sliders.timeSeries
         //   ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
         //   : line("pred_2019")(filteredData.filter(v => v.num_harmed))
       )
@@ -152,7 +152,7 @@
     displayModels: true,
   }
 
-  let sliders = { dailyObservations: 0, timeSeriesModels: 2 }
+  let sliders = { dailyObservations: 0, timeSeries: 2 }
 </script>
 
 <div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
@@ -227,14 +227,14 @@
                   stroke-width={3}
                   d={$dailyObservationsPath}
                 />
-                {#if sliders.timeSeriesModels <= 1}
+                {#if sliders.timeSeries <= 1}
                   {#each filteredData as d}
                     {#if d.pred_2019}
                       <circle
-                        class={!checkboxFilters.displayModels || sliders.timeSeriesModels
+                        class={!checkboxFilters.displayModels || sliders.timeSeries
                           ? "non-reactive"
                           : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                        fill={!checkboxFilters.displayModels || sliders.timeSeriesModels ? "transparent" : "orange"}
+                        fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
                         r={4}
                         cx={xScale(new Date(d.date))}
                         cy={yScale(d.pred_2019)}
@@ -243,13 +243,13 @@
                   {/each}
                 {/if}
                 <path
-                  class={checkboxFilters.displayModels && sliders.timeSeriesModels
+                  class={checkboxFilters.displayModels && sliders.timeSeries
                     ? "hover:stroke-4 hover:stroke-orange"
                     : "non-reactive"}
                   fill="transparent"
-                  stroke={checkboxFilters.displayModels && sliders.timeSeriesModels ? "orange" : "transparent"}
+                  stroke={checkboxFilters.displayModels && sliders.timeSeries ? "orange" : "transparent"}
                   stroke-width={3}
-                  d={$timeSeriesModelsPath}
+                  d={$timeSeriesPath}
                 />
               </g>
               <g
@@ -312,14 +312,14 @@
                 wrapperClasses="w-full"
                 title="Time Series Models"
                 items={sliderItems}
-                value={sliders.timeSeriesModels}
+                value={sliders.timeSeries}
                 step={1}
                 min={0}
                 max={sliderItems.length - 1}
                 float={true}
                 labels={true}
                 middle={true}
-                on:valueChange={({ detail: e }) => (sliders.timeSeriesModels = sliderItems[e.d].value)}
+                on:valueChange={({ detail: e }) => (sliders.timeSeries = sliderItems[e.d].value)}
               />
             </div>
           </div>
