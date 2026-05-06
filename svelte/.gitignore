@@ -5,5 +5,3 @@ build
 dist
 node_modules
 package
-
-src/lib/static/data.json
