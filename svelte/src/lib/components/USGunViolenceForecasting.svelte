@@ -5,7 +5,7 @@
   import sma from "sma"
   import { tweened } from "svelte/motion"
   import { cubicInOut } from "svelte/easing"
-  import { CheckboxFilter, InfoTooltip, Select, Slider, Text } from "svelte-lib/components"
+  import { CheckboxFilter, InfoIcon, InfoTooltip, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
   import data from "../static/data.json"
 
@@ -468,23 +468,7 @@
               >
                 Total Victims
               </text>
-              <g class="group cursor-help" use:tooltip title={yAxisTooltip}>
-                <circle
-                  class="fill-theme-8 stroke-theme-8 group-hover:fill-white"
-                  cx={12}
-                  cy={(graphPadding.top + yScale(0)) / 2 - 78}
-                  r={8}
-                />
-                <text
-                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-sm"
-                  text-anchor="middle"
-                  x={12}
-                  y={(graphPadding.top + yScale(0)) / 2 - 78}
-                  dy="0.34em"
-                >
-                  i
-                </text>
-              </g>
+              <InfoIcon title={yAxisTooltip} cx={12} cy={(graphPadding.top + yScale(0)) / 2 - 78} />
               <text
                 class="non-reactive fill-chart-1 text-lg"
                 text-anchor="middle"
@@ -493,23 +477,7 @@
               >
                 Date
               </text>
-              <g class="group cursor-help" use:tooltip title={xAxisTooltip}>
-                <circle
-                  class="fill-theme-8 stroke-theme-8 group-hover:fill-white"
-                  cx={graphPadding.left + xAxisWidth / 2 + 32}
-                  cy={svgHeight - 20}
-                  r={8}
-                />
-                <text
-                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-sm"
-                  text-anchor="middle"
-                  x={graphPadding.left + xAxisWidth / 2 + 32}
-                  y={svgHeight - 20}
-                  dy="0.34em"
-                >
-                  i
-                </text>
-              </g>
+              <InfoIcon title={xAxisTooltip} cx={graphPadding.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
               <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
                 {#each legendItems as item, i}
                   <g transform="translate(0, {i * 16})">
