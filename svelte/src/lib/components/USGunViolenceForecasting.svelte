@@ -20,16 +20,17 @@
   let yScale
   let xTickLength
   let xAxisWidth
-  // the vertical distance between the bottom border and the x axis labels.
-  let graphPadding = { top: 50, right: 50, bottom: 17.5, left: 68 }
+  // margins around the plot, matching the proportions of the original d3 project.
+  let graphPadding = { top: 20, right: 20, bottom: 65, left: 65 }
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
-  let xTickLabelSize = 14
+  let xTickLabelSize = 12
 
-  let xAxisHeight = graphPadding.bottom + xTickVerticalOffset + xTickHeight + xTickLabelSize
+  // the full bottom band holding the x axis ticks, year labels, and "Date" title.
+  let xAxisHeight = graphPadding.bottom
 
   let filteredData
 
@@ -57,8 +58,8 @@
   $: {
     if (width) {
       visibleSVGWidth = width * 0.8
-      svgHeight = height * 0.65
       graphWidth = data.length * pxPerD
+      svgHeight = height * 0.65
       svgWidth = graphWidth + graphPadding.left + graphPadding.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
       visibleXAxisWidth = visibleSVGWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
@@ -154,13 +155,13 @@
     displayModels: true,
   }
 
-  let sliders = { observations: 3, timeSeries: 0 }
+  let sliders = { observations: 0, timeSeries: 2 }
 
   let maxYearObserved = Math.max(...data.filter(d => d.non_observation != 1).map(d => d.year))
   let numFuturePredDays = data.filter(d => d.non_observation == 1).length
   let firstFutureDate = data.find(d => d.non_observation == 1).date
 
-  let hoverYear = 2016
+  let hoverYear = null
 
   $: legendItems = [
     {
@@ -309,7 +310,7 @@
             deselection={checkboxFilters.displayModels ? [] : [true]}
             on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
           />
-          <span class="flex flex-col items-center text-lg {comparing ? 'italic' : ''}">
+          <span class="flex flex-col items-center text-sm {comparing ? 'italic' : ''}">
             {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
           </span>
         </div>
@@ -449,7 +450,7 @@
                   {/each}
                 {/if}
               </g>
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
+              <g class="non-reactive text-xs" transform="translate({graphPadding.left}, {0})">
                 <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
                 {#each yScale.ticks() as yTick}
                   <g transform="translate(0, {yScale(yTick)})">
@@ -461,9 +462,9 @@
                 {/each}
               </g>
               <text
-                class="non-reactive fill-chart-1 text-base"
+                class="non-reactive fill-chart-1 text-lg"
                 text-anchor="middle"
-                transform="translate(14, {(graphPadding.top + yScale(0)) / 2}) rotate(-90)"
+                transform="translate(16, {(graphPadding.top + yScale(0)) / 2}) rotate(-90)"
               >
                 Total Victims
               </text>
@@ -471,45 +472,45 @@
                 <circle
                   class="fill-dmed-8 stroke-dmed-8 group-hover:fill-white"
                   cx={12}
-                  cy={(graphPadding.top + yScale(0)) / 2 - 59}
+                  cy={(graphPadding.top + yScale(0)) / 2 - 78}
                   r={8}
                 />
                 <text
                   class="fill-white group-hover:fill-dmed-8 pointer-events-none font-bold italic text-xs"
                   text-anchor="middle"
                   x={12}
-                  y={(graphPadding.top + yScale(0)) / 2 - 59}
+                  y={(graphPadding.top + yScale(0)) / 2 - 78}
                   dy="0.34em"
                 >
                   i
                 </text>
               </g>
               <text
-                class="non-reactive fill-chart-1 text-base"
+                class="non-reactive fill-chart-1 text-lg"
                 text-anchor="middle"
                 x={graphPadding.left + xAxisWidth / 2}
-                y={svgHeight - 2}
+                y={svgHeight - 14}
               >
                 Date
               </text>
               <g class="group cursor-help" use:tooltip title={xAxisTooltip}>
                 <circle
                   class="fill-dmed-8 stroke-dmed-8 group-hover:fill-white"
-                  cx={graphPadding.left + xAxisWidth / 2 + 30}
-                  cy={svgHeight - 9}
+                  cx={graphPadding.left + xAxisWidth / 2 + 32}
+                  cy={svgHeight - 20}
                   r={8}
                 />
                 <text
                   class="fill-white group-hover:fill-dmed-8 pointer-events-none font-bold italic text-xs"
                   text-anchor="middle"
-                  x={graphPadding.left + xAxisWidth / 2 + 30}
-                  y={svgHeight - 9}
+                  x={graphPadding.left + xAxisWidth / 2 + 32}
+                  y={svgHeight - 20}
                   dy="0.34em"
                 >
                   i
                 </text>
               </g>
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, 12)">
+              <g class="non-reactive text-xs" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
                 {#each legendItems as item, i}
                   <g transform="translate(0, {i * 16})">
                     {#if !item.visible}
@@ -523,7 +524,7 @@
                   </g>
                 {/each}
               </g>
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
+              <g class="non-reactive text-xs" transform="translate({graphPadding.left}, {yScale(0)})">
                 <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
                 {#each xScale.ticks() as xTick}
                   <g transform="translate({xScale(xTick)}, {0})">
@@ -546,8 +547,8 @@
             </svg>
           </div>
         {/if}
-        <div class="grid grid-cols-2" width={visibleSVGWidth}>
-          <div class="mt-9">
+        <div class="flex items-start gap-10 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
+          <div>
             <div class="mb-2 flex items-center gap-1.5">
               Prediction Timeframe
               <InfoTooltip title={timeframeTooltip} />
@@ -562,28 +563,28 @@
                 on:valueChange={({ detail: e }) => (selectValue = e.d)}
               />
             </div>
-            <table class="mt-6 text-sm border-collapse">
-              <thead>
-                <tr>
-                  <th class="text-left"><InfoTooltip title={metricsTooltip} /></th>
-                  <th class="px-3 font-medium text-right" style="color:orange">Overall Model</th>
-                  <th class="px-3 font-medium text-right" style="color:#00c07f">Comparative Model</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each metricRows as row}
-                  <tr>
-                    <td class="pr-3 whitespace-nowrap">{row.label}</td>
-                    <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                    <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
           </div>
-          <div>
-            <span class="flex flex-col text-center text-xl font-medium mt-7">Moving Averages</span>
-            <div class="grid grid-cols-2 mt-5">
+          <table class="text-xs border-collapse">
+            <thead>
+              <tr>
+                <th class="text-left"><InfoTooltip title={metricsTooltip} /></th>
+                <th class="px-3 font-medium text-right" style="color:orange">Overall Model</th>
+                <th class="px-3 font-medium text-right" style="color:#00c07f">Comparative Model</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each metricRows as row}
+                <tr>
+                  <td class="pr-3 whitespace-nowrap">{row.label}</td>
+                  <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                  <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+          <div class="grow">
+            <span class="flex flex-col text-center text-base font-medium">Moving Averages</span>
+            <div class="grid grid-cols-2 gap-8 mt-4">
               <div>
                 <div class="flex justify-center items-center gap-1.5">
                   Daily Observations
