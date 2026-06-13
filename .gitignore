@@ -1,0 +1,30 @@
+# hidden files.
+**/.DS_Store
+
+# hidden folders.
+**/dist
+**/.git
+**/.svelte-kit
+**/.vscode
+**/.ipynb_checkpoints
+
+**/__pycache__
+**/*.egg-info
+
+# all .env except for .env.example.
+**/.env
+**/.env.*
+**/!.env.example
+
+!**/.gitkeep
+
+**/build
+**/node_modules
+**/package
+
+# files for PNPM, and YARN.
+**/pnpm-lock.yaml
+**/yarn.lock
+
+# user files.
+**/config
