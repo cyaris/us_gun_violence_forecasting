@@ -283,335 +283,335 @@
   }
 </script>
 
-<div class="flex flex-col w-full h-screen items-center" bind:clientWidth={width} bind:clientHeight={height}>
-  <div class="flex flex-col w-full h-full justify-center items-center mb-10">
-    <div class="lg:hidden px-8 text-center text-lg">This visualization is best viewed on a larger screen.</div>
-    <div class="hidden lg:block">
-      {#if filteredData}
-        <div class="flex flex-col self-start mt-4 mb-3 text-sm">
-          <div class="flex items-center gap-1.5">
-            <CheckboxFilter
-              labelClasses="font-medium"
-              label="Scale to Include the Las Vegas Shooting"
-              value={checkboxFilters.lasVegasScale}
-              selection={checkboxFilters.lasVegasScale ? [true] : []}
-              deselection={checkboxFilters.lasVegasScale ? [] : [true]}
-              on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
-            />
-            <InfoTooltip title={lasVegasTooltip} />
-          </div>
+<div
+  class="flex flex-col w-full h-screen justify-center items-center mb-10"
+  bind:clientWidth={width}
+  bind:clientHeight={height}
+>
+  <div class="lg:hidden px-8 text-center text-lg">This visualization is best viewed on a larger screen.</div>
+  <div class="hidden lg:block">
+    {#if filteredData}
+      <div class="flex flex-col self-start mt-4 mb-3 text-sm">
+        <div class="flex items-center gap-1.5">
           <CheckboxFilter
             labelClasses="font-medium"
-            label="Display Daily Observations"
-            value={checkboxFilters.displayObservations}
-            selection={checkboxFilters.displayObservations ? [true] : []}
-            deselection={checkboxFilters.displayObservations ? [] : [true]}
-            on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
+            label="Scale to Include the Las Vegas Shooting"
+            value={checkboxFilters.lasVegasScale}
+            selection={checkboxFilters.lasVegasScale ? [true] : []}
+            deselection={checkboxFilters.lasVegasScale ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
           />
-          <CheckboxFilter
-            labelClasses="font-medium"
-            label="Display Time Series Models"
-            value={checkboxFilters.displayModels}
-            selection={checkboxFilters.displayModels ? [true] : []}
-            deselection={checkboxFilters.displayModels ? [] : [true]}
-            on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
-          />
-          <span class="flex flex-col items-center text-sm {comparing ? 'italic' : ''}">
-            {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
-          </span>
+          <InfoTooltip title={lasVegasTooltip} />
         </div>
-        {#if svgWidth && svgHeight}
-          <div
-            class="overflow-scroll w-full border-solid border-black"
-            width={visibleSVGWidth}
-            style="max-width:{visibleSVGWidth}px"
+        <CheckboxFilter
+          labelClasses="font-medium"
+          label="Display Daily Observations"
+          value={checkboxFilters.displayObservations}
+          selection={checkboxFilters.displayObservations ? [true] : []}
+          deselection={checkboxFilters.displayObservations ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
+        />
+        <CheckboxFilter
+          labelClasses="font-medium"
+          label="Display Time Series Models"
+          value={checkboxFilters.displayModels}
+          selection={checkboxFilters.displayModels ? [true] : []}
+          deselection={checkboxFilters.displayModels ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
+        />
+        <span class="flex flex-col items-center text-sm {comparing ? 'italic' : ''}">
+          {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
+        </span>
+      </div>
+      {#if svgWidth && svgHeight}
+        <div
+          class="overflow-scroll w-full border-solid border-black"
+          width={visibleSVGWidth}
+          style="max-width:{visibleSVGWidth}px"
+        >
+          <svg
+            class="flex flex-col justify-center items-center overflow-x-scroll"
+            width={svgWidth}
+            height={svgHeight}
+            id="graph"
           >
-            <svg
-              class="flex flex-col justify-center items-center overflow-x-scroll"
-              width={svgWidth}
-              height={svgHeight}
-              id="graph"
+            <g
+              bind:this={plotGroup}
+              transform="translate({graphPadding.left}, {0})"
+              on:mousemove={handleHover}
+              on:mouseleave={() => (hoverYear = null)}
             >
-              <g
-                bind:this={plotGroup}
-                transform="translate({graphPadding.left}, {0})"
-                on:mousemove={handleHover}
-                on:mouseleave={() => (hoverYear = null)}
-              >
-                <rect
-                  x={0}
-                  y={graphPadding.top}
-                  width={xAxisWidth}
-                  height={yScale(0) - graphPadding.top}
-                  fill="transparent"
-                />
-                {#if comparing}
-                  <rect
-                    class="non-reactive"
-                    x={0}
-                    y={graphPadding.top}
-                    width={Math.min(xScale(new Date(`${hoverYear + 1}-01-01`)), xAxisWidth)}
-                    height={yScale(0) - graphPadding.top}
-                    fill="black"
-                    fill-opacity={0.04}
-                    stroke="black"
-                    stroke-width={1}
-                  />
-                {/if}
+              <rect
+                x={0}
+                y={graphPadding.top}
+                width={xAxisWidth}
+                height={yScale(0) - graphPadding.top}
+                fill="transparent"
+              />
+              {#if comparing}
                 <rect
                   class="non-reactive"
-                  x={xScale(new Date(firstFutureDate))}
+                  x={0}
                   y={graphPadding.top}
-                  width={xAxisWidth - xScale(new Date(firstFutureDate))}
+                  width={Math.min(xScale(new Date(`${hoverYear + 1}-01-01`)), xAxisWidth)}
                   height={yScale(0) - graphPadding.top}
                   fill="black"
-                  opacity={0.06}
+                  fill-opacity={0.04}
+                  stroke="black"
+                  stroke-width={1}
                 />
-                <line
-                  class="non-reactive stroke-black"
-                  stroke-dasharray="4 4"
-                  x1={xScale(new Date(firstFutureDate))}
-                  x2={xScale(new Date(firstFutureDate))}
-                  y1={graphPadding.top}
-                  y2={yScale(0)}
-                />
-                <text
-                  class="non-reactive fill-chart-1 text-sm italic"
-                  x={(xScale(new Date(firstFutureDate)) + xAxisWidth) / 2}
-                  y={graphPadding.top + 14}
-                  text-anchor="middle"
-                >
-                  Next {numFuturePredDays.toLocaleString()} days...
-                </text>
-                {#if sliders.observations <= 1}
-                  {#each filteredData as d}
-                    {#if d.num_harmed}
-                      <circle
-                        class={!checkboxFilters.displayObservations || sliders.observations
-                          ? "non-reactive"
-                          : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                        fill={!checkboxFilters.displayObservations || sliders.observations ? "transparent" : "teal"}
-                        r={4}
-                        cx={xScale(new Date(d.date))}
-                        cy={yScale(d.num_harmed)}
-                        title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                        use:tooltip
-                      />
-                    {/if}
-                  {/each}
-                {/if}
-                <path
-                  class={checkboxFilters.displayObservations && sliders.observations
-                    ? "hover:stroke-4 hover:stroke-teal"
-                    : "non-reactive"}
-                  fill="transparent"
-                  stroke={checkboxFilters.displayObservations && sliders.observations ? "teal" : "transparent"}
-                  stroke-width={3}
-                  d={$observationsPath}
-                />
-                {#if sliders.timeSeries <= 1}
-                  {#each filteredData as d}
-                    {#if d.pred_2019}
-                      <circle
-                        class={!checkboxFilters.displayModels || sliders.timeSeries
-                          ? "non-reactive"
-                          : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                        fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
-                        r={4}
-                        cx={xScale(new Date(d.date))}
-                        cy={yScale(d.pred_2019)}
-                      />
-                    {/if}
-                  {/each}
-                {/if}
-                <path
-                  class={checkboxFilters.displayModels && sliders.timeSeries
-                    ? "hover:stroke-4 hover:stroke-orange"
-                    : "non-reactive"}
-                  fill="transparent"
-                  stroke={checkboxFilters.displayModels && sliders.timeSeries ? "orange" : "transparent"}
-                  stroke-width={3}
-                  d={$timeSeriesPath}
-                />
-                {#if comparing && checkboxFilters.displayModels && sliders.timeSeries}
-                  <path
-                    class="non-reactive"
-                    fill="transparent"
-                    stroke="#00c07f"
-                    stroke-width={3}
-                    opacity={0.9}
-                    d={comparativePath}
-                  />
-                {:else if comparing && checkboxFilters.displayModels}
-                  {#each filteredData as d}
-                    {#if d[`pred_${hoverYear}`]}
-                      <circle
-                        class="non-reactive"
-                        fill="#00c07f"
-                        r={4}
-                        cx={xScale(new Date(d.date))}
-                        cy={yScale(d[`pred_${hoverYear}`])}
-                      />
-                    {/if}
-                  {/each}
-                {/if}
-              </g>
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
-                <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
-                {#each yScale.ticks() as yTick}
-                  <g transform="translate(0, {yScale(yTick)})">
-                    <line class="stroke-chart-1 opacity-70" x1={-xTickHeight} x2={0} />
-                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
-                      {yTick.toLocaleString()}
-                    </text>
-                  </g>
-                {/each}
-              </g>
-              <text
-                class="non-reactive fill-chart-1 text-lg"
-                text-anchor="middle"
-                transform="translate(16, {(graphPadding.top + yScale(0)) / 2}) rotate(-90)"
-              >
-                Total Victims
-              </text>
-              <InfoIcon title={yAxisTooltip} cx={12} cy={(graphPadding.top + yScale(0)) / 2 - 78} />
-              <text
-                class="non-reactive fill-chart-1 text-lg"
-                text-anchor="middle"
-                x={graphPadding.left + xAxisWidth / 2}
-                y={svgHeight - 14}
-              >
-                Date
-              </text>
-              <InfoIcon title={xAxisTooltip} cx={graphPadding.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
-                {#each legendItems as item, i}
-                  <g transform="translate(0, {i * 16})">
-                    {#if !item.visible}
-                      <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
-                    {:else if item.aggregated}
-                      <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
-                    {:else}
-                      <circle fill={item.color} cx={8} cy={0} r={4} />
-                    {/if}
-                    <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
-                  </g>
-                {/each}
-              </g>
-              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
-                <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-                {#each xScale.ticks() as xTick}
-                  <g transform="translate({xScale(xTick)}, {0})">
-                    <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
-                    <Text
-                      classes="text-center"
-                      overflowBody={false}
-                      wrapBody={false}
-                      x={-xTickLength / 2}
-                      width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                      height={xAxisHeight}
-                      bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                      bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                        ? String(xTick.getFullYear())
-                        : ""}
-                    />
-                  </g>
-                {/each}
-              </g>
-            </svg>
-          </div>
-        {/if}
-        <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
-          <div>
-            <div class="mb-2 flex items-center gap-1.5 font-medium">
-              Prediction Timeframe
-              <InfoTooltip title={timeframeTooltip} />
-            </div>
-            <div class="w-36">
-              <Select
-                items={selectItems}
-                value={selectValue}
-                clearable={false}
-                centeredValue={true}
-                centeredItems={true}
-                on:valueChange={({ detail: e }) => (selectValue = e.d)}
+              {/if}
+              <rect
+                class="non-reactive"
+                x={xScale(new Date(firstFutureDate))}
+                y={graphPadding.top}
+                width={xAxisWidth - xScale(new Date(firstFutureDate))}
+                height={yScale(0) - graphPadding.top}
+                fill="black"
+                opacity={0.06}
               />
-            </div>
-          </div>
-          <table class="border-collapse">
-            <thead>
-              <tr>
-                <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
-                  <div class="flex items-center gap-1.5 font-medium">
-                    Metrics
-                    <InfoTooltip title={metricsTooltip} />
-                  </div>
-                </th>
-                <th
-                  class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
-                  >Overall Model</th
-                >
-                <th
-                  class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
-                  >Comparative Model</th
-                >
-              </tr>
-            </thead>
-            <tbody>
-              {#each metricRows as row}
-                <tr>
-                  <td class="pr-3 whitespace-nowrap"
-                    >{row.label}{#if row.rounded}{" "}<em>(Rounded)</em>{/if}</td
-                  >
-                  <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                  <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
-                </tr>
+              <line
+                class="non-reactive stroke-black"
+                stroke-dasharray="4 4"
+                x1={xScale(new Date(firstFutureDate))}
+                x2={xScale(new Date(firstFutureDate))}
+                y1={graphPadding.top}
+                y2={yScale(0)}
+              />
+              <text
+                class="non-reactive fill-chart-1 text-sm italic"
+                x={(xScale(new Date(firstFutureDate)) + xAxisWidth) / 2}
+                y={graphPadding.top + 14}
+                text-anchor="middle"
+              >
+                Next {numFuturePredDays.toLocaleString()} days...
+              </text>
+              {#if sliders.observations <= 1}
+                {#each filteredData as d}
+                  {#if d.num_harmed}
+                    <circle
+                      class={!checkboxFilters.displayObservations || sliders.observations
+                        ? "non-reactive"
+                        : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={!checkboxFilters.displayObservations || sliders.observations ? "transparent" : "teal"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d.num_harmed)}
+                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
+                      use:tooltip
+                    />
+                  {/if}
+                {/each}
+              {/if}
+              <path
+                class={checkboxFilters.displayObservations && sliders.observations
+                  ? "hover:stroke-4 hover:stroke-teal"
+                  : "non-reactive"}
+                fill="transparent"
+                stroke={checkboxFilters.displayObservations && sliders.observations ? "teal" : "transparent"}
+                stroke-width={3}
+                d={$observationsPath}
+              />
+              {#if sliders.timeSeries <= 1}
+                {#each filteredData as d}
+                  {#if d.pred_2019}
+                    <circle
+                      class={!checkboxFilters.displayModels || sliders.timeSeries
+                        ? "non-reactive"
+                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
+                      fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d.pred_2019)}
+                    />
+                  {/if}
+                {/each}
+              {/if}
+              <path
+                class={checkboxFilters.displayModels && sliders.timeSeries
+                  ? "hover:stroke-4 hover:stroke-orange"
+                  : "non-reactive"}
+                fill="transparent"
+                stroke={checkboxFilters.displayModels && sliders.timeSeries ? "orange" : "transparent"}
+                stroke-width={3}
+                d={$timeSeriesPath}
+              />
+              {#if comparing && checkboxFilters.displayModels && sliders.timeSeries}
+                <path
+                  class="non-reactive"
+                  fill="transparent"
+                  stroke="#00c07f"
+                  stroke-width={3}
+                  opacity={0.9}
+                  d={comparativePath}
+                />
+              {:else if comparing && checkboxFilters.displayModels}
+                {#each filteredData as d}
+                  {#if d[`pred_${hoverYear}`]}
+                    <circle
+                      class="non-reactive"
+                      fill="#00c07f"
+                      r={4}
+                      cx={xScale(new Date(d.date))}
+                      cy={yScale(d[`pred_${hoverYear}`])}
+                    />
+                  {/if}
+                {/each}
+              {/if}
+            </g>
+            <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
+              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
+              {#each yScale.ticks() as yTick}
+                <g transform="translate(0, {yScale(yTick)})">
+                  <line class="stroke-chart-1 opacity-70" x1={-xTickHeight} x2={0} />
+                  <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                    {yTick.toLocaleString()}
+                  </text>
+                </g>
               {/each}
-            </tbody>
-          </table>
-          <div class="grow">
-            <div class="grid grid-cols-2 gap-6 mt-4">
-              <div>
-                <div class="flex justify-center items-center gap-1.5 font-medium">
-                  Moving Average for<br />Daily Observations
-                  <InfoTooltip title={observationsSliderTooltip} />
-                </div>
-                <Slider
-                  wrapperClasses="w-full"
-                  items={sliderItems}
-                  value={sliders.observations}
-                  step={1}
-                  min={0}
-                  max={sliderItems.length - 1}
-                  float={true}
-                  labels={true}
-                  middle={true}
-                  on:valueChange={({ detail: e }) => (sliders.observations = e.d)}
-                />
-              </div>
-              <div>
-                <div class="flex justify-center items-center gap-1.5 font-medium">
-                  Moving Average for<br />Time Series Models
-                  <InfoTooltip title={timeSeriesSliderTooltip} />
-                </div>
-                <Slider
-                  wrapperClasses="w-full"
-                  items={sliderItems}
-                  value={sliders.timeSeries}
-                  step={1}
-                  min={0}
-                  max={sliderItems.length - 1}
-                  float={true}
-                  labels={true}
-                  middle={true}
-                  on:valueChange={({ detail: e }) => (sliders.timeSeries = sliderItems[e.d].value)}
-                />
-              </div>
-            </div>
-          </div>
+            </g>
+            <text
+              class="non-reactive fill-chart-1 text-lg"
+              text-anchor="middle"
+              transform="translate(16, {(graphPadding.top + yScale(0)) / 2}) rotate(-90)"
+            >
+              Total Victims
+            </text>
+            <InfoIcon title={yAxisTooltip} cx={12} cy={(graphPadding.top + yScale(0)) / 2 - 78} />
+            <text
+              class="non-reactive fill-chart-1 text-lg"
+              text-anchor="middle"
+              x={graphPadding.left + xAxisWidth / 2}
+              y={svgHeight - 14}
+            >
+              Date
+            </text>
+            <InfoIcon title={xAxisTooltip} cx={graphPadding.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
+            <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
+              {#each legendItems as item, i}
+                <g transform="translate(0, {i * 16})">
+                  {#if !item.visible}
+                    <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                  {:else if item.aggregated}
+                    <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
+                  {:else}
+                    <circle fill={item.color} cx={8} cy={0} r={4} />
+                  {/if}
+                  <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                </g>
+              {/each}
+            </g>
+            <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
+              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
+              {#each xScale.ticks() as xTick}
+                <g transform="translate({xScale(xTick)}, {0})">
+                  <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
+                  <Text
+                    classes="text-center"
+                    overflowBody={false}
+                    wrapBody={false}
+                    x={-xTickLength / 2}
+                    width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                    height={xAxisHeight}
+                    bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                    bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                      ? String(xTick.getFullYear())
+                      : ""}
+                  />
+                </g>
+              {/each}
+            </g>
+          </svg>
         </div>
       {/if}
-    </div>
+      <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
+        <div>
+          <div class="mb-2 flex items-center gap-1.5 font-medium">
+            Prediction Timeframe
+            <InfoTooltip title={timeframeTooltip} />
+          </div>
+          <div class="w-36">
+            <Select
+              items={selectItems}
+              value={selectValue}
+              clearable={false}
+              centeredValue={true}
+              centeredItems={true}
+              on:valueChange={({ detail: e }) => (selectValue = e.d)}
+            />
+          </div>
+        </div>
+        <table class="border-collapse">
+          <thead>
+            <tr>
+              <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
+                <div class="flex items-center gap-1.5 font-medium">
+                  Metrics
+                  <InfoTooltip title={metricsTooltip} />
+                </div>
+              </th>
+              <th
+                class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
+                >Overall Model</th
+              >
+              <th
+                class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
+                >Comparative Model</th
+              >
+            </tr>
+          </thead>
+          <tbody>
+            {#each metricRows as row}
+              <tr>
+                <td class="pr-3 whitespace-nowrap"
+                  >{row.label}{#if row.rounded}{" "}<em>(Rounded)</em>{/if}</td
+                >
+                <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+        <div class="grow grid grid-cols-2 gap-6 mt-4">
+          <div>
+            <div class="flex justify-center items-center gap-1.5 font-medium">
+              Moving Average for<br />Daily Observations
+              <InfoTooltip title={observationsSliderTooltip} />
+            </div>
+            <Slider
+              wrapperClasses="w-full"
+              items={sliderItems}
+              value={sliders.observations}
+              step={1}
+              min={0}
+              max={sliderItems.length - 1}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliders.observations = e.d)}
+            />
+          </div>
+          <div>
+            <div class="flex justify-center items-center gap-1.5 font-medium">
+              Moving Average for<br />Time Series Models
+              <InfoTooltip title={timeSeriesSliderTooltip} />
+            </div>
+            <Slider
+              wrapperClasses="w-full"
+              items={sliderItems}
+              value={sliders.timeSeries}
+              step={1}
+              min={0}
+              max={sliderItems.length - 1}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliders.timeSeries = sliderItems[e.d].value)}
+            />
+          </div>
+        </div>
+      </div>
+    {/if}
   </div>
 </div>
 <svelte:head>
