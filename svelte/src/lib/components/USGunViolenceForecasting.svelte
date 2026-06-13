@@ -1,7 +1,7 @@
 <script>
   import * as d3 from "d3"
   import { interpolateString } from "d3-interpolate"
-  import { format } from "date-fns"
+  import { format, parseISO } from "date-fns"
   import sma from "sma"
   import { tweened } from "svelte/motion"
   import { cubicInOut } from "svelte/easing"
@@ -132,8 +132,10 @@
     }
   }
 
+  let minYear = Math.min(...data.map(d => d.year))
+
   let selectItems = [
-    { value: "Past - Present", label: "Past - Present" },
+    { value: "Past - Present", label: `${minYear} - Present` },
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
 
@@ -161,6 +163,11 @@
   let numFuturePredDays = data.filter(d => d.non_observation == 1).length
   let firstFutureDate = data.find(d => d.non_observation == 1).date
 
+  let firstDate = format(
+    data.reduce((min, d) => (d.date < min ? d.date : min), data[0].date),
+    "M/d/yy"
+  )
+
   let hoverYear = null
 
   $: legendItems = [
@@ -184,7 +191,6 @@
     },
   ]
 
-  let minYear = Math.min(...data.map(d => d.year))
   let numObservations = data.filter(d => d.non_observation != 1).length
 
   let plotGroup
@@ -238,8 +244,8 @@
     { label: "Model Input", key: "input" },
     { label: "Total Victims", key: "total" },
     { label: "Avg Victims per Day", key: "perDay" },
-    { label: "Avg Yearly Trend", key: "trend" },
-    ...(isFuture ? [] : [{ label: "RMSE", key: "rmse" }]),
+    { label: "Avg Yearly Trend", key: "trend", rounded: true },
+    ...(isFuture ? [] : [{ label: "RMSE", key: "rmse", rounded: true }]),
   ]
 
   let lasVegasTooltip =
@@ -256,7 +262,7 @@
 
   $: metricsTooltip = isFuture
     ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${numFuturePredDays} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${numFuturePredDays} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
-    : "Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since 1/1/14?\nAvg Victims per Day: How many victims does the model think there have been daily since 1/1/14?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since 1/1/14?"
+    : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`
 
   $: {
     if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
@@ -515,7 +521,7 @@
             </svg>
           </div>
         {/if}
-        <div class="flex items-start gap-10 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
+        <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
           <div>
             <div class="mb-2 flex items-center gap-1.5 font-medium">
               Prediction Timeframe
@@ -535,16 +541,18 @@
           <table class="border-collapse">
             <thead>
               <tr>
-                <th class="pb-1 text-left align-bottom" style="border-bottom:3.5px solid var(--chart-1)">
+                <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
                   <div class="flex items-center gap-1.5 font-medium">
                     Metrics
                     <InfoTooltip title={metricsTooltip} />
                   </div>
                 </th>
-                <th class="px-3 pb-1 font-medium !text-right align-bottom" style="border-bottom:3.5px solid orange"
+                <th
+                  class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
                   >Overall Model</th
                 >
-                <th class="px-3 pb-1 font-medium !text-right align-bottom" style="border-bottom:3.5px solid #00c07f"
+                <th
+                  class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
                   >Comparative Model</th
                 >
               </tr>
@@ -552,7 +560,9 @@
             <tbody>
               {#each metricRows as row}
                 <tr>
-                  <td class="pr-3 whitespace-nowrap">{row.label}</td>
+                  <td class="pr-3 whitespace-nowrap"
+                    >{row.label}{#if row.rounded}{" "}<em>(Rounded)</em>{/if}</td
+                  >
                   <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
                   <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
                 </tr>
@@ -560,11 +570,10 @@
             </tbody>
           </table>
           <div class="grow">
-            <span class="flex flex-col text-center text-sm font-medium">Moving Averages</span>
-            <div class="grid grid-cols-2 gap-8 mt-4">
+            <div class="grid grid-cols-2 gap-6 mt-4">
               <div>
                 <div class="flex justify-center items-center gap-1.5 font-medium">
-                  Daily Observations
+                  Moving Average for<br />Daily Observations
                   <InfoTooltip title={observationsSliderTooltip} />
                 </div>
                 <Slider
@@ -582,7 +591,7 @@
               </div>
               <div>
                 <div class="flex justify-center items-center gap-1.5 font-medium">
-                  Time Series Models
+                  Moving Average for<br />Time Series Models
                   <InfoTooltip title={timeSeriesSliderTooltip} />
                 </div>
                 <Slider
