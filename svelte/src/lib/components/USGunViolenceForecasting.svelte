@@ -282,7 +282,7 @@
     <div class="lg:hidden px-8 text-center text-lg">This visualization is best viewed on a larger screen.</div>
     <div class="hidden lg:block">
       {#if filteredData}
-        <div class="flex flex-col self-start mt-4 mb-3">
+        <div class="flex flex-col self-start mt-4 mb-3 text-sm">
           <div class="flex items-center gap-1.5">
             <CheckboxFilter
               labelClasses="font-medium"
@@ -450,7 +450,7 @@
                   {/each}
                 {/if}
               </g>
-              <g class="non-reactive text-xs" transform="translate({graphPadding.left}, {0})">
+              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
                 <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
                 {#each yScale.ticks() as yTick}
                   <g transform="translate(0, {yScale(yTick)})">
@@ -476,7 +476,7 @@
                   r={8}
                 />
                 <text
-                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-xs"
+                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-sm"
                   text-anchor="middle"
                   x={12}
                   y={(graphPadding.top + yScale(0)) / 2 - 78}
@@ -501,7 +501,7 @@
                   r={8}
                 />
                 <text
-                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-xs"
+                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-sm"
                   text-anchor="middle"
                   x={graphPadding.left + xAxisWidth / 2 + 32}
                   y={svgHeight - 20}
@@ -510,7 +510,7 @@
                   i
                 </text>
               </g>
-              <g class="non-reactive text-xs" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
+              <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
                 {#each legendItems as item, i}
                   <g transform="translate(0, {i * 16})">
                     {#if !item.visible}
@@ -524,7 +524,7 @@
                   </g>
                 {/each}
               </g>
-              <g class="non-reactive text-xs" transform="translate({graphPadding.left}, {yScale(0)})">
+              <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
                 <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
                 {#each xScale.ticks() as xTick}
                   <g transform="translate({xScale(xTick)}, {0})">
@@ -549,7 +549,7 @@
         {/if}
         <div class="flex items-start gap-10 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
           <div>
-            <div class="mb-2 flex items-center gap-1.5">
+            <div class="mb-2 flex items-center gap-1.5 font-medium">
               Prediction Timeframe
               <InfoTooltip title={timeframeTooltip} />
             </div>
@@ -564,17 +564,21 @@
               />
             </div>
           </div>
-          <table class="text-xs border-collapse">
+          <table class="border-collapse">
             <thead>
               <tr>
-                <th class="text-left">
+                <th class="pb-1 text-left align-bottom" style="border-bottom:3.5px solid var(--chart-1)">
                   <div class="flex items-center gap-1.5 font-medium">
                     Metrics
                     <InfoTooltip title={metricsTooltip} />
                   </div>
                 </th>
-                <th class="px-3 font-medium text-right" style="color:orange">Overall Model</th>
-                <th class="px-3 font-medium text-right" style="color:#00c07f">Comparative Model</th>
+                <th class="px-3 pb-1 font-medium !text-right align-bottom" style="border-bottom:3.5px solid orange"
+                  >Overall Model</th
+                >
+                <th class="px-3 pb-1 font-medium !text-right align-bottom" style="border-bottom:3.5px solid #00c07f"
+                  >Comparative Model</th
+                >
               </tr>
             </thead>
             <tbody>
@@ -588,10 +592,10 @@
             </tbody>
           </table>
           <div class="grow">
-            <span class="flex flex-col text-center text-base font-medium">Moving Averages</span>
+            <span class="flex flex-col text-center text-sm font-medium">Moving Averages</span>
             <div class="grid grid-cols-2 gap-8 mt-4">
               <div>
-                <div class="flex justify-center items-center gap-1.5">
+                <div class="flex justify-center items-center gap-1.5 font-medium">
                   Daily Observations
                   <InfoTooltip title={observationsSliderTooltip} />
                 </div>
@@ -609,7 +613,7 @@
                 />
               </div>
               <div>
-                <div class="flex justify-center items-center gap-1.5">
+                <div class="flex justify-center items-center gap-1.5 font-medium">
                   Time Series Models
                   <InfoTooltip title={timeSeriesSliderTooltip} />
                 </div>
