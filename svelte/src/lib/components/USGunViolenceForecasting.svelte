@@ -470,13 +470,13 @@
               </text>
               <g class="group cursor-help" use:tooltip title={yAxisTooltip}>
                 <circle
-                  class="fill-dmed-8 stroke-dmed-8 group-hover:fill-white"
+                  class="fill-theme-8 stroke-theme-8 group-hover:fill-white"
                   cx={12}
                   cy={(graphPadding.top + yScale(0)) / 2 - 78}
                   r={8}
                 />
                 <text
-                  class="fill-white group-hover:fill-dmed-8 pointer-events-none font-bold italic text-xs"
+                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-xs"
                   text-anchor="middle"
                   x={12}
                   y={(graphPadding.top + yScale(0)) / 2 - 78}
@@ -495,13 +495,13 @@
               </text>
               <g class="group cursor-help" use:tooltip title={xAxisTooltip}>
                 <circle
-                  class="fill-dmed-8 stroke-dmed-8 group-hover:fill-white"
+                  class="fill-theme-8 stroke-theme-8 group-hover:fill-white"
                   cx={graphPadding.left + xAxisWidth / 2 + 32}
                   cy={svgHeight - 20}
                   r={8}
                 />
                 <text
-                  class="fill-white group-hover:fill-dmed-8 pointer-events-none font-bold italic text-xs"
+                  class="fill-white group-hover:fill-theme-8 pointer-events-none font-bold italic text-xs"
                   text-anchor="middle"
                   x={graphPadding.left + xAxisWidth / 2 + 32}
                   y={svgHeight - 20}
@@ -567,7 +567,12 @@
           <table class="text-xs border-collapse">
             <thead>
               <tr>
-                <th class="text-left"><InfoTooltip title={metricsTooltip} /></th>
+                <th class="text-left">
+                  <div class="flex items-center gap-1.5 font-medium">
+                    Metrics
+                    <InfoTooltip title={metricsTooltip} />
+                  </div>
+                </th>
                 <th class="px-3 font-medium text-right" style="color:orange">Overall Model</th>
                 <th class="px-3 font-medium text-right" style="color:#00c07f">Comparative Model</th>
               </tr>
