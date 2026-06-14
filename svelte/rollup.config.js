@@ -1,7 +1,7 @@
 import commonjs from "@rollup/plugin-commonjs"
 import image from "@rollup/plugin-image"
-import resolve from "@rollup/plugin-node-resolve"
 import json from "@rollup/plugin-json"
+import resolve from "@rollup/plugin-node-resolve"
 import url from "@rollup/plugin-url"
 import postcss from "rollup-plugin-postcss"
 import progress from "rollup-plugin-progress"
@@ -9,8 +9,8 @@ import svelte from "rollup-plugin-svelte"
 import svg from "rollup-plugin-svg"
 import tailwindcss from "tailwindcss"
 
-import tailwindConfig from "./tailwind.config.cjs"
 import addScopedClass from "./add-scoped-class-plugin.cjs"
+import tailwindConfig from "./tailwind.config.cjs"
 
 const plugins = [
   resolve({

@@ -3,10 +3,11 @@
   import { interpolateString } from "d3-interpolate"
   import { format, parseISO } from "date-fns"
   import sma from "sma"
-  import { tweened } from "svelte/motion"
   import { cubicInOut } from "svelte/easing"
+  import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, InfoTooltip, Select, Slider, Text } from "svelte-lib/components"
   import { filterUnique, getCSSCustomProperty, getTextWidth, tooltip } from "svelte-lib/functions"
+  
   import data from "../static/data.json"
 
   let width
