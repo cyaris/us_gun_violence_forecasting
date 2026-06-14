@@ -39,7 +39,6 @@
 
   let pxPerD = 0.4
   let graphWidth
-  let visibleXAxisWidth
 
   // TODO: combine paths into one variable.
   let observationsPath = tweened(null, {
@@ -63,7 +62,6 @@
       svgHeight = height * 0.65
       svgWidth = graphWidth + graphPadding.left + graphPadding.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
-      visibleXAxisWidth = visibleSVGWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
 
       if (data.length) {
         filteredData = data.sort((a, b) => b.num_harmed - a.num_harmed).slice(checkboxFilters.lasVegasScale ? 0 : 1)
@@ -259,7 +257,7 @@
   let timeSeriesSliderTooltip =
     "Adjust the slider to specify a moving average for displaying time series models. Units are in days, with 0 days displaying the exact prediction on a given day."
 
-  $: timeframeTooltip = `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${numFuturePredDays} days).`
+  const timeframeTooltip = `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${numFuturePredDays} days).`
 
   $: metricsTooltip = isFuture
     ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${numFuturePredDays} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${numFuturePredDays} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
@@ -388,7 +386,7 @@
                 Next {numFuturePredDays.toLocaleString()} days...
               </text>
               {#if sliders.observations <= 1}
-                {#each filteredData as d}
+                {#each filteredData as d (d.date)}
                   {#if d.num_harmed}
                     <circle
                       class={!checkboxFilters.displayObservations || sliders.observations
@@ -414,7 +412,7 @@
                 d={$observationsPath}
               />
               {#if sliders.timeSeries <= 1}
-                {#each filteredData as d}
+                {#each filteredData as d (d.date)}
                   {#if d.pred_2019}
                     <circle
                       class={!checkboxFilters.displayModels || sliders.timeSeries
@@ -447,7 +445,7 @@
                   d={comparativePath}
                 />
               {:else if comparing && checkboxFilters.displayModels}
-                {#each filteredData as d}
+                {#each filteredData as d (d.date)}
                   {#if d[`pred_${hoverYear}`]}
                     <circle
                       class="non-reactive"
@@ -462,7 +460,7 @@
             </g>
             <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
               <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
-              {#each yScale.ticks() as yTick}
+              {#each yScale.ticks() as yTick (yTick)}
                 <g transform="translate(0, {yScale(yTick)})">
                   <line class="stroke-chart-1 opacity-70" x1={-xTickHeight} x2={0} />
                   <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
@@ -489,7 +487,7 @@
             </text>
             <InfoIcon title={xAxisTooltip} cx={graphPadding.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
             <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
-              {#each legendItems as item, i}
+              {#each legendItems as item, i (item.label)}
                 <g transform="translate(0, {i * 16})">
                   {#if !item.visible}
                     <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
@@ -504,7 +502,7 @@
             </g>
             <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
               <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-              {#each xScale.ticks() as xTick}
+              {#each xScale.ticks() as xTick (xTick)}
                 <g transform="translate({xScale(xTick)}, {0})">
                   <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
                   <Text
@@ -562,10 +560,10 @@
             </tr>
           </thead>
           <tbody>
-            {#each metricRows as row}
+            {#each metricRows as row (row.key)}
               <tr>
                 <td class="pr-3 whitespace-nowrap"
-                  >{row.label}{#if row.rounded}{" "}<em>(Rounded)</em>{/if}</td
+                  >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                 >
                 <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
                 <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
