@@ -13,17 +13,11 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write '**/*.{css,cjs,html,js,json,svelte,svg}'",
     "format:check": "prettier --ignore-path ../.gitignore --ignore-path .prettierignore --check '**/*.{css,cjs,html,js,json,svelte,svg}'",
-    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --no-eslintrc --config eslint.config.cjs '**/*.{cjs,html,js,svelte}'",
-    "lint:fix": "ESLINT_USE_FLAT_CONFIG=false eslint --no-eslintrc --config eslint.config.cjs --fix '**/*.{cjs,html,js,svelte}'",
+    "lint": "eslint '**/*.{cjs,html,js,svelte}'",
+    "lint:fix": "eslint --fix '**/*.{cjs,html,js,svelte}'",
     "rollup": "rollup -c rollup.config.js",
     "rollup:watch": "rollup -c rollup.config.js -w"
   },
-  "eslintIgnore": [
-    ".svelte-kit",
-    "build",
-    "dist",
-    "node_modules"
-  ],
   "dependencies": {
     "svelte-lib": "file:../../svelte-lib"
   }
