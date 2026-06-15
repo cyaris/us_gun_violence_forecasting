@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "us-gun-violence-forecasting"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "colorama>=0.4.0",
+    "pandas>=2.0.0",
+    "prophet>=1.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["black>=24.0.0", "isort>=5.13.0", "pytest>=8.0.0"]
+
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+known_first_party = ["update_forecast_data", "utils"]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    [^/]+\.egg-info
+  | \.git
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.venv
+  | __pycache__
+  | build
+  | dist
+)/
+'''
