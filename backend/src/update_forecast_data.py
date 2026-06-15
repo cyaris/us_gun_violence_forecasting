@@ -5,15 +5,17 @@ import argparse
 import logging
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from prophet import Prophet
 
-from utils import initialize_logger
+from utils import configure_root_logger, initialize_logger
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
 DEFAULT_INPUT_CSV: Path = REPO_ROOT / "backend/all-shootings-2014-2023.csv"
-DEFAULT_OUTPUT_JSON: Path = REPO_ROOT / "svelte/src/lib/static/data.json"
+DEFAULT_OUTPUT_JSON: Path = REPO_ROOT / "frontend/src/lib/static/data.json"
 
+configure_root_logger()
 logger = initialize_logger(__name__)
 
 
@@ -42,7 +44,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
     )
     parser.add_argument(
-        "--changepoint-prior-scale", default=0.5, help="Prophet changepoint_prior_scale value.", type=float
+        "--changepoint-prior-scale", default=0.01, help="Prophet changepoint_prior_scale value.", type=float
     )
     parser.add_argument(
         "--dry-run",
@@ -89,11 +91,10 @@ def future_dataframe_lengths(df_date: pd.DataFrame, forecast_days: int) -> dict[
 
 def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_prior_scale: float) -> pd.DataFrame:
     model_input = df_date.rename(columns={"date": "ds", "num_harmed": "y"})
+    model_input["y"] = np.log1p(model_input["y"])
+
     lengths = future_dataframe_lengths(df_date, forecast_days)
     df: pd.DataFrame | None = None
-
-    logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
-    logging.getLogger("prophet").setLevel(logging.WARNING)
 
     for year in df_date["date"].dt.year.drop_duplicates():
         year = int(year)
@@ -101,7 +102,10 @@ def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_p
         logger.info(f"Fitting Prophet model through {year}...")
 
         harmed_prophet = Prophet(
-            changepoint_prior_scale=changepoint_prior_scale, daily_seasonality=True, yearly_seasonality=True
+            changepoint_prior_scale=changepoint_prior_scale,
+            daily_seasonality=True,
+            yearly_seasonality=True,
+            seasonality_mode="multiplicative",
         )
         harmed_prophet.fit(model_input[model_input["ds"].dt.year <= year])
 
@@ -110,9 +114,12 @@ def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_p
 
         pred_col = f"pred_{year}"
         trend_col = f"yearly_trend_calc_{year}"
+        # Prophet was fit on log1p(num_harmed), so convert forecasts back to the original count scale.
+        harmed_forecast[pred_col] = np.maximum(0, np.expm1(harmed_forecast["yhat"]))
+        # Calculate the year-over-year trend on the original count scale.
+        harmed_forecast[trend_col] = harmed_forecast[pred_col] - harmed_forecast[pred_col].shift(periods=365)
 
-        harmed_forecast[trend_col] = harmed_forecast["yhat"] - harmed_forecast["yhat"].shift(periods=365)
-        harmed_forecast = harmed_forecast.rename(columns={"ds": "date", "yhat": pred_col})
+        harmed_forecast = harmed_forecast.rename(columns={"ds": "date"})
 
         if df is None:
             df = harmed_forecast[["date", pred_col]].merge(df_date, how="outer", on="date")

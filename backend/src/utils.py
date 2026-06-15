@@ -33,6 +33,18 @@ class LoggerFormatter(logging.Formatter):
         return formatter.format(record)
 
 
+def configure_root_logger(
+    level: Literal["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
+) -> None:
+    root = logging.getLogger()
+    root.setLevel(getattr(logging, level, logging.INFO))
+
+    if not root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(LoggerFormatter())
+        root.addHandler(handler)
+
+
 def initialize_logger(
     name: str,
     level: Literal["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
