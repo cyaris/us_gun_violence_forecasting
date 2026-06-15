@@ -30,3 +30,5 @@
 **/config
 
 scripts
+backend/all-shootings-2014-2023.csv
+frontend/src/lib/static/data.sjon

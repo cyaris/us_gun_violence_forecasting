@@ -1,0 +1,24 @@
+{
+  "name": "us-gun-violence-forecasting",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host",
+    "dev:open": "vite --host --open",
+    "build": "vite build",
+    "package": "vite package",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
+    "format": "prettier --ignore-path .gitignore --ignore-path .prettierignore --write '**/*.{css,cjs,html,js,json,svelte,svg}'",
+    "format:check": "prettier --ignore-path ../.gitignore --ignore-path .prettierignore --check '**/*.{css,cjs,html,js,json,svelte,svg}'",
+    "lint": "eslint '**/*.{cjs,html,js,svelte}'",
+    "lint:fix": "eslint --fix '**/*.{cjs,html,js,svelte}'",
+    "rollup": "rollup -c rollup.config.js",
+    "rollup:watch": "rollup -c rollup.config.js -w"
+  },
+  "dependencies": {
+    "svelte-lib": "file:../../svelte-lib"
+  }
+}
