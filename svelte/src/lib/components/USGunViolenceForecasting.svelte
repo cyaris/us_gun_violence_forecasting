@@ -10,6 +10,11 @@
 
   import data from "../static/data.json"
 
+  let minYear = Math.min(...data.map(d => d.year))
+  let maxYearObserved = Math.max(...data.filter(d => d.non_observation != 1).map(d => d.year))
+  let overallPredCol = `pred_${maxYearObserved}`
+  let overallPredMovingAverageCol = `${overallPredCol}_moving_average`
+
   let width
   let height
   let svgWidth
@@ -75,12 +80,12 @@
         }
 
         let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.observations].label)
-        let timeSeries = getMovingAverage("pred_2019", sliderItems[sliders.timeSeries].label)
+        let timeSeries = getMovingAverage(overallPredCol, sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
           d.num_harmed_moving_average = observationsMovingAverage[i]
-          d.pred_2019_moving_average = timeSeries[i]
+          d[overallPredMovingAverageCol] = timeSeries[i]
         })
 
         xScale = d3.scaleTime(
@@ -95,12 +100,12 @@
             0,
             d3.max(filteredData, d =>
               sliders.observations && sliders.timeSeries
-                ? Math.max(d.num_harmed_moving_average, d.pred_2019_moving_average)
+                ? Math.max(d.num_harmed_moving_average, d[overallPredMovingAverageCol])
                 : sliders.observations
-                  ? Math.max(d.num_harmed_moving_average, d.pred_2019)
+                  ? Math.max(d.num_harmed_moving_average, d[overallPredCol])
                   : sliders.timeSeries
-                    ? Math.max(d.num_harmed, d.pred_2019_moving_average)
-                    : Math.max(d.num_harmed, d.pred_2019)
+                    ? Math.max(d.num_harmed, d[overallPredMovingAverageCol])
+                    : Math.max(d.num_harmed, d[overallPredCol])
             ),
           ],
           [svgHeight - xAxisHeight, graphPadding.top]
@@ -123,15 +128,13 @@
       )
 
       timeSeriesPath.set(
-        line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
+        line(overallPredMovingAverageCol)(filteredData.filter(v => v[overallPredMovingAverageCol]))
         // sliders.timeSeries
-        //   ? line("pred_2019_moving_average")(filteredData.filter(v => v.pred_2019_moving_average))
-        //   : line("pred_2019")(filteredData.filter(v => v.num_harmed))
+        //   ? line(overallPredMovingAverageCol)(filteredData.filter(v => v[overallPredMovingAverageCol]))
+        //   : line(overallPredCol)(filteredData.filter(v => v.num_harmed))
       )
     }
   }
-
-  let minYear = Math.min(...data.map(d => d.year))
 
   let selectItems = [
     { value: "Past - Present", label: `${minYear} - Present` },
@@ -158,7 +161,6 @@
 
   let sliders = { observations: 0, timeSeries: 2 }
 
-  let maxYearObserved = Math.max(...data.filter(d => d.non_observation != 1).map(d => d.year))
   let numFuturePredDays = data.filter(d => d.non_observation == 1).length
   let firstFutureDate = data.find(d => d.non_observation == 1).date
 
@@ -413,7 +415,7 @@
               />
               {#if sliders.timeSeries <= 1}
                 {#each filteredData as d (d.date)}
-                  {#if d.pred_2019}
+                  {#if d[overallPredCol]}
                     <circle
                       class={!checkboxFilters.displayModels || sliders.timeSeries
                         ? "non-reactive"
@@ -421,7 +423,7 @@
                       fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
                       r={4}
                       cx={xScale(new Date(d.date))}
-                      cy={yScale(d.pred_2019)}
+                      cy={yScale(d[overallPredCol])}
                     />
                   {/if}
                 {/each}
