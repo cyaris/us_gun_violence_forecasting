@@ -2,7 +2,6 @@
 """Regenerate the Svelte forecast data from Gun Violence Archive exports."""
 
 import argparse
-import logging
 from pathlib import Path
 
 import numpy as np
@@ -22,7 +21,7 @@ logger = initialize_logger(__name__)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build the US gun violence daily harmed-victim forecast data JSON " "used by the Svelte visualization."
+            "Build the US gun violence daily harmed-victim forecast data JSON used by the Svelte visualization."
         )
     )
     parser.add_argument(
