@@ -140,10 +140,6 @@ def prepare_for_visualization(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     df["year"] = df["date"].dt.year
-    df["nyd"] = None
-    new_year_indices = df.index[(df["date"].dt.day == 1) & (df["date"].dt.month == 1)]
-    for i, new_year_index in enumerate(new_year_indices):
-        df.loc[new_year_index, "nyd"] = i
 
     df.insert(0, "Unnamed: 0", range(len(df)))
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")
