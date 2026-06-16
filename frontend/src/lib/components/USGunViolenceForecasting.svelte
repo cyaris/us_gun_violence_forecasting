@@ -10,15 +10,21 @@
 
   import data from "../static/data.json"
 
-  let minYear = Math.min(...data.map(d => d.year))
-  let maxYearObserved = Math.max(...data.filter(d => d.non_observation != 1).map(d => d.year))
-  let overallPredCol = `pred_${maxYearObserved}`
-  let overallPredMovingAverageCol = `${overallPredCol}_moving_average`
+  // Backend emits this time series chronologically; row order is used for yearly trend calculations.
+  let parseLocalDate = date => new Date(`${date}T00:00:00`)
+  let yearFromDate = d => Number(d.date.slice(0, 4))
+  let predictionColumn = year => `predicted_victims_${year}`
+  let observedVictimsColumn = "observed_victims"
+  let observedVictimsMovingAverageColumn = `${observedVictimsColumn}_moving_average`
+  let minYear = Math.min(...data.map(yearFromDate))
+  let latestObservedYear = Math.max(...data.filter(d => !d.is_forecast).map(yearFromDate))
+  let overallPredictionColumn = predictionColumn(latestObservedYear)
+  let overallPredictionMovingAverageColumn = `${overallPredictionColumn}_moving_average`
 
   let width
   let height
   let svgWidth
-  let visibleSVGWidth
+  let chartViewportWidth
   let svgHeight
   let graphStrokeWidth = 1
 
@@ -27,7 +33,7 @@
   let xTickLength
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let graphPadding = { top: 20, right: 20, bottom: 65, left: 65 }
+  let plotMargin = { top: 20, right: 20, bottom: 65, left: 65 }
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
@@ -36,41 +42,73 @@
   let xTickLabelSize = 12
 
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
-  let xAxisHeight = graphPadding.bottom
+  let xAxisHeight = plotMargin.bottom
 
   let filteredData
 
-  let line
+  let pathGeneratorFor
 
-  let pxPerD = 0.4
+  let pxPerDay = 0.4
+  let fadeClasses = "transition-opacity duration-300 delay-100 ease-[cubic-bezier(0.65,0,0.35,1)]"
+  let tweenTiming = {
+    duration: 600,
+    delay: 100,
+    easing: cubicInOut,
+  }
   let graphWidth
+  let observationsCanvas
+  let timeSeriesCanvas
+  let comparativeCanvas
+  let hoveredObservation = null
+  let observationPointRows = []
+  let timeSeriesPointRows = []
+  let comparativePointRows = []
+  let animatedPointYScale = null
 
-  // TODO: combine paths into one variable.
-  let observationsPath = tweened(null, {
-    interpolate: interpolateString,
-    duration: 600,
-    delay: 100,
-    cubicInOut,
+  let animatedYDomain = tweened([0, 1], {
+    interpolate: (a, b) => {
+      let min = d3.interpolateNumber(a[0], b[0])
+      let max = d3.interpolateNumber(a[1], b[1])
+
+      return t => [min(t), max(t)]
+    },
+    ...tweenTiming,
   })
 
-  let timeSeriesPath = tweened(null, {
-    interpolate: interpolateString,
-    duration: 600,
-    delay: 100,
-    cubicInOut,
-  })
+  let animatedPaths = tweened(
+    { observations: null, timeSeries: null },
+    {
+      interpolate: (a, b) => {
+        let observations = interpolateString(a.observations, b.observations)
+        let timeSeries = interpolateString(a.timeSeries, b.timeSeries)
+
+        return t => ({
+          observations: observations(t),
+          timeSeries: timeSeries(t),
+        })
+      },
+      ...tweenTiming,
+    }
+  )
+
+  $: observationValueColumn = sliders.observations ? observedVictimsMovingAverageColumn : observedVictimsColumn
+  $: timeSeriesValueColumn = sliders.timeSeries ? overallPredictionMovingAverageColumn : overallPredictionColumn
+  $: timeSeriesPathFilterColumn = sliders.timeSeries ? timeSeriesValueColumn : observedVictimsColumn
 
   $: {
     if (width) {
-      visibleSVGWidth = width * 0.8
-      graphWidth = data.length * pxPerD
+      chartViewportWidth = width * 0.8
+      graphWidth = data.length * pxPerDay
       svgHeight = height * 0.65
-      svgWidth = graphWidth + graphPadding.left + graphPadding.right + graphStrokeWidth * 2
-      xAxisWidth = svgWidth - graphPadding.right - graphPadding.left - graphStrokeWidth * 2
+      svgWidth = graphWidth + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
+      xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
       if (data.length) {
-        filteredData = data.sort((a, b) => b.num_harmed - a.num_harmed).slice(checkboxFilters.lasVegasScale ? 0 : 1)
-        filteredData = filteredData.sort((a, b) => new Date(a.date) - new Date(b.date))
+        filteredData = [...data]
+          .sort((a, b) => b.observed_victims - a.observed_victims)
+          .slice(checkboxFilters.lasVegasScale ? 0 : 1)
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
 
         let getMovingAverage = function (field, range) {
           return sma(
@@ -79,60 +117,41 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage("num_harmed", sliderItems[sliders.observations].label)
-        let timeSeries = getMovingAverage(overallPredCol, sliderItems[sliders.timeSeries].label)
+        let observationsMovingAverage = getMovingAverage(observedVictimsColumn, sliderItems[sliders.observations].label)
+        let timeSeries = getMovingAverage(overallPredictionColumn, sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
-          d.num_harmed_moving_average = observationsMovingAverage[i]
-          d[overallPredMovingAverageCol] = timeSeries[i]
+          d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
+          d[overallPredictionMovingAverageColumn] = timeSeries[i]
         })
 
         xScale = d3.scaleTime(
-          d3.extent(filteredData, d => new Date(d.date)),
+          d3.extent(filteredData, d => d.parsedDate),
           [0, xAxisWidth]
         )
 
         xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
 
-        yScale = d3.scaleLinear(
-          [
-            0,
-            d3.max(filteredData, d =>
-              sliders.observations && sliders.timeSeries
-                ? Math.max(d.num_harmed_moving_average, d[overallPredMovingAverageCol])
-                : sliders.observations
-                  ? Math.max(d.num_harmed_moving_average, d[overallPredCol])
-                  : sliders.timeSeries
-                    ? Math.max(d.num_harmed, d[overallPredMovingAverageCol])
-                    : Math.max(d.num_harmed, d[overallPredCol])
-            ),
-          ],
-          [svgHeight - xAxisHeight, graphPadding.top]
-        )
+        let yDomain = [0, d3.max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
 
-        line = function (field) {
+        yScale = d3.scaleLinear(yDomain, [svgHeight - xAxisHeight, plotMargin.top])
+
+        animatedYDomain.set(yDomain)
+
+        pathGeneratorFor = function (field) {
           return d3
             .line()
             .curve(d3.curveNatural)
-            .x(d => xScale(new Date(d.date)))
+            .x(d => xScale(d.parsedDate))
             .y(d => yScale(d[field]))
         }
       }
 
-      observationsPath.set(
-        // line("num_harmed")(filteredData.filter(v => v.num_harmed))
-        sliders.observations
-          ? line("num_harmed_moving_average")(filteredData.filter(v => v.num_harmed_moving_average))
-          : line("num_harmed")(filteredData.filter(v => v.num_harmed))
-      )
-
-      timeSeriesPath.set(
-        line(overallPredMovingAverageCol)(filteredData.filter(v => v[overallPredMovingAverageCol]))
-        // sliders.timeSeries
-        //   ? line(overallPredMovingAverageCol)(filteredData.filter(v => v[overallPredMovingAverageCol]))
-        //   : line(overallPredCol)(filteredData.filter(v => v.num_harmed))
-      )
+      animatedPaths.set({
+        observations: pathGeneratorFor(observationValueColumn)(filteredData.filter(v => v[observationValueColumn])),
+        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(filteredData.filter(v => v[timeSeriesPathFilterColumn])),
+      })
     }
   }
 
@@ -161,13 +180,10 @@
 
   let sliders = { observations: 0, timeSeries: 2 }
 
-  let numFuturePredDays = data.filter(d => d.non_observation == 1).length
-  let firstFutureDate = data.find(d => d.non_observation == 1).date
+  let forecastDayCount = data.filter(d => d.is_forecast).length
+  let forecastStartDate = data.find(d => d.is_forecast).date
 
-  let firstDate = format(
-    data.reduce((min, d) => (d.date < min ? d.date : min), data[0].date),
-    "M/d/yy"
-  )
+  let firstDate = format(parseLocalDate(data[0].date), "M/d/yy")
 
   let hoverYear = null
 
@@ -187,15 +203,60 @@
     {
       label: "Comparative Model",
       color: "#00c07f",
-      visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < maxYearObserved,
+      visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
       aggregated: sliders.timeSeries > 0,
     },
   ]
 
-  let numObservations = data.filter(d => d.non_observation != 1).length
+  let numObservations = data.filter(d => !d.is_forecast).length
 
   let plotGroup
   let comparativePath = null
+
+  $: observationPointsVisible = checkboxFilters.displayObservations && sliders.observations == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && sliders.observations > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliders.timeSeries == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliders.timeSeries > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries > 0
+
+  $: animatedPointYScale =
+    svgHeight && $animatedYDomain ? d3.scaleLinear($animatedYDomain, [svgHeight - xAxisHeight, plotMargin.top]) : null
+
+  $: observationPointRows = filteredData ? filteredData.filter(d => d.observed_victims) : []
+  $: timeSeriesPointRows = filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : []
+  $: comparativePointRows = comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : []
+
+  $: drawPointLayer(
+    observationsCanvas,
+    observationPointRows,
+    "observed_victims",
+    "teal",
+    xScale,
+    animatedPointYScale,
+    svgWidth,
+    svgHeight
+  )
+  $: drawPointLayer(
+    timeSeriesCanvas,
+    timeSeriesPointRows,
+    overallPredictionColumn,
+    "orange",
+    xScale,
+    animatedPointYScale,
+    svgWidth,
+    svgHeight
+  )
+  $: drawPointLayer(
+    comparativeCanvas,
+    comparativePointRows,
+    comparing ? predictionColumn(hoverYear) : null,
+    "#00c07f",
+    xScale,
+    animatedPointYScale,
+    svgWidth,
+    svgHeight
+  )
 
   let movingAverage = (rows, field, range) =>
     sma(
@@ -203,24 +264,81 @@
       range
     ).map(v => parseFloat(v))
 
-  function metrics(year, future) {
-    let predCol = `pred_${year}`
-    let trendCol = `yearly_trend_calc_${year}`
-    let rows = data.filter(d => (future ? d.non_observation == 1 : d.non_observation != 1))
+  function drawPointLayer(canvas, rows, field, color, currentXScale, currentYScale, currentSvgWidth, currentSvgHeight) {
+    if (!canvas || !field || !currentXScale || !currentYScale || !currentSvgWidth || !currentSvgHeight) return
 
-    let predSum = rows.reduce((sum, d) => sum + (d[predCol] || 0), 0)
-    let trendSum = rows.reduce((sum, d) => sum + (d[trendCol] || 0), 0)
+    let pixelRatio = typeof window == "undefined" ? 1 : window.devicePixelRatio || 1
+    let canvasWidth = Math.ceil(currentSvgWidth * pixelRatio)
+    let canvasHeight = Math.ceil(currentSvgHeight * pixelRatio)
 
-    let result = {
-      input: year == maxYearObserved ? `${minYear}–Present` : year == minYear ? `${minYear}` : `${minYear}–${year}`,
-      total: Math.round(predSum).toLocaleString(),
-      perDay: Math.round(predSum / rows.length).toLocaleString(),
-      trend: Math.round(trendSum / (future ? numFuturePredDays : numObservations - numFuturePredDays)).toLocaleString(),
+    if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
     }
 
-    if (!future) {
+    let context = canvas.getContext("2d")
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+    context.clearRect(0, 0, currentSvgWidth, currentSvgHeight)
+    context.fillStyle = color
+    context.beginPath()
+
+    rows.forEach(row => {
+      let value = row[field]
+      if (!value) return
+
+      let x = plotMargin.left + currentXScale(row.parsedDate)
+      let y = currentYScale(value)
+
+      context.moveTo(x + 4, y)
+      context.arc(x, y, 4, 0, Math.PI * 2)
+    })
+
+    context.fill()
+  }
+
+  function nearestObservation(pointerX, pointerY) {
+    if (!observationPointsVisible || !observationPointRows.length || !animatedPointYScale || !xScale) return null
+
+    let targetDate = xScale.invert(pointerX)
+    let pointIndex = d3.bisector(d => d.parsedDate).left(observationPointRows, targetDate)
+    let candidates = [observationPointRows[pointIndex - 1], observationPointRows[pointIndex]].filter(Boolean)
+    let nearest = candidates.reduce((closest, row) => {
+      let distance = Math.hypot(xScale(row.parsedDate) - pointerX, animatedPointYScale(row.observed_victims) - pointerY)
+
+      return !closest || distance < closest.distance ? { row, distance } : closest
+    }, null)
+
+    return nearest?.distance <= 8 ? nearest.row : null
+  }
+
+  function yearlyTrendAt(rowIndex, field) {
+    let current = data[rowIndex]?.[field]
+    let previousYear = data[rowIndex - 365]?.[field]
+
+    return current != null && previousYear != null ? current - previousYear : null
+  }
+
+  function modelMetrics(year, isFutureTimeframe) {
+    let predictionColumnName = predictionColumn(year)
+    let rows = data.map((d, i) => ({ d, i })).filter(({ d }) => (isFutureTimeframe ? d.is_forecast : !d.is_forecast))
+
+    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] || 0), 0)
+    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumnName)).filter(v => v != null)
+    let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
+
+    let result = {
+      input: year == latestObservedYear ? `${minYear}–Present` : year == minYear ? `${minYear}` : `${minYear}–${year}`,
+      total: Math.round(predSum).toLocaleString(),
+      perDay: Math.round(predSum / rows.length).toLocaleString(),
+      trend: Math.round(trendSum / yearlyTrends.length).toLocaleString(),
+    }
+
+    if (!isFutureTimeframe) {
       result.rmse = Math.round(
-        Math.sqrt(rows.reduce((sum, d) => sum + ((d[predCol] || 0) - d.num_harmed) ** 2, 0) / numObservations)
+        Math.sqrt(
+          rows.reduce((sum, { d }) => sum + ((d[predictionColumnName] || 0) - d.observed_victims) ** 2, 0) /
+            numObservations
+        )
       ).toLocaleString()
     }
 
@@ -228,18 +346,21 @@
   }
 
   function handleHover(e) {
-    let year = xScale.invert(d3.pointer(e, plotGroup)[0]).getFullYear()
+    let [pointerX, pointerY] = d3.pointer(e, plotGroup)
+    let year = xScale.invert(pointerX).getFullYear()
 
     if (year != hoverYear) {
       hoverYear = year
     }
+
+    hoveredObservation = nearestObservation(pointerX, pointerY)
   }
 
-  $: comparing = hoverYear != null && hoverYear < maxYearObserved
+  $: comparing = hoverYear != null && hoverYear < latestObservedYear
   $: isFuture = selectValue.value == "Next 365 Days"
 
-  $: overallMetrics = filteredData ? metrics(maxYearObserved, isFuture) : null
-  $: comparativeMetrics = comparing ? metrics(hoverYear, isFuture) : null
+  $: overallMetrics = filteredData ? modelMetrics(latestObservedYear, isFuture) : null
+  $: comparativeMetrics = comparing ? modelMetrics(hoverYear, isFuture) : null
 
   $: metricRows = [
     { label: "Model Input", key: "input" },
@@ -249,33 +370,40 @@
     ...(isFuture ? [] : [{ label: "RMSE", key: "rmse", rounded: true }]),
   ]
 
-  let lasVegasTooltip =
-    "The Las Vegas shooting is the deadliest mass shooting in US history. With 548 total victims killed/injured, it is a major outlier in this dataset. Filter to see how this observation affects the scaling of the entire graph."
-  let xAxisTooltip = "Individual incidents are summed together and grouped by date."
-  let yAxisTooltip =
-    "Includes all victims reported as injured or killed. Victims with unreported health statuses are not included."
-  let observationsSliderTooltip =
-    "Adjust the slider to specify a moving average for displaying daily observations. Units are in days, with 0 days displaying the actual/recorded observation."
-  let timeSeriesSliderTooltip =
-    "Adjust the slider to specify a moving average for displaying time series models. Units are in days, with 0 days displaying the exact prediction on a given day."
-
-  const timeframeTooltip = `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${numFuturePredDays} days).`
-
-  $: metricsTooltip = isFuture
-    ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${numFuturePredDays} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${numFuturePredDays} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
-    : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`
+  $: tooltipText = {
+    lasVegasScale:
+      "The Las Vegas shooting is the deadliest mass shooting in US history. With 548 total victims killed/injured, it is a major outlier in this dataset. Filter to see how this observation affects the scaling of the entire graph.",
+    xAxis: "Individual incidents are summed together and grouped by date.",
+    yAxis:
+      "Includes all victims reported as injured or killed. Victims with unreported health statuses are not included.",
+    observationsSlider:
+      "Adjust the slider to specify a moving average for displaying daily observations. Units are in days, with 0 days displaying the actual/recorded observation.",
+    timeSeriesSlider:
+      "Adjust the slider to specify a moving average for displaying time series models. Units are in days, with 0 days displaying the exact prediction on a given day.",
+    timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
+    metrics: isFuture
+      ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
+      : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`,
+    hoveredObservation: hoveredObservation
+      ? `Date: ${format(hoveredObservation.parsedDate, "yyyy-MM-dd")}\nVictims: ${hoveredObservation.observed_victims.toLocaleString()}`
+      : "",
+  }
 
   $: {
     if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
-      let movingAverages = movingAverage(filteredData, `pred_${hoverYear}`, sliderItems[sliders.timeSeries].label)
+      let movingAverages = movingAverage(
+        filteredData,
+        predictionColumn(hoverYear),
+        sliderItems[sliders.timeSeries].label
+      )
 
       comparativePath = d3
         .line()
         .curve(d3.curveNatural)
-        .x(d => xScale(new Date(d.date)))
+        .x(d => xScale(d.parsedDate))
         .y(d => yScale(d.value))(
         filteredData
-          .map((d, i) => ({ date: d.date, value: movingAverages[i] }))
+          .map((d, i) => ({ parsedDate: d.parsedDate, value: movingAverages[i] }))
           .filter(d => d.value != null && !isNaN(d.value))
       )
     } else {
@@ -302,7 +430,7 @@
             deselection={checkboxFilters.lasVegasScale ? [] : [true]}
             on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
           />
-          <InfoTooltip title={lasVegasTooltip} />
+          <InfoTooltip title={tooltipText.lasVegasScale} />
         </div>
         <CheckboxFilter
           labelClasses="font-medium"
@@ -320,216 +448,211 @@
           deselection={checkboxFilters.displayModels ? [] : [true]}
           on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
         />
-        <span class="flex flex-col items-center text-sm {comparing ? 'italic' : ''}">
+        <span class="flex flex-col items-center text-sm" class:italic={comparing}>
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && svgHeight}
         <div
           class="overflow-scroll w-full border-solid border-black"
-          width={visibleSVGWidth}
-          style="max-width:{visibleSVGWidth}px"
+          width={chartViewportWidth}
+          style="max-width:{chartViewportWidth}px"
         >
-          <svg
-            class="flex flex-col justify-center items-center overflow-x-scroll"
-            width={svgWidth}
-            height={svgHeight}
-            id="graph"
-          >
-            <g
-              bind:this={plotGroup}
-              transform="translate({graphPadding.left}, {0})"
-              on:mousemove={handleHover}
-              on:mouseleave={() => (hoverYear = null)}
+          <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
+            <canvas
+              bind:this={observationsCanvas}
+              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+              aria-hidden="true"
+              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{observationPointsVisible ? 1 : 0}"
+            />
+            <canvas
+              bind:this={timeSeriesCanvas}
+              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+              aria-hidden="true"
+              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{timeSeriesPointsVisible ? 1 : 0}"
+            />
+            <canvas
+              bind:this={comparativeCanvas}
+              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+              aria-hidden="true"
+              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{comparativePointsVisible ? 0.9 : 0}"
+            />
+            <svg
+              class="absolute left-0 top-0 flex flex-col justify-center items-center overflow-x-scroll"
+              width={svgWidth}
+              height={svgHeight}
+              id="graph"
             >
-              <rect
-                x={0}
-                y={graphPadding.top}
-                width={xAxisWidth}
-                height={yScale(0) - graphPadding.top}
-                fill="transparent"
-              />
-              {#if comparing}
+              <g
+                bind:this={plotGroup}
+                transform="translate({plotMargin.left}, {0})"
+                role="presentation"
+                on:mousemove={handleHover}
+                on:mouseleave={() => {
+                  hoverYear = null
+                  hoveredObservation = null
+                }}
+              >
+                <rect
+                  x={0}
+                  y={plotMargin.top}
+                  width={xAxisWidth}
+                  height={yScale(0) - plotMargin.top}
+                  fill="transparent"
+                />
+                {#if comparing}
+                  <rect
+                    class="non-reactive"
+                    x={0}
+                    y={plotMargin.top}
+                    width={Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth)}
+                    height={yScale(0) - plotMargin.top}
+                    fill="black"
+                    fill-opacity={0.04}
+                    stroke="black"
+                    stroke-width={1}
+                  />
+                {/if}
                 <rect
                   class="non-reactive"
-                  x={0}
-                  y={graphPadding.top}
-                  width={Math.min(xScale(new Date(`${hoverYear + 1}-01-01`)), xAxisWidth)}
-                  height={yScale(0) - graphPadding.top}
+                  x={xScale(parseLocalDate(forecastStartDate))}
+                  y={plotMargin.top}
+                  width={xAxisWidth - xScale(parseLocalDate(forecastStartDate))}
+                  height={yScale(0) - plotMargin.top}
                   fill="black"
-                  fill-opacity={0.04}
-                  stroke="black"
-                  stroke-width={1}
+                  opacity={0.06}
                 />
-              {/if}
-              <rect
-                class="non-reactive"
-                x={xScale(new Date(firstFutureDate))}
-                y={graphPadding.top}
-                width={xAxisWidth - xScale(new Date(firstFutureDate))}
-                height={yScale(0) - graphPadding.top}
-                fill="black"
-                opacity={0.06}
-              />
-              <line
-                class="non-reactive stroke-black"
-                stroke-dasharray="4 4"
-                x1={xScale(new Date(firstFutureDate))}
-                x2={xScale(new Date(firstFutureDate))}
-                y1={graphPadding.top}
-                y2={yScale(0)}
-              />
-              <text
-                class="non-reactive fill-chart-1 text-sm italic"
-                x={(xScale(new Date(firstFutureDate)) + xAxisWidth) / 2}
-                y={graphPadding.top + 14}
-                text-anchor="middle"
-              >
-                Next {numFuturePredDays.toLocaleString()} days...
-              </text>
-              {#if sliders.observations <= 1}
-                {#each filteredData as d (d.date)}
-                  {#if d.num_harmed}
-                    <circle
-                      class={!checkboxFilters.displayObservations || sliders.observations
-                        ? "non-reactive"
-                        : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!checkboxFilters.displayObservations || sliders.observations ? "transparent" : "teal"}
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(d.num_harmed)}
-                      title={"Date: " + format(d.date, "yyyy-MM-dd") + "\nVictims: " + d.num_harmed.toLocaleString()}
-                      use:tooltip
-                    />
-                  {/if}
-                {/each}
-              {/if}
-              <path
-                class={checkboxFilters.displayObservations && sliders.observations
-                  ? "hover:stroke-4 hover:stroke-teal"
-                  : "non-reactive"}
-                fill="transparent"
-                stroke={checkboxFilters.displayObservations && sliders.observations ? "teal" : "transparent"}
-                stroke-width={3}
-                d={$observationsPath}
-              />
-              {#if sliders.timeSeries <= 1}
-                {#each filteredData as d (d.date)}
-                  {#if d[overallPredCol]}
-                    <circle
-                      class={!checkboxFilters.displayModels || sliders.timeSeries
-                        ? "non-reactive"
-                        : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(d[overallPredCol])}
-                    />
-                  {/if}
-                {/each}
-              {/if}
-              <path
-                class={checkboxFilters.displayModels && sliders.timeSeries
-                  ? "hover:stroke-4 hover:stroke-orange"
-                  : "non-reactive"}
-                fill="transparent"
-                stroke={checkboxFilters.displayModels && sliders.timeSeries ? "orange" : "transparent"}
-                stroke-width={3}
-                d={$timeSeriesPath}
-              />
-              {#if comparing && checkboxFilters.displayModels && sliders.timeSeries}
-                <path
+                <line
                   class="non-reactive"
-                  fill="transparent"
-                  stroke="#00c07f"
-                  stroke-width={3}
-                  opacity={0.9}
-                  d={comparativePath}
+                  stroke="black"
+                  stroke-dasharray="4 4"
+                  x1={xScale(parseLocalDate(forecastStartDate))}
+                  x2={xScale(parseLocalDate(forecastStartDate))}
+                  y1={plotMargin.top}
+                  y2={yScale(0)}
                 />
-              {:else if comparing && checkboxFilters.displayModels}
-                {#each filteredData as d (d.date)}
-                  {#if d[`pred_${hoverYear}`]}
-                    <circle
-                      class="non-reactive"
-                      fill="#00c07f"
-                      r={4}
-                      cx={xScale(new Date(d.date))}
-                      cy={yScale(d[`pred_${hoverYear}`])}
-                    />
-                  {/if}
-                {/each}
-              {/if}
-            </g>
-            <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {0})">
-              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,{graphPadding.top}V{yScale(0)}" />
-              {#each yScale.ticks() as yTick (yTick)}
-                <g transform="translate(0, {yScale(yTick)})">
-                  <line class="stroke-chart-1 opacity-70" x1={-xTickHeight} x2={0} />
-                  <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
-                    {yTick.toLocaleString()}
-                  </text>
-                </g>
-              {/each}
-            </g>
-            <text
-              class="non-reactive fill-chart-1 text-lg"
-              text-anchor="middle"
-              transform="translate(16, {(graphPadding.top + yScale(0)) / 2}) rotate(-90)"
-            >
-              Total Victims
-            </text>
-            <InfoIcon title={yAxisTooltip} cx={12} cy={(graphPadding.top + yScale(0)) / 2 - 78} />
-            <text
-              class="non-reactive fill-chart-1 text-lg"
-              text-anchor="middle"
-              x={graphPadding.left + xAxisWidth / 2}
-              y={svgHeight - 14}
-            >
-              Date
-            </text>
-            <InfoIcon title={xAxisTooltip} cx={graphPadding.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
-            <g class="non-reactive text-sm" transform="translate({graphPadding.left + 8}, {graphPadding.top + 8})">
-              {#each legendItems as item, i (item.label)}
-                <g transform="translate(0, {i * 16})">
-                  {#if !item.visible}
-                    <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
-                  {:else if item.aggregated}
-                    <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
-                  {:else}
-                    <circle fill={item.color} cx={8} cy={0} r={4} />
-                  {/if}
-                  <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
-                </g>
-              {/each}
-            </g>
-            <g class="non-reactive text-sm" transform="translate({graphPadding.left}, {yScale(0)})">
-              <path class="fill-transparent stroke-chart-1 opacity-70" d="M0,0V0H{xAxisWidth}V0" />
-              {#each xScale.ticks() as xTick (xTick)}
-                <g transform="translate({xScale(xTick)}, {0})">
-                  <line class="stroke-chart-1 opacity-70" y1={0.5} y2={xTickHeight} />
-                  <Text
-                    classes="text-center"
-                    overflowBody={false}
-                    wrapBody={false}
-                    x={-xTickLength / 2}
-                    width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                    height={xAxisHeight}
-                    bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                    bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                      ? String(xTick.getFullYear())
-                      : ""}
+                <text
+                  class="non-reactive fill-chart-1 text-sm italic"
+                  x={(xScale(parseLocalDate(forecastStartDate)) + xAxisWidth) / 2}
+                  y={plotMargin.top + 14}
+                  text-anchor="middle"
+                >
+                  Next {forecastDayCount.toLocaleString()} days...
+                </text>
+                <path
+                  class={observationPathVisible
+                    ? `${fadeClasses} hover:stroke-4 hover:stroke-teal`
+                    : `${fadeClasses} non-reactive`}
+                  fill="transparent"
+                  stroke="teal"
+                  stroke-width={3}
+                  style="opacity:{observationPathVisible ? 1 : 0}"
+                  d={$animatedPaths.observations}
+                />
+                {#if hoveredObservation && observationPointsVisible && animatedPointYScale}
+                  <circle
+                    class="hover:cursor-help"
+                    fill="teal"
+                    stroke="black"
+                    r={5}
+                    cx={xScale(hoveredObservation.parsedDate)}
+                    cy={animatedPointYScale(hoveredObservation.observed_victims)}
+                    title={tooltipText.hoveredObservation}
+                    use:tooltip
                   />
-                </g>
-              {/each}
-            </g>
-          </svg>
+                {/if}
+                <path
+                  class={timeSeriesPathVisible
+                    ? `${fadeClasses} hover:stroke-4 hover:stroke-orange`
+                    : `${fadeClasses} non-reactive`}
+                  fill="transparent"
+                  stroke="orange"
+                  stroke-width={3}
+                  style="opacity:{timeSeriesPathVisible ? 1 : 0}"
+                  d={$animatedPaths.timeSeries}
+                />
+                {#if comparing && checkboxFilters.displayModels}
+                  <path
+                    class="non-reactive {fadeClasses}"
+                    fill="transparent"
+                    stroke="#00c07f"
+                    stroke-width={3}
+                    style="opacity:{comparativePathVisible ? 0.9 : 0}"
+                    d={comparativePath}
+                  />
+                {/if}
+              </g>
+              <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
+                <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{yScale(0)}" />
+                {#each yScale.ticks() as yTick (yTick)}
+                  <g transform="translate(0, {yScale(yTick)})">
+                    <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
+                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                      {yTick.toLocaleString()}
+                    </text>
+                  </g>
+                {/each}
+              </g>
+              <text
+                class="non-reactive fill-chart-1 text-lg"
+                text-anchor="middle"
+                transform="translate(16, {(plotMargin.top + yScale(0)) / 2}) rotate(-90)"
+              >
+                Total Victims
+              </text>
+              <InfoIcon title={tooltipText.yAxis} cx={12} cy={(plotMargin.top + yScale(0)) / 2 - 78} />
+              <text
+                class="non-reactive fill-chart-1 text-lg"
+                text-anchor="middle"
+                x={plotMargin.left + xAxisWidth / 2}
+                y={svgHeight - 14}
+              >
+                Date
+              </text>
+              <InfoIcon title={tooltipText.xAxis} cx={plotMargin.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
+              <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
+                {#each legendItems as item, i (item.label)}
+                  <g transform="translate(0, {i * 16})">
+                    {#if !item.visible}
+                      <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                    {:else if item.aggregated}
+                      <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
+                    {:else}
+                      <circle fill={item.color} cx={8} cy={0} r={4} />
+                    {/if}
+                    <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                  </g>
+                {/each}
+              </g>
+              <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {yScale(0)})">
+                <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,0V0H{xAxisWidth}V0" />
+                {#each xScale.ticks() as xTick (xTick)}
+                  <g transform="translate({xScale(xTick)}, {0})">
+                    <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
+                    <Text
+                      classes="text-center"
+                      overflowBody={false}
+                      wrapBody={false}
+                      x={-xTickLength / 2}
+                      width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
+                      height={xAxisHeight}
+                      bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
+                      bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
+                        ? String(xTick.getFullYear())
+                        : ""}
+                    />
+                  </g>
+                {/each}
+              </g>
+            </svg>
+          </div>
         </div>
       {/if}
-      <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{visibleSVGWidth}px">
+      <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{chartViewportWidth}px">
         <div>
           <div class="mb-2 flex items-center gap-1.5 font-medium">
             Prediction Timeframe
-            <InfoTooltip title={timeframeTooltip} />
+            <InfoTooltip title={tooltipText.timeframe} />
           </div>
           <div class="w-36">
             <Select
@@ -548,7 +671,7 @@
               <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
                 <div class="flex items-center gap-1.5 font-medium">
                   Metrics
-                  <InfoTooltip title={metricsTooltip} />
+                  <InfoTooltip title={tooltipText.metrics} />
                 </div>
               </th>
               <th
@@ -577,7 +700,7 @@
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
               Moving Average for<br />Daily Observations
-              <InfoTooltip title={observationsSliderTooltip} />
+              <InfoTooltip title={tooltipText.observationsSlider} />
             </div>
             <Slider
               wrapperClasses="w-full"
@@ -595,7 +718,7 @@
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
               Moving Average for<br />Time Series Models
-              <InfoTooltip title={timeSeriesSliderTooltip} />
+              <InfoTooltip title={tooltipText.timeSeriesSlider} />
             </div>
             <Slider
               wrapperClasses="w-full"
@@ -615,18 +738,3 @@
     {/if}
   </div>
 </div>
-<svelte:head>
-  <style>
-    g.group {
-      transition: d 600ms cubic-bezier(0.65, 0, 0.35, 1);
-      transition-delay: 100ms;
-      /* will-change: transform; */
-    }
-
-    /* .group circle {
-      transition: cy 600ms cubic-bezier(0.65, 0, 0.35, 1);
-      transition-delay: 100ms;
-      will-change: transform, cy;
-    } */
-  </style>
-</svelte:head>
