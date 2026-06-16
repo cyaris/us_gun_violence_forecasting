@@ -14,6 +14,8 @@
   let parseLocalDate = date => new Date(`${date}T00:00:00`)
   let yearFromDate = d => Number(d.date.slice(0, 4))
   let predictionColumn = year => `predicted_victims_${year}`
+  let observedVictimsColumn = "observed_victims"
+  let observedVictimsMovingAverageColumn = `${observedVictimsColumn}_moving_average`
   let minYear = Math.min(...data.map(yearFromDate))
   let latestObservedYear = Math.max(...data.filter(d => !d.is_forecast).map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
@@ -48,6 +50,11 @@
 
   let pxPerDay = 0.4
   let fadeClasses = "transition-opacity duration-300 delay-100 ease-[cubic-bezier(0.65,0,0.35,1)]"
+  let tweenTiming = {
+    duration: 600,
+    delay: 100,
+    easing: cubicInOut,
+  }
   let graphWidth
   let observationsCanvas
   let timeSeriesCanvas
@@ -65,9 +72,7 @@
 
       return t => [min(t), max(t)]
     },
-    duration: 600,
-    delay: 100,
-    easing: cubicInOut,
+    ...tweenTiming,
   })
 
   let animatedPaths = tweened(
@@ -82,11 +87,13 @@
           timeSeries: timeSeries(t),
         })
       },
-      duration: 600,
-      delay: 100,
-      easing: cubicInOut,
+      ...tweenTiming,
     }
   )
+
+  $: observationValueColumn = sliders.observations ? observedVictimsMovingAverageColumn : observedVictimsColumn
+  $: timeSeriesValueColumn = sliders.timeSeries ? overallPredictionMovingAverageColumn : overallPredictionColumn
+  $: timeSeriesPathFilterColumn = sliders.timeSeries ? timeSeriesValueColumn : observedVictimsColumn
 
   $: {
     if (width) {
@@ -110,12 +117,12 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage("observed_victims", sliderItems[sliders.observations].label)
+        let observationsMovingAverage = getMovingAverage(observedVictimsColumn, sliderItems[sliders.observations].label)
         let timeSeries = getMovingAverage(overallPredictionColumn, sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
-          d.observed_victims_moving_average = observationsMovingAverage[i]
+          d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
           d[overallPredictionMovingAverageColumn] = timeSeries[i]
         })
 
@@ -126,18 +133,7 @@
 
         xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
 
-        let yDomain = [
-          0,
-          d3.max(filteredData, d =>
-            sliders.observations && sliders.timeSeries
-              ? Math.max(d.observed_victims_moving_average, d[overallPredictionMovingAverageColumn])
-              : sliders.observations
-                ? Math.max(d.observed_victims_moving_average, d[overallPredictionColumn])
-                : sliders.timeSeries
-                  ? Math.max(d.observed_victims, d[overallPredictionMovingAverageColumn])
-                  : Math.max(d.observed_victims, d[overallPredictionColumn])
-          ),
-        ]
+        let yDomain = [0, d3.max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
 
         yScale = d3.scaleLinear(yDomain, [svgHeight - xAxisHeight, plotMargin.top])
 
@@ -153,16 +149,8 @@
       }
 
       animatedPaths.set({
-        observations: sliders.observations
-          ? pathGeneratorFor("observed_victims_moving_average")(
-              filteredData.filter(v => v.observed_victims_moving_average)
-            )
-          : pathGeneratorFor("observed_victims")(filteredData.filter(v => v.observed_victims)),
-        timeSeries: sliders.timeSeries
-          ? pathGeneratorFor(overallPredictionMovingAverageColumn)(
-              filteredData.filter(v => v[overallPredictionMovingAverageColumn])
-            )
-          : pathGeneratorFor(overallPredictionColumn)(filteredData.filter(v => v.observed_victims)),
+        observations: pathGeneratorFor(observationValueColumn)(filteredData.filter(v => v[observationValueColumn])),
+        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(filteredData.filter(v => v[timeSeriesPathFilterColumn])),
       })
     }
   }
