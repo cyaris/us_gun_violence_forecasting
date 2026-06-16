@@ -409,40 +409,45 @@
   <div class="lg:hidden px-8 text-center text-lg">This visualization is best viewed on a larger screen.</div>
   <div class="hidden lg:block">
     {#if filteredData}
-      <div class="flex flex-col self-start mt-4 mb-3 text-sm">
-        <div class="flex items-center gap-1.5">
+      <div class="relative mt-4 mb-3 text-sm" style="width:{chartViewportWidth}px">
+        <div class="flex flex-col items-start">
+          <div class="flex items-center gap-2">
+            <CheckboxFilter
+              labelClasses="font-medium"
+              label="Scale to Include the Las Vegas Shooting"
+              value={checkboxFilters.lasVegasScale}
+              selection={checkboxFilters.lasVegasScale ? [true] : []}
+              deselection={checkboxFilters.lasVegasScale ? [] : [true]}
+              on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
+            />
+            <InfoIcon title={tooltipText.lasVegasScale} {tooltipClasses} />
+          </div>
           <CheckboxFilter
             labelClasses="font-medium"
-            label="Scale to Include the Las Vegas Shooting"
-            value={checkboxFilters.lasVegasScale}
-            selection={checkboxFilters.lasVegasScale ? [true] : []}
-            deselection={checkboxFilters.lasVegasScale ? [] : [true]}
-            on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
+            label="Display Daily Observations"
+            value={checkboxFilters.displayObservations}
+            selection={checkboxFilters.displayObservations ? [true] : []}
+            deselection={checkboxFilters.displayObservations ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
           />
-          <InfoIcon title={tooltipText.lasVegasScale} {tooltipClasses} />
+          <CheckboxFilter
+            labelClasses="font-medium"
+            label="Display Time Series Models"
+            value={checkboxFilters.displayModels}
+            selection={checkboxFilters.displayModels ? [true] : []}
+            deselection={checkboxFilters.displayModels ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
+          />
         </div>
-        <CheckboxFilter
-          labelClasses="font-medium"
-          label="Display Daily Observations"
-          value={checkboxFilters.displayObservations}
-          selection={checkboxFilters.displayObservations ? [true] : []}
-          deselection={checkboxFilters.displayObservations ? [] : [true]}
-          on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
-        />
-        <CheckboxFilter
-          labelClasses="font-medium"
-          label="Display Time Series Models"
-          value={checkboxFilters.displayModels}
-          selection={checkboxFilters.displayModels ? [true] : []}
-          deselection={checkboxFilters.displayModels ? [] : [true]}
-          on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
-        />
-        <span class="flex flex-col items-center text-sm" class:italic={comparing}>
+        <span
+          class="pointer-events-none absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center whitespace-nowrap text-sm"
+          class:italic={comparing}
+        >
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && svgHeight}
-        <div class="relative w-full overflow-hidden border-solid border-black" style="max-width:{chartViewportWidth}px">
+        <div class="relative w-full overflow-hidden border border-solid border-black" style="max-width:{chartViewportWidth}px">
           <div class="h-full w-full overflow-x-scroll overflow-y-hidden" style="height:{svgHeight}px">
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
               <canvas
@@ -658,14 +663,14 @@
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 32} cy={xAxisInfoY} />
+              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 36} cy={xAxisInfoY} />
             </g>
           </svg>
         </div>
       {/if}
       <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{chartViewportWidth}px">
         <div>
-          <div class="mb-2 flex items-center gap-1.5 font-medium">
+          <div class="mb-2 flex items-center gap-2 font-medium">
             Prediction Timeframe
             <InfoIcon title={tooltipText.timeframe} {tooltipClasses} />
           </div>
@@ -684,7 +689,7 @@
           <thead>
             <tr>
               <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
-                <div class="flex items-center gap-1.5 font-medium">
+                <div class="flex items-center gap-2 font-medium">
                   Metrics
                   <InfoIcon title={tooltipText.metrics} {tooltipClasses} />
                 </div>
@@ -713,7 +718,7 @@
         </table>
         <div class="grow grid grid-cols-2 gap-6 mt-4">
           <div>
-            <div class="flex justify-center items-center gap-1.5 font-medium">
+            <div class="flex justify-center items-center gap-2 font-medium">
               <span class="text-center">Moving Average for Daily Observations</span>
               <InfoIcon title={tooltipText.observationsSlider} {tooltipClasses} />
             </div>
@@ -731,7 +736,7 @@
             />
           </div>
           <div>
-            <div class="flex justify-center items-center gap-1.5 font-medium">
+            <div class="flex justify-center items-center gap-2 font-medium">
               <span class="text-center">Moving Average for Time Series Models</span>
               <InfoIcon title={tooltipText.timeSeriesSlider} {tooltipClasses} />
             </div>
