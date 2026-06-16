@@ -88,14 +88,8 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage(
-          "observed_victims",
-          movingAverageOptions[movingAverageSelections.observations].label
-        )
-        let timeSeries = getMovingAverage(
-          overallPredictionColumnName,
-          movingAverageOptions[movingAverageSelections.timeSeries].label
-        )
+        let observationsMovingAverage = getMovingAverage("observed_victims", sliderItems[sliders.observations].label)
+        let timeSeries = getMovingAverage(overallPredictionColumnName, sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
@@ -114,11 +108,11 @@
           [
             0,
             d3.max(filteredData, d =>
-              movingAverageSelections.observations && movingAverageSelections.timeSeries
+              sliders.observations && sliders.timeSeries
                 ? Math.max(d.observed_victims_moving_average, d[overallPredictionMovingAverageColumnName])
-                : movingAverageSelections.observations
+                : sliders.observations
                   ? Math.max(d.observed_victims_moving_average, d[overallPredictionColumnName])
-                  : movingAverageSelections.timeSeries
+                  : sliders.timeSeries
                     ? Math.max(d.observed_victims, d[overallPredictionMovingAverageColumnName])
                     : Math.max(d.observed_victims, d[overallPredictionColumnName])
             ),
@@ -136,12 +130,12 @@
       }
 
       animatedPaths.set({
-        observations: movingAverageSelections.observations
+        observations: sliders.observations
           ? pathGeneratorFor("observed_victims_moving_average")(
               filteredData.filter(v => v.observed_victims_moving_average)
             )
           : pathGeneratorFor("observed_victims")(filteredData.filter(v => v.observed_victims)),
-        timeSeries: movingAverageSelections.timeSeries
+        timeSeries: sliders.timeSeries
           ? pathGeneratorFor(overallPredictionMovingAverageColumnName)(
               filteredData.filter(v => v[overallPredictionMovingAverageColumnName])
             )
@@ -150,14 +144,14 @@
     }
   }
 
-  let timeframeOptions = [
+  let selectItems = [
     { value: "Past - Present", label: `${minYear} - Present` },
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
 
-  let selectedTimeframe = timeframeOptions[0]
+  let selectedTimeframe = selectItems[0]
 
-  let movingAverageOptions = [
+  let sliderItems = [
     { value: 0, label: 0 },
     { value: 1, label: 5 },
     { value: 2, label: 10 },
@@ -173,7 +167,7 @@
     displayModels: true,
   }
 
-  let movingAverageSelections = { observations: 0, timeSeries: 2 }
+  let sliders = { observations: 0, timeSeries: 2 }
 
   let forecastDayCount = data.filter(d => d.is_forecast).length
   let forecastStartDate = data.find(d => d.is_forecast).date
@@ -187,19 +181,19 @@
       label: "Daily Observations",
       color: "teal",
       visible: chartOptions.displayObservations,
-      aggregated: movingAverageSelections.observations > 0,
+      aggregated: sliders.observations > 0,
     },
     {
       label: "Overall Model",
       color: "orange",
       visible: chartOptions.displayModels,
-      aggregated: movingAverageSelections.timeSeries > 0,
+      aggregated: sliders.timeSeries > 0,
     },
     {
       label: "Comparative Model",
       color: "#00c07f",
       visible: chartOptions.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: movingAverageSelections.timeSeries > 0,
+      aggregated: sliders.timeSeries > 0,
     },
   ]
 
@@ -286,11 +280,11 @@
     : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`
 
   $: {
-    if (comparing && movingAverageSelections.timeSeries && filteredData && xScale && yScale) {
+    if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
       let movingAverages = movingAverage(
         filteredData,
         predictionColumnName(hoverYear),
-        movingAverageOptions[movingAverageSelections.timeSeries].label
+        sliderItems[sliders.timeSeries].label
       )
 
       comparativePath = d3
@@ -412,16 +406,14 @@
               >
                 Next {forecastDayCount.toLocaleString()} days...
               </text>
-              {#if movingAverageSelections.observations <= 1}
+              {#if sliders.observations <= 1}
                 {#each filteredData as d (d.date)}
                   {#if d.observed_victims}
                     <circle
-                      class={!chartOptions.displayObservations || movingAverageSelections.observations
+                      class={!chartOptions.displayObservations || sliders.observations
                         ? "non-reactive"
                         : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!chartOptions.displayObservations || movingAverageSelections.observations
-                        ? "transparent"
-                        : "teal"}
+                      fill={!chartOptions.displayObservations || sliders.observations ? "transparent" : "teal"}
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
                       cy={yScale(d.observed_victims)}
@@ -435,26 +427,22 @@
                 {/each}
               {/if}
               <path
-                class={chartOptions.displayObservations && movingAverageSelections.observations
+                class={chartOptions.displayObservations && sliders.observations
                   ? "hover:stroke-4 hover:stroke-teal"
                   : "non-reactive"}
                 fill="transparent"
-                stroke={chartOptions.displayObservations && movingAverageSelections.observations
-                  ? "teal"
-                  : "transparent"}
+                stroke={chartOptions.displayObservations && sliders.observations ? "teal" : "transparent"}
                 stroke-width={3}
                 d={$animatedPaths.observations}
               />
-              {#if movingAverageSelections.timeSeries <= 1}
+              {#if sliders.timeSeries <= 1}
                 {#each filteredData as d (d.date)}
                   {#if d[overallPredictionColumnName]}
                     <circle
-                      class={!chartOptions.displayModels || movingAverageSelections.timeSeries
+                      class={!chartOptions.displayModels || sliders.timeSeries
                         ? "non-reactive"
                         : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!chartOptions.displayModels || movingAverageSelections.timeSeries
-                        ? "transparent"
-                        : "orange"}
+                      fill={!chartOptions.displayModels || sliders.timeSeries ? "transparent" : "orange"}
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
                       cy={yScale(d[overallPredictionColumnName])}
@@ -463,15 +451,15 @@
                 {/each}
               {/if}
               <path
-                class={chartOptions.displayModels && movingAverageSelections.timeSeries
+                class={chartOptions.displayModels && sliders.timeSeries
                   ? "hover:stroke-4 hover:stroke-orange"
                   : "non-reactive"}
                 fill="transparent"
-                stroke={chartOptions.displayModels && movingAverageSelections.timeSeries ? "orange" : "transparent"}
+                stroke={chartOptions.displayModels && sliders.timeSeries ? "orange" : "transparent"}
                 stroke-width={3}
                 d={$animatedPaths.timeSeries}
               />
-              {#if comparing && chartOptions.displayModels && movingAverageSelections.timeSeries}
+              {#if comparing && chartOptions.displayModels && sliders.timeSeries}
                 <path
                   class="non-reactive"
                   fill="transparent"
@@ -567,7 +555,7 @@
           </div>
           <div class="w-36">
             <Select
-              items={timeframeOptions}
+              items={selectItems}
               value={selectedTimeframe}
               clearable={false}
               centeredValue={true}
@@ -615,15 +603,15 @@
             </div>
             <Slider
               wrapperClasses="w-full"
-              items={movingAverageOptions}
-              value={movingAverageSelections.observations}
+              items={sliderItems}
+              value={sliders.observations}
               step={1}
               min={0}
-              max={movingAverageOptions.length - 1}
+              max={sliderItems.length - 1}
               float={true}
               labels={true}
               middle={true}
-              on:valueChange={({ detail: e }) => (movingAverageSelections.observations = e.d)}
+              on:valueChange={({ detail: e }) => (sliders.observations = e.d)}
             />
           </div>
           <div>
@@ -633,15 +621,15 @@
             </div>
             <Slider
               wrapperClasses="w-full"
-              items={movingAverageOptions}
-              value={movingAverageSelections.timeSeries}
+              items={sliderItems}
+              value={sliders.timeSeries}
               step={1}
               min={0}
-              max={movingAverageOptions.length - 1}
+              max={sliderItems.length - 1}
               float={true}
               labels={true}
               middle={true}
-              on:valueChange={({ detail: e }) => (movingAverageSelections.timeSeries = movingAverageOptions[e.d].value)}
+              on:valueChange={({ detail: e }) => (sliders.timeSeries = sliderItems[e.d].value)}
             />
           </div>
         </div>
