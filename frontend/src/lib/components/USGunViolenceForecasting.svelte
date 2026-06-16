@@ -49,7 +49,6 @@
   let yAxisTitleX = 16 + yAxisTitleLeftPadding
   let yAxisInfoX = 12 + yAxisTitleLeftPadding
   let tooltipClasses = "max-w-[20rem]"
-
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
   let xAxisHeight = plotMargin.bottom
 
@@ -121,9 +120,8 @@
           ).map(v => parseFloat(v))
         }
 
-        let observationsMovingAverage = getMovingAverage(observedVictimsColumn, sliderItems[sliders.observations].label)
-        let timeSeries = getMovingAverage(overallPredictionColumn, sliderItems[sliders.timeSeries].label)
-
+        let observationsMovingAverage = getMovingAverage(observedVictimsColumn, sliders.observations)
+        let timeSeries = getMovingAverage(overallPredictionColumn, sliders.timeSeries)
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
           d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
@@ -164,19 +162,32 @@
 
   let selectValue = selectItems[0]
 
-  let sliderItems = [
-    { value: 0, label: 0 },
-    { value: 1, label: 5 },
-    { value: 2, label: 10 },
-    { value: 3, label: 15 },
-    { value: 4, label: 20 },
-    { value: 5, label: 25 },
-    { value: 6, label: 30 },
-  ]
+  let sliderMin = 0
+  let sliderMax = 30
+  let sliderStep = 5
 
   let checkboxFilters = { lasVegasScale: true, displayObservations: true, displayModels: true }
 
-  let sliders = { observations: 0, timeSeries: 2 }
+  let sliders = { observations: 0, timeSeries: 10 }
+
+  let checkboxFilterItems = [
+    { key: "lasVegasScale", label: "Scale to Include the Las Vegas Shooting", tooltipKey: "lasVegasScale" },
+    { key: "displayObservations", label: "Display Daily Observations" },
+    { key: "displayModels", label: "Display Time Series Models" },
+  ]
+
+  let sliderItems = [
+    {
+      key: "observations",
+      label: "Moving Average for Daily Observations",
+      tooltipKey: "observationsSlider",
+    },
+    {
+      key: "timeSeries",
+      label: "Moving Average for Time Series Models",
+      tooltipKey: "timeSeriesSlider",
+    },
+  ]
 
   let forecastDayCount = data.filter(d => d.is_forecast).length
   let forecastStartDate = data.find(d => d.is_forecast).date
@@ -380,11 +391,7 @@
 
   $: {
     if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
-      let movingAverages = movingAverage(
-        filteredData,
-        predictionColumn(hoverYear),
-        sliderItems[sliders.timeSeries].label
-      )
+      let movingAverages = movingAverage(filteredData, predictionColumn(hoverYear), sliders.timeSeries)
 
       comparativePath = d3
         .line()
@@ -411,33 +418,30 @@
     {#if filteredData}
       <div class="relative mt-4 mb-3 text-sm" style="width:{chartViewportWidth}px">
         <div class="flex flex-col items-start">
-          <div class="flex items-center gap-2">
-            <CheckboxFilter
-              labelClasses="font-medium"
-              label="Scale to Include the Las Vegas Shooting"
-              value={checkboxFilters.lasVegasScale}
-              selection={checkboxFilters.lasVegasScale ? [true] : []}
-              deselection={checkboxFilters.lasVegasScale ? [] : [true]}
-              on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
-            />
-            <InfoIcon title={tooltipText.lasVegasScale} {tooltipClasses} />
-          </div>
-          <CheckboxFilter
-            labelClasses="font-medium"
-            label="Display Daily Observations"
-            value={checkboxFilters.displayObservations}
-            selection={checkboxFilters.displayObservations ? [true] : []}
-            deselection={checkboxFilters.displayObservations ? [] : [true]}
-            on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
-          />
-          <CheckboxFilter
-            labelClasses="font-medium"
-            label="Display Time Series Models"
-            value={checkboxFilters.displayModels}
-            selection={checkboxFilters.displayModels ? [true] : []}
-            deselection={checkboxFilters.displayModels ? [] : [true]}
-            on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
-          />
+          {#each checkboxFilterItems as checkbox (checkbox.key)}
+            {#if checkbox.tooltipKey}
+              <div class="flex items-center gap-2">
+                <CheckboxFilter
+                  labelClasses="font-medium"
+                  label={checkbox.label}
+                  value={checkboxFilters[checkbox.key]}
+                  selection={checkboxFilters[checkbox.key] ? [true] : []}
+                  deselection={checkboxFilters[checkbox.key] ? [] : [true]}
+                  on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
+                />
+                <InfoIcon title={tooltipText[checkbox.tooltipKey]} {tooltipClasses} />
+              </div>
+            {:else}
+              <CheckboxFilter
+                labelClasses="font-medium"
+                label={checkbox.label}
+                value={checkboxFilters[checkbox.key]}
+                selection={checkboxFilters[checkbox.key] ? [true] : []}
+                deselection={checkboxFilters[checkbox.key] ? [] : [true]}
+                on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
+              />
+            {/if}
+          {/each}
         </div>
         <span
           class="pointer-events-none absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center whitespace-nowrap text-sm"
@@ -447,26 +451,35 @@
         </span>
       </div>
       {#if svgWidth && svgHeight}
-        <div class="relative w-full overflow-hidden border border-solid border-black" style="max-width:{chartViewportWidth}px">
+        <div
+          class="relative w-full overflow-hidden border border-solid border-black"
+          style="max-width:{chartViewportWidth}px"
+        >
           <div class="h-full w-full overflow-x-scroll overflow-y-hidden" style="height:{svgHeight}px">
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
               <canvas
                 bind:this={observationsCanvas}
                 class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class:opacity-100={observationPointsVisible}
+                class:opacity-0={!observationPointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{observationPointsVisible ? 1 : 0}"
+                style="width:{svgWidth}px; height:{svgHeight}px"
               />
               <canvas
                 bind:this={timeSeriesCanvas}
                 class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class:opacity-100={timeSeriesPointsVisible}
+                class:opacity-0={!timeSeriesPointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{timeSeriesPointsVisible ? 1 : 0}"
+                style="width:{svgWidth}px; height:{svgHeight}px"
               />
               <canvas
                 bind:this={comparativeCanvas}
                 class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class:opacity-90={comparativePointsVisible}
+                class:opacity-0={!comparativePointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{comparativePointsVisible ? 0.9 : 0}"
+                style="width:{svgWidth}px; height:{svgHeight}px"
               />
               <svg
                 class="absolute left-0 top-0 flex flex-col justify-center items-center"
@@ -717,42 +730,26 @@
           </tbody>
         </table>
         <div class="grow grid grid-cols-2 gap-6 mt-4">
-          <div>
-            <div class="flex justify-center items-center gap-2 font-medium">
-              <span class="text-center">Moving Average for Daily Observations</span>
-              <InfoIcon title={tooltipText.observationsSlider} {tooltipClasses} />
+          {#each sliderItems as slider (slider.key)}
+            <div>
+              <div class="flex justify-center items-center gap-2 font-medium">
+                <span class="text-center">{slider.label}</span>
+                <InfoIcon title={tooltipText[slider.tooltipKey]} {tooltipClasses} />
+              </div>
+              <Slider
+                wrapperClasses="w-full"
+                value={sliders[slider.key]}
+                step={sliderStep}
+                min={sliderMin}
+                max={sliderMax}
+                labelStep={sliderStep}
+                float={true}
+                labels={true}
+                middle={true}
+                on:valueChange={({ detail: e }) => (sliders = { ...sliders, [slider.key]: e.d })}
+              />
             </div>
-            <Slider
-              wrapperClasses="w-full"
-              items={sliderItems}
-              value={sliders.observations}
-              step={1}
-              min={0}
-              max={sliderItems.length - 1}
-              float={true}
-              labels={true}
-              middle={true}
-              on:valueChange={({ detail: e }) => (sliders.observations = e.d)}
-            />
-          </div>
-          <div>
-            <div class="flex justify-center items-center gap-2 font-medium">
-              <span class="text-center">Moving Average for Time Series Models</span>
-              <InfoIcon title={tooltipText.timeSeriesSlider} {tooltipClasses} />
-            </div>
-            <Slider
-              wrapperClasses="w-full"
-              items={sliderItems}
-              value={sliders.timeSeries}
-              step={1}
-              min={0}
-              max={sliderItems.length - 1}
-              float={true}
-              labels={true}
-              middle={true}
-              on:valueChange={({ detail: e }) => (sliders.timeSeries = sliderItems[e.d].value)}
-            />
-          </div>
+          {/each}
         </div>
       </div>
     {/if}
