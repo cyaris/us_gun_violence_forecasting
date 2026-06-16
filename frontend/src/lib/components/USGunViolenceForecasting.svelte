@@ -216,11 +216,11 @@
   }
 
   function modelMetrics(year, isFutureTimeframe) {
-    let predictionColumn = predictionColumn(year)
+    let predictionColumnName = predictionColumn(year)
     let rows = data.map((d, i) => ({ d, i })).filter(({ d }) => (isFutureTimeframe ? d.is_forecast : !d.is_forecast))
 
-    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumn] || 0), 0)
-    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumn)).filter(v => v != null)
+    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] || 0), 0)
+    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumnName)).filter(v => v != null)
     let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
 
     let result = {
@@ -233,7 +233,8 @@
     if (!isFutureTimeframe) {
       result.rmse = Math.round(
         Math.sqrt(
-          rows.reduce((sum, { d }) => sum + ((d[predictionColumn] || 0) - d.observed_victims) ** 2, 0) / numObservations
+          rows.reduce((sum, { d }) => sum + ((d[predictionColumnName] || 0) - d.observed_victims) ** 2, 0) /
+            numObservations
         )
       ).toLocaleString()
     }
