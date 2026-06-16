@@ -60,14 +60,14 @@ def load_daily_harmed(input_csv: Path) -> pd.DataFrame:
 
     incidents = pd.read_csv(input_csv, usecols=["Incident_Date", "Victims_Injured", "Victims_Killed"])
     incidents["date"] = pd.to_datetime(incidents["Incident_Date"])
-    incidents["num_harmed"] = pd.to_numeric(incidents["Victims_Killed"], errors="coerce").fillna(0) + pd.to_numeric(
-        incidents["Victims_Injured"], errors="coerce"
-    ).fillna(0)
+    incidents["observed_victims"] = pd.to_numeric(incidents["Victims_Killed"], errors="coerce").fillna(
+        0
+    ) + pd.to_numeric(incidents["Victims_Injured"], errors="coerce").fillna(0)
 
-    daily = incidents.groupby("date", as_index=False)["num_harmed"].sum()
+    daily = incidents.groupby("date", as_index=False)["observed_victims"].sum()
     all_dates = pd.DataFrame({"date": pd.date_range(daily["date"].min(), daily["date"].max(), freq="D")})
     daily = all_dates.merge(daily, how="left", on="date")
-    daily["num_harmed"] = daily["num_harmed"].fillna(0).astype(int)
+    daily["observed_victims"] = daily["observed_victims"].fillna(0).astype(int)
 
     return daily
 
@@ -89,7 +89,7 @@ def future_dataframe_lengths(df_date: pd.DataFrame, forecast_days: int) -> dict[
 
 
 def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_prior_scale: float) -> pd.DataFrame:
-    model_input = df_date.rename(columns={"date": "ds", "num_harmed": "y"})
+    model_input = df_date.rename(columns={"date": "ds", "observed_victims": "y"})
     model_input["y"] = np.log1p(model_input["y"])
 
     lengths = future_dataframe_lengths(df_date, forecast_days)
@@ -111,21 +111,16 @@ def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_p
         harmed_forecast = harmed_prophet.make_future_dataframe(freq="D", periods=lengths[year])
         harmed_forecast = harmed_prophet.predict(harmed_forecast)
 
-        pred_col = f"pred_{year}"
-        trend_col = f"yearly_trend_calc_{year}"
-        # Prophet was fit on log1p(num_harmed), so convert forecasts back to the original count scale.
+        pred_col = f"predicted_victims_{year}"
+        # Prophet was fit on log1p(observed_victims), so convert forecasts back to the original count scale.
         harmed_forecast[pred_col] = np.maximum(0, np.expm1(harmed_forecast["yhat"]))
-        # Calculate the year-over-year trend on the original count scale.
-        harmed_forecast[trend_col] = harmed_forecast[pred_col] - harmed_forecast[pred_col].shift(periods=365)
 
         harmed_forecast = harmed_forecast.rename(columns={"ds": "date"})
 
         if df is None:
             df = harmed_forecast[["date", pred_col]].merge(df_date, how="outer", on="date")
-            df = harmed_forecast[["date", trend_col]].merge(df, how="outer", on="date")
         else:
             df = harmed_forecast[["date", pred_col]].merge(df, how="outer", on="date")
-            df = harmed_forecast[["date", trend_col]].merge(df, how="outer", on="date")
 
     if df is None:
         raise ValueError("No yearly models were fit because the daily dataset is empty.")
@@ -134,23 +129,21 @@ def build_forecast_data(df_date: pd.DataFrame, forecast_days: int, changepoint_p
 
 
 def prepare_for_visualization(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.reset_index()
+    df = df.sort_values("date").reset_index(drop=True)
 
-    df["non_observation"] = None
-    first_future_index = df.index[df["num_harmed"].isna()].min()
-    if pd.notna(first_future_index):
-        df.loc[df["index"] >= first_future_index, "non_observation"] = 1
+    df["is_forecast"] = df["observed_victims"].isna()
 
-    df["num_harmed"] = pd.Series(
-        [None if pd.isna(value) else int(value) for value in df["num_harmed"]], dtype=object, index=df.index
+    df["observed_victims"] = pd.Series(
+        [None if pd.isna(value) else int(value) for value in df["observed_victims"]], dtype=object, index=df.index
     )
 
-    df["year"] = df["date"].dt.year
-
-    df.insert(0, "Unnamed: 0", range(len(df)))
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")
+    prediction_cols = sorted(
+        [col for col in df.columns if col.startswith("predicted_victims_")],
+        key=lambda col: int(col.rsplit("_", 1)[1]),
+    )
 
-    return df
+    return df[["date", "observed_victims", "is_forecast", *prediction_cols]]
 
 
 def write_json(df: pd.DataFrame, output_json: Path) -> None:
