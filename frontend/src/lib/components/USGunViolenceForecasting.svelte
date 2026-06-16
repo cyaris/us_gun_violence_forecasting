@@ -13,11 +13,11 @@
   // Backend emits this time series chronologically; row order is used for yearly trend calculations.
   let parseLocalDate = date => new Date(`${date}T00:00:00`)
   let yearFromDate = d => Number(d.date.slice(0, 4))
-  let predictionColumnName = year => `predicted_victims_${year}`
+  let predictionColumn = year => `predicted_victims_${year}`
   let minYear = Math.min(...data.map(yearFromDate))
   let latestObservedYear = Math.max(...data.filter(d => !d.is_forecast).map(yearFromDate))
-  let overallPredictionColumnName = predictionColumnName(latestObservedYear)
-  let overallPredictionMovingAverageColumnName = `${overallPredictionColumnName}_moving_average`
+  let overallPredictionColumn = predictionColumn(latestObservedYear)
+  let overallPredictionMovingAverageColumn = `${overallPredictionColumn}_moving_average`
 
   let width
   let height
@@ -89,12 +89,12 @@
         }
 
         let observationsMovingAverage = getMovingAverage("observed_victims", sliderItems[sliders.observations].label)
-        let timeSeries = getMovingAverage(overallPredictionColumnName, sliderItems[sliders.timeSeries].label)
+        let timeSeries = getMovingAverage(overallPredictionColumn, sliderItems[sliders.timeSeries].label)
 
         // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
         filteredData.forEach((d, i) => {
           d.observed_victims_moving_average = observationsMovingAverage[i]
-          d[overallPredictionMovingAverageColumnName] = timeSeries[i]
+          d[overallPredictionMovingAverageColumn] = timeSeries[i]
         })
 
         xScale = d3.scaleTime(
@@ -109,12 +109,12 @@
             0,
             d3.max(filteredData, d =>
               sliders.observations && sliders.timeSeries
-                ? Math.max(d.observed_victims_moving_average, d[overallPredictionMovingAverageColumnName])
+                ? Math.max(d.observed_victims_moving_average, d[overallPredictionMovingAverageColumn])
                 : sliders.observations
-                  ? Math.max(d.observed_victims_moving_average, d[overallPredictionColumnName])
+                  ? Math.max(d.observed_victims_moving_average, d[overallPredictionColumn])
                   : sliders.timeSeries
-                    ? Math.max(d.observed_victims, d[overallPredictionMovingAverageColumnName])
-                    : Math.max(d.observed_victims, d[overallPredictionColumnName])
+                    ? Math.max(d.observed_victims, d[overallPredictionMovingAverageColumn])
+                    : Math.max(d.observed_victims, d[overallPredictionColumn])
             ),
           ],
           [svgHeight - xAxisHeight, plotMargin.top]
@@ -136,10 +136,10 @@
             )
           : pathGeneratorFor("observed_victims")(filteredData.filter(v => v.observed_victims)),
         timeSeries: sliders.timeSeries
-          ? pathGeneratorFor(overallPredictionMovingAverageColumnName)(
-              filteredData.filter(v => v[overallPredictionMovingAverageColumnName])
+          ? pathGeneratorFor(overallPredictionMovingAverageColumn)(
+              filteredData.filter(v => v[overallPredictionMovingAverageColumn])
             )
-          : pathGeneratorFor(overallPredictionColumnName)(filteredData.filter(v => v.observed_victims)),
+          : pathGeneratorFor(overallPredictionColumn)(filteredData.filter(v => v.observed_victims)),
       })
     }
   }
@@ -216,7 +216,7 @@
   }
 
   function modelMetrics(year, isFutureTimeframe) {
-    let predictionColumn = predictionColumnName(year)
+    let predictionColumn = predictionColumn(year)
     let rows = data.map((d, i) => ({ d, i })).filter(({ d }) => (isFutureTimeframe ? d.is_forecast : !d.is_forecast))
 
     let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumn] || 0), 0)
@@ -283,7 +283,7 @@
     if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
       let movingAverages = movingAverage(
         filteredData,
-        predictionColumnName(hoverYear),
+        predictionColumn(hoverYear),
         sliderItems[sliders.timeSeries].label
       )
 
@@ -437,7 +437,7 @@
               />
               {#if sliders.timeSeries <= 1}
                 {#each filteredData as d (d.date)}
-                  {#if d[overallPredictionColumnName]}
+                  {#if d[overallPredictionColumn]}
                     <circle
                       class={!chartOptions.displayModels || sliders.timeSeries
                         ? "non-reactive"
@@ -445,7 +445,7 @@
                       fill={!chartOptions.displayModels || sliders.timeSeries ? "transparent" : "orange"}
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
-                      cy={yScale(d[overallPredictionColumnName])}
+                      cy={yScale(d[overallPredictionColumn])}
                     />
                   {/if}
                 {/each}
@@ -470,13 +470,13 @@
                 />
               {:else if comparing && chartOptions.displayModels}
                 {#each filteredData as d (d.date)}
-                  {#if d[predictionColumnName(hoverYear)]}
+                  {#if d[predictionColumn(hoverYear)]}
                     <circle
                       class="non-reactive"
                       fill="#00c07f"
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
-                      cy={yScale(d[predictionColumnName(hoverYear)])}
+                      cy={yScale(d[predictionColumn(hoverYear)])}
                     />
                   {/if}
                 {/each}
