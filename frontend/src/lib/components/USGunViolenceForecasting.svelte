@@ -149,7 +149,7 @@
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
 
-  let selectedTimeframe = selectItems[0]
+  let selectValue = selectItems[0]
 
   let sliderItems = [
     { value: 0, label: 0 },
@@ -250,7 +250,7 @@
   }
 
   $: comparing = hoverYear != null && hoverYear < latestObservedYear
-  $: isFuture = selectedTimeframe.value == "Next 365 Days"
+  $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = filteredData ? modelMetrics(latestObservedYear, isFuture) : null
   $: comparativeMetrics = comparing ? modelMetrics(hoverYear, isFuture) : null
@@ -556,11 +556,11 @@
           <div class="w-36">
             <Select
               items={selectItems}
-              value={selectedTimeframe}
+              value={selectValue}
               clearable={false}
               centeredValue={true}
               centeredItems={true}
-              on:valueChange={({ detail: e }) => (selectedTimeframe = e.d)}
+              on:valueChange={({ detail: e }) => (selectValue = e.d)}
             />
           </div>
         </div>
