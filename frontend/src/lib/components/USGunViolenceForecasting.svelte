@@ -5,7 +5,7 @@
   import sma from "sma"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, InfoTooltip, Select, Slider } from "svelte-lib/components"
+  import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
 
   import data from "../static/data.json"
 
@@ -44,6 +44,11 @@
   let xAxisInfoVerticalOffset = 6
   let yAxisTitleLeftPadding = 8
   let forecastLabelTopPadding = 22
+  let xTickLabelBandHeight = xTickLabelSize + xTickLabelDescenderPadding
+  let yAxisLabelBandMaskWidth = Math.max(plotMargin.left - xTickLabelBleed, 0)
+  let yAxisTitleX = 16 + yAxisTitleLeftPadding
+  let yAxisInfoX = 12 + yAxisTitleLeftPadding
+  let tooltipClasses = "max-w-[20rem]"
 
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
   let xAxisHeight = plotMargin.bottom
@@ -220,14 +225,10 @@
   $: timeSeriesPointRows = filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : []
   $: comparativePointRows = comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : []
   $: xTickLabelBandTop = yScale ? yScale(0) + xTickHeight + xTickVerticalOffset : 0
-  $: xTickLabelBandHeight = xTickLabelSize + xTickLabelDescenderPadding
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
-  $: yAxisLabelBandMaskWidth = Math.max(plotMargin.left - xTickLabelBleed, 0)
   $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
   $: xAxisTitleY = svgHeight ? svgHeight - xAxisTitleBottomPadding : 0
   $: xAxisInfoY = svgHeight ? xAxisTitleY - xAxisInfoVerticalOffset : 0
-  $: yAxisTitleX = 16 + yAxisTitleLeftPadding
-  $: yAxisInfoX = 12 + yAxisTitleLeftPadding
 
   $: drawPointLayer(
     observationsCanvas,
@@ -373,8 +374,8 @@
       "Adjust the slider to specify a moving average for displaying time series models. Units are in days, with 0 days displaying the exact prediction on a given day.",
     timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
     metrics: isFuture
-      ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
-      : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`,
+      ? `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\n\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\n\nAvg Yearly Trend: What is the average change between these predictions annually?`
+      : `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\n\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\n\nAvg Yearly Trend: What is the average change between these predictions annually?\n\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`,
   }
 
   $: {
@@ -418,7 +419,7 @@
             deselection={checkboxFilters.lasVegasScale ? [] : [true]}
             on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
           />
-          <InfoTooltip title={tooltipText.lasVegasScale} />
+          <InfoIcon title={tooltipText.lasVegasScale} {tooltipClasses} />
         </div>
         <CheckboxFilter
           labelClasses="font-medium"
@@ -644,7 +645,12 @@
               Total Victims
             </text>
             <g transform="rotate(-90, {yAxisInfoX}, {(plotMargin.top + yScale(0)) / 2 - 78})">
-              <InfoIcon title={tooltipText.yAxis} cx={yAxisInfoX} cy={(plotMargin.top + yScale(0)) / 2 - 78} />
+              <InfoIcon
+                title={tooltipText.yAxis}
+                {tooltipClasses}
+                cx={yAxisInfoX}
+                cy={(plotMargin.top + yScale(0)) / 2 - 78}
+              />
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
@@ -652,7 +658,7 @@
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} cx={xAxisTitleX + 32} cy={xAxisInfoY} />
+              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 32} cy={xAxisInfoY} />
             </g>
           </svg>
         </div>
@@ -661,7 +667,7 @@
         <div>
           <div class="mb-2 flex items-center gap-1.5 font-medium">
             Prediction Timeframe
-            <InfoTooltip title={tooltipText.timeframe} />
+            <InfoIcon title={tooltipText.timeframe} {tooltipClasses} />
           </div>
           <div class="w-36">
             <Select
@@ -680,7 +686,7 @@
               <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
                 <div class="flex items-center gap-1.5 font-medium">
                   Metrics
-                  <InfoTooltip title={tooltipText.metrics} />
+                  <InfoIcon title={tooltipText.metrics} {tooltipClasses} />
                 </div>
               </th>
               <th
@@ -709,7 +715,7 @@
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
               <span class="text-center">Moving Average for Daily Observations</span>
-              <InfoTooltip title={tooltipText.observationsSlider} />
+              <InfoIcon title={tooltipText.observationsSlider} {tooltipClasses} />
             </div>
             <Slider
               wrapperClasses="w-full"
@@ -727,7 +733,7 @@
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
               <span class="text-center">Moving Average for Time Series Models</span>
-              <InfoTooltip title={tooltipText.timeSeriesSlider} />
+              <InfoIcon title={tooltipText.timeSeriesSlider} {tooltipClasses} />
             </div>
             <Slider
               wrapperClasses="w-full"
