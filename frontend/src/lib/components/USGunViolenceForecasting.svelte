@@ -78,7 +78,7 @@
       if (data.length) {
         filteredData = [...data]
           .sort((a, b) => b.observed_victims - a.observed_victims)
-          .slice(chartOptions.lasVegasScale ? 0 : 1)
+          .slice(checkboxFilters.lasVegasScale ? 0 : 1)
           .sort((a, b) => a.date.localeCompare(b.date))
 
         let getMovingAverage = function (field, range) {
@@ -161,7 +161,7 @@
     { value: 6, label: 30 },
   ]
 
-  let chartOptions = {
+  let checkboxFilters = {
     lasVegasScale: true,
     displayObservations: true,
     displayModels: true,
@@ -180,19 +180,19 @@
     {
       label: "Daily Observations",
       color: "teal",
-      visible: chartOptions.displayObservations,
+      visible: checkboxFilters.displayObservations,
       aggregated: sliders.observations > 0,
     },
     {
       label: "Overall Model",
       color: "orange",
-      visible: chartOptions.displayModels,
+      visible: checkboxFilters.displayModels,
       aggregated: sliders.timeSeries > 0,
     },
     {
       label: "Comparative Model",
       color: "#00c07f",
-      visible: chartOptions.displayModels && hoverYear != null && hoverYear < latestObservedYear,
+      visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
       aggregated: sliders.timeSeries > 0,
     },
   ]
@@ -315,28 +315,28 @@
           <CheckboxFilter
             labelClasses="font-medium"
             label="Scale to Include the Las Vegas Shooting"
-            value={chartOptions.lasVegasScale}
-            selection={chartOptions.lasVegasScale ? [true] : []}
-            deselection={chartOptions.lasVegasScale ? [] : [true]}
-            on:update={({ detail: e }) => (chartOptions.lasVegasScale = !e.value)}
+            value={checkboxFilters.lasVegasScale}
+            selection={checkboxFilters.lasVegasScale ? [true] : []}
+            deselection={checkboxFilters.lasVegasScale ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters.lasVegasScale = !e.value)}
           />
           <InfoTooltip title={lasVegasTooltip} />
         </div>
         <CheckboxFilter
           labelClasses="font-medium"
           label="Display Daily Observations"
-          value={chartOptions.displayObservations}
-          selection={chartOptions.displayObservations ? [true] : []}
-          deselection={chartOptions.displayObservations ? [] : [true]}
-          on:update={({ detail: e }) => (chartOptions.displayObservations = !e.value)}
+          value={checkboxFilters.displayObservations}
+          selection={checkboxFilters.displayObservations ? [true] : []}
+          deselection={checkboxFilters.displayObservations ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayObservations = !e.value)}
         />
         <CheckboxFilter
           labelClasses="font-medium"
           label="Display Time Series Models"
-          value={chartOptions.displayModels}
-          selection={chartOptions.displayModels ? [true] : []}
-          deselection={chartOptions.displayModels ? [] : [true]}
-          on:update={({ detail: e }) => (chartOptions.displayModels = !e.value)}
+          value={checkboxFilters.displayModels}
+          selection={checkboxFilters.displayModels ? [true] : []}
+          deselection={checkboxFilters.displayModels ? [] : [true]}
+          on:update={({ detail: e }) => (checkboxFilters.displayModels = !e.value)}
         />
         <span class="flex flex-col items-center text-sm {comparing ? 'italic' : ''}">
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
@@ -410,10 +410,10 @@
                 {#each filteredData as d (d.date)}
                   {#if d.observed_victims}
                     <circle
-                      class={!chartOptions.displayObservations || sliders.observations
+                      class={!checkboxFilters.displayObservations || sliders.observations
                         ? "non-reactive"
                         : "stroke stroke-teal hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!chartOptions.displayObservations || sliders.observations ? "transparent" : "teal"}
+                      fill={!checkboxFilters.displayObservations || sliders.observations ? "transparent" : "teal"}
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
                       cy={yScale(d.observed_victims)}
@@ -427,11 +427,11 @@
                 {/each}
               {/if}
               <path
-                class={chartOptions.displayObservations && sliders.observations
+                class={checkboxFilters.displayObservations && sliders.observations
                   ? "hover:stroke-4 hover:stroke-teal"
                   : "non-reactive"}
                 fill="transparent"
-                stroke={chartOptions.displayObservations && sliders.observations ? "teal" : "transparent"}
+                stroke={checkboxFilters.displayObservations && sliders.observations ? "teal" : "transparent"}
                 stroke-width={3}
                 d={$animatedPaths.observations}
               />
@@ -439,10 +439,10 @@
                 {#each filteredData as d (d.date)}
                   {#if d[overallPredictionColumn]}
                     <circle
-                      class={!chartOptions.displayModels || sliders.timeSeries
+                      class={!checkboxFilters.displayModels || sliders.timeSeries
                         ? "non-reactive"
                         : "stroke stroke-orange hover:stroke-2 hover:stroke-black hover:cursor-help"}
-                      fill={!chartOptions.displayModels || sliders.timeSeries ? "transparent" : "orange"}
+                      fill={!checkboxFilters.displayModels || sliders.timeSeries ? "transparent" : "orange"}
                       r={4}
                       cx={xScale(parseLocalDate(d.date))}
                       cy={yScale(d[overallPredictionColumn])}
@@ -451,15 +451,15 @@
                 {/each}
               {/if}
               <path
-                class={chartOptions.displayModels && sliders.timeSeries
+                class={checkboxFilters.displayModels && sliders.timeSeries
                   ? "hover:stroke-4 hover:stroke-orange"
                   : "non-reactive"}
                 fill="transparent"
-                stroke={chartOptions.displayModels && sliders.timeSeries ? "orange" : "transparent"}
+                stroke={checkboxFilters.displayModels && sliders.timeSeries ? "orange" : "transparent"}
                 stroke-width={3}
                 d={$animatedPaths.timeSeries}
               />
-              {#if comparing && chartOptions.displayModels && sliders.timeSeries}
+              {#if comparing && checkboxFilters.displayModels && sliders.timeSeries}
                 <path
                   class="non-reactive"
                   fill="transparent"
@@ -468,7 +468,7 @@
                   opacity={0.9}
                   d={comparativePath}
                 />
-              {:else if comparing && chartOptions.displayModels}
+              {:else if comparing && checkboxFilters.displayModels}
                 {#each filteredData as d (d.date)}
                   {#if d[predictionColumn(hoverYear)]}
                     <circle
