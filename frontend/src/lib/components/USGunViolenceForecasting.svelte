@@ -54,10 +54,7 @@
 
   let pxPerDay = 0.4
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
-  let tweenTiming = {
-    duration: 600,
-    easing: cubicInOut,
-  }
+  let tweenTiming = { duration: 600, easing: cubicInOut }
   let graphWidth
   let observationsCanvas
   let timeSeriesCanvas
@@ -172,11 +169,7 @@
     { value: 6, label: 30 },
   ]
 
-  let checkboxFilters = {
-    lasVegasScale: true,
-    displayObservations: true,
-    displayModels: true,
-  }
+  let checkboxFilters = { lasVegasScale: true, displayObservations: true, displayModels: true }
 
   let sliders = { observations: 0, timeSeries: 2 }
 
@@ -651,11 +644,7 @@
               Total Victims
             </text>
             <g transform="rotate(-90, {yAxisInfoX}, {(plotMargin.top + yScale(0)) / 2 - 78})">
-              <InfoIcon
-                title={tooltipText.yAxis}
-                cx={yAxisInfoX}
-                cy={(plotMargin.top + yScale(0)) / 2 - 78}
-              />
+              <InfoIcon title={tooltipText.yAxis} cx={yAxisInfoX} cy={(plotMargin.top + yScale(0)) / 2 - 78} />
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
