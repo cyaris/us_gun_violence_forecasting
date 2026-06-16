@@ -20,12 +20,9 @@ backend/
 frontend/
   package.json                     # frontend scripts
   src/
-    lib/components/
-      USGunViolenceForecasting.svelte
-    lib/static/
-      data.json                    # generated forecast data, ignored by git
-    routes/
-      +page.svelte                 # renders the visualization
+    lib/components/USGunViolenceForecasting.svelte
+    lib/static/data.json           # generated forecast data, ignored by git
+    routes/+page.svelte            # renders the visualization
 ```
 
 ## Prerequisites
