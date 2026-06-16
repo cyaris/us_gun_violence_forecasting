@@ -684,11 +684,11 @@
                 </div>
               </th>
               <th
-                class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
+                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
                 >Overall Model</th
               >
               <th
-                class="px-3 pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
+                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
                 >Comparative Model</th
               >
             </tr>
@@ -699,8 +699,8 @@
                 <td class="pr-3 whitespace-nowrap"
                   >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                 >
-                <td class="px-3 text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                <td class="px-3 text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                <td class="pl-3 pr-px text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                <td class="pl-3 pr-px text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
               </tr>
             {/each}
           </tbody>
@@ -708,7 +708,7 @@
         <div class="grow grid grid-cols-2 gap-6 mt-4">
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
-              Moving Average for<br />Daily Observations
+              <span class="text-center">Moving Average for Daily Observations</span>
               <InfoTooltip title={tooltipText.observationsSlider} />
             </div>
             <Slider
@@ -726,7 +726,7 @@
           </div>
           <div>
             <div class="flex justify-center items-center gap-1.5 font-medium">
-              Moving Average for<br />Time Series Models
+              <span class="text-center">Moving Average for Time Series Models</span>
               <InfoTooltip title={tooltipText.timeSeriesSlider} />
             </div>
             <Slider
