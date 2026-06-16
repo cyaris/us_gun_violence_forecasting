@@ -5,8 +5,7 @@
   import sma from "sma"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, InfoTooltip, Select, Slider, Text } from "svelte-lib/components"
-  import { getTextWidth, tooltip } from "svelte-lib/functions"
+  import { CheckboxFilter, InfoIcon, InfoTooltip, Select, Slider } from "svelte-lib/components"
 
   import data from "../static/data.json"
 
@@ -30,16 +29,21 @@
 
   let xScale
   let yScale
-  let xTickLength
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let plotMargin = { top: 20, right: 20, bottom: 65, left: 65 }
+  let plotMargin = { top: 20, right: 20, bottom: 93, left: 84 }
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
-  let xTickLabelSize = 12
+  let xTickLabelSize = 14
+  let xTickLabelBleed = 32
+  let xTickLabelDescenderPadding = 4
+  let xAxisTitleBottomPadding = 24
+  let xAxisInfoVerticalOffset = 6
+  let yAxisTitleLeftPadding = 8
+  let forecastLabelTopPadding = 22
 
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
   let xAxisHeight = plotMargin.bottom
@@ -49,17 +53,15 @@
   let pathGeneratorFor
 
   let pxPerDay = 0.4
-  let fadeClasses = "transition-opacity duration-300 delay-100 ease-[cubic-bezier(0.65,0,0.35,1)]"
+  let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let tweenTiming = {
     duration: 600,
-    delay: 100,
     easing: cubicInOut,
   }
   let graphWidth
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
-  let hoveredObservation = null
   let observationPointRows = []
   let timeSeriesPointRows = []
   let comparativePointRows = []
@@ -130,8 +132,6 @@
           d3.extent(filteredData, d => d.parsedDate),
           [0, xAxisWidth]
         )
-
-        xTickLength = xScale(xScale.ticks()[1]) - xScale(xScale.ticks()[0])
 
         let yDomain = [0, d3.max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
 
@@ -226,6 +226,15 @@
   $: observationPointRows = filteredData ? filteredData.filter(d => d.observed_victims) : []
   $: timeSeriesPointRows = filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : []
   $: comparativePointRows = comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : []
+  $: xTickLabelBandTop = yScale ? yScale(0) + xTickHeight + xTickVerticalOffset : 0
+  $: xTickLabelBandHeight = xTickLabelSize + xTickLabelDescenderPadding
+  $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
+  $: yAxisLabelBandMaskWidth = Math.max(plotMargin.left - xTickLabelBleed, 0)
+  $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
+  $: xAxisTitleY = svgHeight ? svgHeight - xAxisTitleBottomPadding : 0
+  $: xAxisInfoY = svgHeight ? xAxisTitleY - xAxisInfoVerticalOffset : 0
+  $: yAxisTitleX = 16 + yAxisTitleLeftPadding
+  $: yAxisInfoX = 12 + yAxisTitleLeftPadding
 
   $: drawPointLayer(
     observationsCanvas,
@@ -296,21 +305,6 @@
     context.fill()
   }
 
-  function nearestObservation(pointerX, pointerY) {
-    if (!observationPointsVisible || !observationPointRows.length || !animatedPointYScale || !xScale) return null
-
-    let targetDate = xScale.invert(pointerX)
-    let pointIndex = d3.bisector(d => d.parsedDate).left(observationPointRows, targetDate)
-    let candidates = [observationPointRows[pointIndex - 1], observationPointRows[pointIndex]].filter(Boolean)
-    let nearest = candidates.reduce((closest, row) => {
-      let distance = Math.hypot(xScale(row.parsedDate) - pointerX, animatedPointYScale(row.observed_victims) - pointerY)
-
-      return !closest || distance < closest.distance ? { row, distance } : closest
-    }, null)
-
-    return nearest?.distance <= 8 ? nearest.row : null
-  }
-
   function yearlyTrendAt(rowIndex, field) {
     let current = data[rowIndex]?.[field]
     let previousYear = data[rowIndex - 365]?.[field]
@@ -345,18 +339,22 @@
     return result
   }
 
+  function clearHover() {
+    hoverYear = null
+  }
+
   function handleHover(e) {
-    let [pointerX, pointerY] = d3.pointer(e, plotGroup)
+    let [pointerX] = d3.pointer(e, plotGroup)
     let year = xScale.invert(pointerX).getFullYear()
 
     if (year != hoverYear) {
       hoverYear = year
     }
-
-    hoveredObservation = nearestObservation(pointerX, pointerY)
   }
 
   $: comparing = hoverYear != null && hoverYear < latestObservedYear
+  $: hoverHighlightWidth =
+    comparing && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : 0
   $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = filteredData ? modelMetrics(latestObservedYear, isFuture) : null
@@ -384,9 +382,6 @@
     metrics: isFuture
       ? `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\nAvg Yearly Trend: What is the average change between these predictions annually?`
       : `Model Input: What years of data were used to generate these predictions?\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\nAvg Yearly Trend: What is the average change between these predictions annually?\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`,
-    hoveredObservation: hoveredObservation
-      ? `Date: ${format(hoveredObservation.parsedDate, "yyyy-MM-dd")}\nVictims: ${hoveredObservation.observed_victims.toLocaleString()}`
-      : "",
   }
 
   $: {
@@ -453,199 +448,224 @@
         </span>
       </div>
       {#if svgWidth && svgHeight}
-        <div
-          class="overflow-scroll w-full border-solid border-black"
-          width={chartViewportWidth}
-          style="max-width:{chartViewportWidth}px"
-        >
-          <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
-            <canvas
-              bind:this={observationsCanvas}
-              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
-              aria-hidden="true"
-              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{observationPointsVisible ? 1 : 0}"
-            />
-            <canvas
-              bind:this={timeSeriesCanvas}
-              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
-              aria-hidden="true"
-              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{timeSeriesPointsVisible ? 1 : 0}"
-            />
-            <canvas
-              bind:this={comparativeCanvas}
-              class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
-              aria-hidden="true"
-              style="width:{svgWidth}px; height:{svgHeight}px; opacity:{comparativePointsVisible ? 0.9 : 0}"
-            />
-            <svg
-              class="absolute left-0 top-0 flex flex-col justify-center items-center overflow-x-scroll"
-              width={svgWidth}
-              height={svgHeight}
-              id="graph"
-            >
-              <g
-                bind:this={plotGroup}
-                transform="translate({plotMargin.left}, {0})"
-                role="presentation"
-                on:mousemove={handleHover}
-                on:mouseleave={() => {
-                  hoverYear = null
-                  hoveredObservation = null
-                }}
+        <div class="relative w-full overflow-hidden border-solid border-black" style="max-width:{chartViewportWidth}px">
+          <div class="h-full w-full overflow-x-scroll overflow-y-hidden" style="height:{svgHeight}px">
+            <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
+              <canvas
+                bind:this={observationsCanvas}
+                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                aria-hidden="true"
+                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{observationPointsVisible ? 1 : 0}"
+              />
+              <canvas
+                bind:this={timeSeriesCanvas}
+                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                aria-hidden="true"
+                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{timeSeriesPointsVisible ? 1 : 0}"
+              />
+              <canvas
+                bind:this={comparativeCanvas}
+                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                aria-hidden="true"
+                style="width:{svgWidth}px; height:{svgHeight}px; opacity:{comparativePointsVisible ? 0.9 : 0}"
+              />
+              <svg
+                class="absolute left-0 top-0 flex flex-col justify-center items-center"
+                width={svgWidth}
+                height={svgHeight}
+                id="graph"
               >
-                <rect
-                  x={0}
-                  y={plotMargin.top}
-                  width={xAxisWidth}
-                  height={yScale(0) - plotMargin.top}
-                  fill="transparent"
-                />
-                {#if comparing}
+                <g
+                  bind:this={plotGroup}
+                  transform="translate({plotMargin.left}, {0})"
+                  role="presentation"
+                  on:mousemove={handleHover}
+                  on:mouseleave={clearHover}
+                >
                   <rect
-                    class="non-reactive"
                     x={0}
                     y={plotMargin.top}
-                    width={Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth)}
+                    width={xAxisWidth}
+                    height={yScale(0) - plotMargin.top}
+                    fill="transparent"
+                  />
+                  {#if comparing}
+                    <rect
+                      class="non-reactive"
+                      x={0}
+                      y={plotMargin.top}
+                      width={hoverHighlightWidth}
+                      height={yScale(0) - plotMargin.top}
+                      fill="black"
+                      fill-opacity={0.04}
+                    />
+                    <path
+                      class="non-reactive"
+                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{yScale(0)}H0"
+                      fill="transparent"
+                      stroke="black"
+                      stroke-width={1}
+                    />
+                  {/if}
+                  <rect
+                    class="non-reactive"
+                    x={xScale(parseLocalDate(forecastStartDate))}
+                    y={plotMargin.top}
+                    width={xAxisWidth - xScale(parseLocalDate(forecastStartDate))}
                     height={yScale(0) - plotMargin.top}
                     fill="black"
-                    fill-opacity={0.04}
-                    stroke="black"
-                    stroke-width={1}
+                    opacity={0.06}
                   />
-                {/if}
-                <rect
-                  class="non-reactive"
-                  x={xScale(parseLocalDate(forecastStartDate))}
-                  y={plotMargin.top}
-                  width={xAxisWidth - xScale(parseLocalDate(forecastStartDate))}
-                  height={yScale(0) - plotMargin.top}
-                  fill="black"
-                  opacity={0.06}
-                />
-                <line
-                  class="non-reactive"
-                  stroke="black"
-                  stroke-dasharray="4 4"
-                  x1={xScale(parseLocalDate(forecastStartDate))}
-                  x2={xScale(parseLocalDate(forecastStartDate))}
-                  y1={plotMargin.top}
-                  y2={yScale(0)}
-                />
-                <text
-                  class="non-reactive fill-chart-1 text-sm italic"
-                  x={(xScale(parseLocalDate(forecastStartDate)) + xAxisWidth) / 2}
-                  y={plotMargin.top + 14}
-                  text-anchor="middle"
-                >
-                  Next {forecastDayCount.toLocaleString()} days...
-                </text>
-                <path
-                  class={observationPathVisible
-                    ? `${fadeClasses} hover:stroke-4 hover:stroke-teal`
-                    : `${fadeClasses} non-reactive`}
-                  fill="transparent"
-                  stroke="teal"
-                  stroke-width={3}
-                  style="opacity:{observationPathVisible ? 1 : 0}"
-                  d={$animatedPaths.observations}
-                />
-                {#if hoveredObservation && observationPointsVisible && animatedPointYScale}
-                  <circle
-                    class="hover:cursor-help"
-                    fill="teal"
+                  <line
+                    class="non-reactive"
                     stroke="black"
-                    r={5}
-                    cx={xScale(hoveredObservation.parsedDate)}
-                    cy={animatedPointYScale(hoveredObservation.observed_victims)}
-                    title={tooltipText.hoveredObservation}
-                    use:tooltip
+                    stroke-dasharray="4 4"
+                    x1={xScale(parseLocalDate(forecastStartDate))}
+                    x2={xScale(parseLocalDate(forecastStartDate))}
+                    y1={plotMargin.top}
+                    y2={yScale(0)}
                   />
-                {/if}
-                <path
-                  class={timeSeriesPathVisible
-                    ? `${fadeClasses} hover:stroke-4 hover:stroke-orange`
-                    : `${fadeClasses} non-reactive`}
-                  fill="transparent"
-                  stroke="orange"
-                  stroke-width={3}
-                  style="opacity:{timeSeriesPathVisible ? 1 : 0}"
-                  d={$animatedPaths.timeSeries}
-                />
-                {#if comparing && checkboxFilters.displayModels}
+                  <line
+                    class="non-reactive"
+                    stroke="black"
+                    stroke-dasharray="1 4"
+                    stroke-linecap="round"
+                    x1={xScale(parseLocalDate(forecastStartDate))}
+                    x2={xAxisWidth}
+                    y1={plotMargin.top}
+                    y2={plotMargin.top}
+                  />
+                  <text
+                    class="non-reactive fill-chart-1 text-sm italic"
+                    x={(xScale(parseLocalDate(forecastStartDate)) + xAxisWidth) / 2}
+                    y={plotMargin.top + forecastLabelTopPadding}
+                    text-anchor="middle"
+                  >
+                    Next {forecastDayCount.toLocaleString()} days...
+                  </text>
                   <path
-                    class="non-reactive {fadeClasses}"
+                    class={observationPathVisible
+                      ? `${fadeClasses} hover:stroke-4 hover:stroke-teal`
+                      : `${fadeClasses} non-reactive`}
                     fill="transparent"
-                    stroke="#00c07f"
+                    stroke="teal"
                     stroke-width={3}
-                    style="opacity:{comparativePathVisible ? 0.9 : 0}"
-                    d={comparativePath}
+                    style="opacity:{observationPathVisible ? 1 : 0}"
+                    d={$animatedPaths.observations}
                   />
-                {/if}
-              </g>
-              <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-                <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{yScale(0)}" />
-                {#each yScale.ticks() as yTick (yTick)}
-                  <g transform="translate(0, {yScale(yTick)})">
-                    <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
-                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
-                      {yTick.toLocaleString()}
-                    </text>
-                  </g>
-                {/each}
-              </g>
-              <text
-                class="non-reactive fill-chart-1 text-lg"
-                text-anchor="middle"
-                transform="translate(16, {(plotMargin.top + yScale(0)) / 2}) rotate(-90)"
-              >
-                Total Victims
-              </text>
-              <InfoIcon title={tooltipText.yAxis} cx={12} cy={(plotMargin.top + yScale(0)) / 2 - 78} />
-              <text
-                class="non-reactive fill-chart-1 text-lg"
-                text-anchor="middle"
-                x={plotMargin.left + xAxisWidth / 2}
-                y={svgHeight - 14}
-              >
-                Date
-              </text>
-              <InfoIcon title={tooltipText.xAxis} cx={plotMargin.left + xAxisWidth / 2 + 32} cy={svgHeight - 20} />
-              <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
-                {#each legendItems as item, i (item.label)}
-                  <g transform="translate(0, {i * 16})">
-                    {#if !item.visible}
-                      <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
-                    {:else if item.aggregated}
-                      <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
-                    {:else}
-                      <circle fill={item.color} cx={8} cy={0} r={4} />
-                    {/if}
-                    <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
-                  </g>
-                {/each}
-              </g>
-              <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {yScale(0)})">
-                <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,0V0H{xAxisWidth}V0" />
-                {#each xScale.ticks() as xTick (xTick)}
-                  <g transform="translate({xScale(xTick)}, {0})">
-                    <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
-                    <Text
-                      classes="text-center"
-                      overflowBody={false}
-                      wrapBody={false}
-                      x={-xTickLength / 2}
-                      width={Math.min(xTickLength, xAxisWidth - xScale(xTick) + xTickLength / 2)}
-                      height={xAxisHeight}
-                      bodyPadding={{ top: xTickHeight + xTickVerticalOffset, right: 0, bottom: 0, left: 0 }}
-                      bodyText={xAxisWidth - xScale(xTick) >= getTextWidth(String(xTick.getFullYear()), xTickLabelSize)
-                        ? String(xTick.getFullYear())
-                        : ""}
+                  <path
+                    class={timeSeriesPathVisible
+                      ? `${fadeClasses} hover:stroke-4 hover:stroke-orange`
+                      : `${fadeClasses} non-reactive`}
+                    fill="transparent"
+                    stroke="orange"
+                    stroke-width={3}
+                    style="opacity:{timeSeriesPathVisible ? 1 : 0}"
+                    d={$animatedPaths.timeSeries}
+                  />
+                  {#if comparing && checkboxFilters.displayModels}
+                    <path
+                      class="non-reactive {fadeClasses}"
+                      fill="transparent"
+                      stroke="#00c07f"
+                      stroke-width={3}
+                      style="opacity:{comparativePathVisible ? 0.9 : 0}"
+                      d={comparativePath}
                     />
-                  </g>
-                {/each}
-              </g>
-            </svg>
+                  {/if}
+                </g>
+                <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
+                  {#each legendItems as item, i (item.label)}
+                    <g transform="translate(0, {i * 16})">
+                      {#if !item.visible}
+                        <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                      {:else if item.aggregated}
+                        <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
+                      {:else}
+                        <circle fill={item.color} cx={8} cy={0} r={4} />
+                      {/if}
+                      <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                    </g>
+                  {/each}
+                </g>
+                <svg
+                  class="non-reactive text-sm"
+                  x={plotMargin.left}
+                  y={yScale(0)}
+                  width={xAxisWidth}
+                  height={xTickHeight + 1}
+                  overflow="hidden"
+                >
+                  <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,0V0H{xAxisWidth}V0" />
+                  {#each xScale.ticks() as xTick (xTick)}
+                    <g transform="translate({xScale(xTick)}, {0})">
+                      <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
+                    </g>
+                  {/each}
+                </svg>
+                <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {yScale(0)})">
+                  {#each xScale.ticks() as xTick (xTick)}
+                    <text
+                      class="fill-chart-1"
+                      x={xScale(xTick)}
+                      y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
+                      text-anchor="middle"
+                    >
+                      {xTick.getFullYear()}
+                    </text>
+                  {/each}
+                </g>
+              </svg>
+            </div>
           </div>
+          <div
+            class="pointer-events-none absolute left-0 top-0 z-10 bg-white"
+            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px"
+          />
+          <div
+            class="pointer-events-none absolute left-0 z-10 bg-white"
+            style="top:{xTickLabelBandTop}px; width:{yAxisLabelBandMaskWidth}px; height:{xTickLabelBandHeight}px"
+          />
+          <div
+            class="pointer-events-none absolute left-0 z-10 bg-white"
+            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight - xTickLabelBandBottom}px"
+          />
+          <svg class="absolute left-0 top-0 z-20" width={plotMargin.left} height={yScale(0)} overflow="visible">
+            <rect width={plotMargin.left} height={yScale(0)} fill="white" pointer-events="none" />
+            <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
+              <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{yScale(0)}" />
+              {#each yScale.ticks() as yTick (yTick)}
+                <g transform="translate(0, {yScale(yTick)})">
+                  <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
+                  <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                    {yTick.toLocaleString()}
+                  </text>
+                </g>
+              {/each}
+            </g>
+            <text
+              class="non-reactive fill-chart-1 text-lg"
+              text-anchor="middle"
+              transform="translate({yAxisTitleX}, {(plotMargin.top + yScale(0)) / 2}) rotate(-90)"
+            >
+              Total Victims
+            </text>
+            <g transform="rotate(-90, {yAxisInfoX}, {(plotMargin.top + yScale(0)) / 2 - 78})">
+              <InfoIcon
+                title={tooltipText.yAxis}
+                cx={yAxisInfoX}
+                cy={(plotMargin.top + yScale(0)) / 2 - 78}
+              />
+            </g>
+          </svg>
+          <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
+            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={xAxisTitleY}>
+              Date
+            </text>
+            <g class="pointer-events-auto">
+              <InfoIcon title={tooltipText.xAxis} cx={xAxisTitleX + 32} cy={xAxisInfoY} />
+            </g>
+          </svg>
         </div>
       {/if}
       <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{chartViewportWidth}px">
