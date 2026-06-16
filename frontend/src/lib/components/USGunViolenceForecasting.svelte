@@ -100,7 +100,7 @@
 
   $: {
     if (width) {
-      chartViewportWidth = width * 0.8
+      chartViewportWidth = width * 0.7
       graphWidth = data.length * pxPerDay
       svgHeight = height * 0.65
       svgWidth = graphWidth + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
