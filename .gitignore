@@ -6,6 +6,7 @@
 **/.git
 **/.svelte-kit
 **/.vscode
+**/.venv
 **/.ipynb_checkpoints
 
 **/__pycache__
