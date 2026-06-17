@@ -165,16 +165,8 @@
   ]
 
   let sliderItems = [
-    {
-      key: "observations",
-      label: "Moving Average for Daily Observations",
-      tooltipKey: "observationsSlider",
-    },
-    {
-      key: "timeSeries",
-      label: "Moving Average for Time Series Models",
-      tooltipKey: "timeSeriesSlider",
-    },
+    { key: "observations", label: "Moving Average for Daily Observations", tooltipKey: "observationsSlider" },
+    { key: "timeSeries", label: "Moving Average for Time Series Models", tooltipKey: "timeSeriesSlider" },
   ]
 
   let forecastDayCount = data.filter(d => d.is_forecast).length
