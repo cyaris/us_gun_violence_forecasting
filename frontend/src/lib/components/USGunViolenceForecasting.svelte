@@ -41,9 +41,6 @@
   let yAxisTitleLeftPadding = 8
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX = 12 + yAxisTitleLeftPadding
-  let tooltipClasses = "max-w-[20rem]"
-  // the full bottom band holding the x axis ticks, year labels, and "Date" title.
-  let xAxisHeight = plotMargin.bottom
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
   let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
@@ -125,7 +122,7 @@
 
         let yDomain = [0, d3.max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
 
-        yScale = d3.scaleLinear(yDomain, [svgHeight - xAxisHeight, plotMargin.top])
+        yScale = d3.scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
 
         animatedYDomain.set(yDomain)
 
@@ -213,7 +210,7 @@
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries > 0
 
   $: animatedPointYScale =
-    svgHeight && $animatedYDomain ? d3.scaleLinear($animatedYDomain, [svgHeight - xAxisHeight, plotMargin.top]) : null
+    svgHeight && $animatedYDomain ? d3.scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top]) : null
 
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
@@ -471,7 +468,7 @@
                   deselection={checkboxFilters[checkbox.key] ? [] : [true]}
                   on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
                 />
-                <InfoIcon title={tooltipText[checkbox.tooltipKey]} {tooltipClasses} />
+                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-[20rem]" />
               </div>
             {:else}
               <CheckboxFilter
@@ -714,7 +711,12 @@
               Total Victims
             </text>
             <g transform="rotate(-90, {yAxisInfoX}, {yAxisCenterY - 78})">
-              <InfoIcon title={tooltipText.yAxis} {tooltipClasses} cx={yAxisInfoX} cy={yAxisCenterY - 78} />
+              <InfoIcon
+                title={tooltipText.yAxis}
+                tooltipClasses="max-w-[20rem]"
+                cx={yAxisInfoX}
+                cy={yAxisCenterY - 78}
+              />
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
@@ -722,7 +724,12 @@
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 36} cy={svgHeight - 30} />
+              <InfoIcon
+                title={tooltipText.xAxis}
+                tooltipClasses="max-w-[20rem]"
+                cx={xAxisTitleX + 36}
+                cy={svgHeight - 30}
+              />
             </g>
           </svg>
         </div>
@@ -731,7 +738,7 @@
         <div>
           <div class="mb-2 flex items-center gap-2 font-medium">
             Prediction Timeframe
-            <InfoIcon title={tooltipText.timeframe} {tooltipClasses} />
+            <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-[20rem]" />
           </div>
           <div class="w-36">
             <Select
@@ -750,7 +757,7 @@
               <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
                 <div class="flex items-center gap-2 font-medium">
                   Metrics
-                  <InfoIcon title={tooltipText.metrics} {tooltipClasses} />
+                  <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-[20rem]" />
                 </div>
               </th>
               <th
@@ -780,7 +787,7 @@
             <div>
               <div class="flex justify-center items-center gap-2 font-medium">
                 <span class="text-center">{slider.label}</span>
-                <InfoIcon title={tooltipText[slider.tooltipKey]} {tooltipClasses} />
+                <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-[20rem]" />
               </div>
               <Slider
                 wrapperClasses="w-full"
