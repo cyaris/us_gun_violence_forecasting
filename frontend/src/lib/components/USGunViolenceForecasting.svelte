@@ -210,7 +210,9 @@
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries > 0
 
   $: animatedPointYScale =
-    svgHeight && $animatedYDomain ? d3.scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top]) : null
+    svgHeight && $animatedYDomain
+      ? d3.scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+      : null
 
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
@@ -448,14 +450,14 @@
 </script>
 
 <div
-  class="flex flex-col w-full h-screen justify-center items-center mb-10"
+  class="mb-10 flex h-screen w-full flex-col items-center justify-center"
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
-  <div class="lg:hidden px-8 text-center text-lg">This visualization is best viewed on a larger screen.</div>
+  <div class="px-8 text-center text-lg lg:hidden">This visualization is best viewed on a larger screen.</div>
   <div class="hidden lg:block">
     {#if filteredData}
-      <div class="relative mt-4 mb-3 text-sm" style="width:{chartViewportWidth}px">
+      <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
         <div class="flex flex-col items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             {#if checkbox.tooltipKey}
@@ -494,7 +496,7 @@
           class="relative w-full overflow-hidden border border-solid"
           style="max-width:{chartViewportWidth}px; border-color:black"
         >
-          <div class="h-full w-full overflow-x-scroll overflow-y-hidden" style="height:{svgHeight}px">
+          <div class="h-full w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={svgHeight}>
                 {#if comparing}
@@ -536,7 +538,7 @@
                 style="width:{svgWidth}px; height:{svgHeight}px"
               />
               <svg
-                class="absolute left-0 top-0 z-20 flex flex-col justify-center items-center"
+                class="absolute left-0 top-0 z-20 flex flex-col items-center justify-center"
                 width={svgWidth}
                 height={svgHeight}
                 id="graph"
@@ -675,20 +677,19 @@
             </g>
           </svg>
           <div
-            class="pointer-events-none absolute left-0 top-0 z-30"
-            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px; background-color:white"
+            class="pointer-events-none absolute left-0 top-0 z-30 bg-white"
+            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30"
+            class="pointer-events-none absolute left-0 z-30 bg-white"
             style="top:{xTickLabelBandTop}px; width:{Math.max(
               plotMargin.left - 32,
               0
-            )}px; height:{xTickLabelBandHeight}px; background-color:white"
+            )}px; height:{xTickLabelBandHeight}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30"
-            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight -
-              xTickLabelBandBottom}px; background-color:white"
+            class="pointer-events-none absolute left-0 z-30 bg-white"
+            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight - xTickLabelBandBottom}px"
           />
           <svg class="absolute left-0 top-0 z-40" width={plotMargin.left} height={plotBottomY} overflow="visible">
             <rect width={plotMargin.left} height={plotBottomY} fill="white" pointer-events="none" />
@@ -734,7 +735,7 @@
           </svg>
         </div>
       {/if}
-      <div class="flex items-start gap-6 w-full mt-5 text-sm" style="max-width:{chartViewportWidth}px">
+      <div class="mt-5 flex w-full items-start gap-6 text-sm" style="max-width:{chartViewportWidth}px">
         <div>
           <div class="mb-2 flex items-center gap-2 font-medium">
             Prediction Timeframe
@@ -754,18 +755,18 @@
         <table class="border-collapse">
           <thead>
             <tr>
-              <th class="pb-1 text-left align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-chart-1">
+              <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
                 <div class="flex items-center gap-2 font-medium">
                   Metrics
                   <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-[20rem]" />
                 </div>
               </th>
               <th
-                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px]"
+                class="border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.overallModel}>Overall Model</th
               >
               <th
-                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px]"
+                class="border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.comparativeModel}>Comparative Model</th
               >
             </tr>
@@ -773,7 +774,7 @@
           <tbody>
             {#each metricRows as row (row.key)}
               <tr>
-                <td class="pr-3 whitespace-nowrap"
+                <td class="whitespace-nowrap pr-3"
                   >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                 >
                 <td class="pl-3 pr-px text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
@@ -782,10 +783,10 @@
             {/each}
           </tbody>
         </table>
-        <div class="grow grid grid-cols-2 gap-6 mt-4">
+        <div class="mt-4 grid grow grid-cols-2 gap-6">
           {#each sliderItems as slider (slider.key)}
             <div>
-              <div class="flex justify-center items-center gap-2 font-medium">
+              <div class="flex items-center justify-center gap-2 font-medium">
                 <span class="text-center">{slider.label}</span>
                 <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-[20rem]" />
               </div>
