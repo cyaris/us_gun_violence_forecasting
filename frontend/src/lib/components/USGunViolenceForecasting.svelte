@@ -38,38 +38,25 @@
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
   let xTickLabelSize = 14
-  let xTickLabelBleed = 32
-  let xTickLabelDescenderPadding = 4
-  let xAxisTitleBottomPadding = 24
-  let xAxisInfoVerticalOffset = 6
   let yAxisTitleLeftPadding = 8
-  let forecastLabelTopPadding = 22
-  let xTickLabelBandHeight = xTickLabelSize + xTickLabelDescenderPadding
-  let yAxisLabelBandMaskWidth = Math.max(plotMargin.left - xTickLabelBleed, 0)
-  let yAxisTitleX = 16 + yAxisTitleLeftPadding
+  let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX = 12 + yAxisTitleLeftPadding
   let tooltipClasses = "max-w-[20rem]"
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
   let xAxisHeight = plotMargin.bottom
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
   let pointRadius = 4
-  let fadedPointAlpha = 0.5
   let observationCircleStroke = { color: "black", width: 0.5 }
 
   let filteredData
 
   let pathGeneratorFor
 
-  let pxPerDay = 0.4
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let tweenTiming = { duration: 600, easing: cubicInOut }
-  let graphWidth
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
-  let observationPointRows = []
-  let timeSeriesPointRows = []
-  let comparativePointRows = []
   let animatedPointYScale = null
 
   let animatedYDomain = tweened([0, 1], {
@@ -105,9 +92,8 @@
   $: {
     if (width) {
       chartViewportWidth = width * 0.7
-      graphWidth = data.length * pxPerDay
       svgHeight = height * 0.65
-      svgWidth = graphWidth + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
+      svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
       if (data.length) {
@@ -166,8 +152,6 @@
 
   let selectValue = selectItems[0]
 
-  let sliderMin = 0
-  let sliderMax = 30
   let sliderStep = 5
 
   let checkboxFilters = { lasVegasScale: true, displayObservations: true, displayModels: true }
@@ -239,20 +223,14 @@
   $: animatedPointYScale =
     svgHeight && $animatedYDomain ? d3.scaleLinear($animatedYDomain, [svgHeight - xAxisHeight, plotMargin.top]) : null
 
-  $: observationPointRows = filteredData ? filteredData.filter(d => d.observed_victims) : []
-  $: timeSeriesPointRows = filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : []
-  $: comparativePointRows = comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : []
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
   $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
   $: xTicks = xScale ? xScale.ticks() : []
-  $: yTicks = yScale ? yScale.ticks() : []
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
-  $: xAxisTitleY = svgHeight ? svgHeight - xAxisTitleBottomPadding : 0
-  $: xAxisInfoY = svgHeight ? xAxisTitleY - xAxisInfoVerticalOffset : 0
 
   $: {
     let pointLayerReady = xScale && animatedPointYScale && svgWidth && svgHeight
@@ -261,7 +239,7 @@
     if (pointLayerReady) {
       drawPointLayer({
         canvas: observationsCanvas,
-        rows: observationPointRows,
+        rows: filteredData ? filteredData.filter(d => d.observed_victims) : [],
         field: "observed_victims",
         color: chartColors.observations,
         hoverHighlightWidth: pointLayerHoverHighlightWidth,
@@ -269,14 +247,14 @@
       })
       drawPointLayer({
         canvas: timeSeriesCanvas,
-        rows: timeSeriesPointRows,
+        rows: filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : [],
         field: overallPredictionColumn,
         color: chartColors.overallModel,
         hoverHighlightWidth: pointLayerHoverHighlightWidth,
       })
       drawPointLayer({
         canvas: comparativeCanvas,
-        rows: comparativePointRows,
+        rows: comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : [],
         field: comparing ? predictionColumn(hoverYear) : null,
         color: chartColors.comparativeModel,
         hoverHighlightWidth: pointLayerHoverHighlightWidth,
@@ -377,7 +355,7 @@
       context.restore()
     }
 
-    drawPoints(fadedPoints, fadedPointAlpha)
+    drawPoints(fadedPoints, 0.5)
     drawPoints(highlightedPoints, 1)
     context.globalAlpha = 1
   }
@@ -622,7 +600,7 @@
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
                     x={(forecastStartX + xAxisWidth) / 2}
-                    y={plotMargin.top + forecastLabelTopPadding}
+                    y={plotMargin.top + 22}
                     text-anchor="middle"
                   >
                     Next {forecastDayCount.toLocaleString()} days...
@@ -708,23 +686,26 @@
             </g>
           </svg>
           <div
-            class="pointer-events-none absolute left-0 top-0 z-10"
+            class="pointer-events-none absolute left-0 top-0 z-30"
             style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px; background-color:white"
           />
           <div
-            class="pointer-events-none absolute left-0 z-10"
-            style="top:{xTickLabelBandTop}px; width:{yAxisLabelBandMaskWidth}px; height:{xTickLabelBandHeight}px; background-color:white"
+            class="pointer-events-none absolute left-0 z-30"
+            style="top:{xTickLabelBandTop}px; width:{Math.max(
+              plotMargin.left - 32,
+              0
+            )}px; height:{xTickLabelBandHeight}px; background-color:white"
           />
           <div
-            class="pointer-events-none absolute left-0 z-10"
+            class="pointer-events-none absolute left-0 z-30"
             style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight -
               xTickLabelBandBottom}px; background-color:white"
           />
-          <svg class="absolute left-0 top-0 z-20" width={plotMargin.left} height={plotBottomY} overflow="visible">
+          <svg class="absolute left-0 top-0 z-40" width={plotMargin.left} height={plotBottomY} overflow="visible">
             <rect width={plotMargin.left} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
-              {#each yTicks as yTick (yTick)}
+              {#each yScale.ticks() as yTick (yTick)}
                 <g transform="translate(0, {yScale(yTick)})">
                   <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
                   <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
@@ -736,7 +717,7 @@
             <text
               class="non-reactive fill-chart-1 text-lg"
               text-anchor="middle"
-              transform="translate({yAxisTitleX}, {yAxisCenterY}) rotate(-90)"
+              transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
               Total Victims
             </text>
@@ -745,11 +726,11 @@
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
-            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={xAxisTitleY}>
+            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={svgHeight - 24}>
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 36} cy={xAxisInfoY} />
+              <InfoIcon title={tooltipText.xAxis} {tooltipClasses} cx={xAxisTitleX + 36} cy={svgHeight - 30} />
             </g>
           </svg>
         </div>
@@ -813,8 +794,8 @@
                 wrapperClasses="w-full"
                 value={sliders[slider.key]}
                 step={sliderStep}
-                min={sliderMin}
-                max={sliderMax}
+                min={0}
+                max={30}
                 labelStep={sliderStep}
                 float={true}
                 labels={true}
