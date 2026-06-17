@@ -589,14 +589,6 @@
                     y1={plotMargin.top}
                     y2={plotMargin.top}
                   />
-                  <text
-                    class="non-reactive fill-chart-1 text-sm italic"
-                    x={(forecastStartX + xAxisWidth) / 2}
-                    y={plotMargin.top + 22}
-                    text-anchor="middle"
-                  >
-                    Next {forecastDayCount.toLocaleString()} days...
-                  </text>
                   <path
                     class={observationPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
                     fill="transparent"
@@ -623,6 +615,14 @@
                       d={comparativePath}
                     />
                   {/if}
+                  <text
+                    class="non-reactive fill-chart-1 text-sm italic"
+                    x={(forecastStartX + xAxisWidth) / 2}
+                    y={plotMargin.top + 22}
+                    text-anchor="middle"
+                  >
+                    Next {forecastDayCount.toLocaleString()} days...
+                  </text>
                 </g>
                 <svg
                   class="non-reactive text-sm"
