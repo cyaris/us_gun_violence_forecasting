@@ -143,7 +143,7 @@
   }
 
   let selectItems = [
-    { value: "Past - Present", label: `${minYear} - Present` },
+    { value: "Historical Data", label: "Historical Data" },
     { value: "Next 365 Days", label: "Next 365 Days" },
   ]
 
@@ -367,7 +367,12 @@
     let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
 
     let result = {
-      input: year == latestObservedYear ? `${minYear}–Present` : year == minYear ? `${minYear}` : `${minYear}–${year}`,
+      input:
+        year == latestObservedYear
+          ? `${minYear}–${latestObservedYear}`
+          : year == minYear
+            ? `${minYear}`
+            : `${minYear}–${year}`,
       total: Math.round(predSum).toLocaleString(),
       perDay: Math.round(predSum / rows.length).toLocaleString(),
       trend: Math.round(trendSum / yearlyTrends.length).toLocaleString(),
@@ -752,33 +757,35 @@
             />
           </div>
         </div>
-        <table class="border-collapse">
+        <table class="w-min table-fixed border-collapse">
           <thead>
             <tr>
-              <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
+              <th
+                class="w-48 border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]"
+              >
                 <div class="flex items-center gap-2 font-medium">
                   Metrics
                   <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-[20rem]" />
                 </div>
               </th>
               <th
-                class="border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.overallModel}>Overall Model</th
+                class="w-20 border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
+                style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
               >
               <th
-                class="border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.comparativeModel}>Comparative Model</th
+                class="w-20 border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
+                style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
               >
             </tr>
           </thead>
           <tbody>
             {#each metricRows as row (row.key)}
               <tr>
-                <td class="whitespace-nowrap pr-3"
+                <td class="whitespace-nowrap"
                   >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                 >
-                <td class="pl-3 pr-px text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                <td class="pl-3 pr-px text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
               </tr>
             {/each}
           </tbody>
