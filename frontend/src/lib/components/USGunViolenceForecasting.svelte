@@ -789,6 +789,7 @@
                 min={0}
                 max={30}
                 labelStep={sliderStep}
+                labelEveryXTicks={2}
                 float={true}
                 labels={true}
                 middle={true}
