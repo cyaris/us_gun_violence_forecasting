@@ -51,6 +51,10 @@
   let tooltipClasses = "max-w-[20rem]"
   // the full bottom band holding the x axis ticks, year labels, and "Date" title.
   let xAxisHeight = plotMargin.bottom
+  let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
+  let pointRadius = 4
+  let fadedPointAlpha = 0.5
+  let observationCircleStroke = { color: "black", width: 0.5 }
 
   let filteredData
 
@@ -198,20 +202,23 @@
 
   $: legendItems = [
     {
+      key: "observations",
       label: "Daily Observations",
-      color: "teal",
+      color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
       aggregated: sliders.observations > 0,
     },
     {
+      key: "overallModel",
       label: "Overall Model",
-      color: "orange",
+      color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
       aggregated: sliders.timeSeries > 0,
     },
     {
+      key: "comparativeModel",
       label: "Comparative Model",
-      color: "#00c07f",
+      color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
       aggregated: sliders.timeSeries > 0,
     },
@@ -235,42 +242,47 @@
   $: observationPointRows = filteredData ? filteredData.filter(d => d.observed_victims) : []
   $: timeSeriesPointRows = filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : []
   $: comparativePointRows = comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : []
-  $: xTickLabelBandTop = yScale ? yScale(0) + xTickHeight + xTickVerticalOffset : 0
+  $: plotBottomY = yScale ? yScale(0) : 0
+  $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
+  $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
+  $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
+  $: xTicks = xScale ? xScale.ticks() : []
+  $: yTicks = yScale ? yScale.ticks() : []
+  $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
   $: xAxisTitleY = svgHeight ? svgHeight - xAxisTitleBottomPadding : 0
   $: xAxisInfoY = svgHeight ? xAxisTitleY - xAxisInfoVerticalOffset : 0
 
-  $: drawPointLayer(
-    observationsCanvas,
-    observationPointRows,
-    "observed_victims",
-    "teal",
-    xScale,
-    animatedPointYScale,
-    svgWidth,
-    svgHeight
-  )
-  $: drawPointLayer(
-    timeSeriesCanvas,
-    timeSeriesPointRows,
-    overallPredictionColumn,
-    "orange",
-    xScale,
-    animatedPointYScale,
-    svgWidth,
-    svgHeight
-  )
-  $: drawPointLayer(
-    comparativeCanvas,
-    comparativePointRows,
-    comparing ? predictionColumn(hoverYear) : null,
-    "#00c07f",
-    xScale,
-    animatedPointYScale,
-    svgWidth,
-    svgHeight
-  )
+  $: {
+    let pointLayerReady = xScale && animatedPointYScale && svgWidth && svgHeight
+    let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
+
+    if (pointLayerReady) {
+      drawPointLayer({
+        canvas: observationsCanvas,
+        rows: observationPointRows,
+        field: "observed_victims",
+        color: chartColors.observations,
+        hoverHighlightWidth: pointLayerHoverHighlightWidth,
+        stroke: observationCircleStroke,
+      })
+      drawPointLayer({
+        canvas: timeSeriesCanvas,
+        rows: timeSeriesPointRows,
+        field: overallPredictionColumn,
+        color: chartColors.overallModel,
+        hoverHighlightWidth: pointLayerHoverHighlightWidth,
+      })
+      drawPointLayer({
+        canvas: comparativeCanvas,
+        rows: comparativePointRows,
+        field: comparing ? predictionColumn(hoverYear) : null,
+        color: chartColors.comparativeModel,
+        hoverHighlightWidth: pointLayerHoverHighlightWidth,
+      })
+    }
+  }
 
   let movingAverage = (rows, field, range) =>
     sma(
@@ -278,12 +290,19 @@
       range
     ).map(v => parseFloat(v))
 
-  function drawPointLayer(canvas, rows, field, color, currentXScale, currentYScale, currentSvgWidth, currentSvgHeight) {
-    if (!canvas || !field || !currentXScale || !currentYScale || !currentSvgWidth || !currentSvgHeight) return
+  function drawPointLayer({
+    canvas,
+    rows,
+    field,
+    color,
+    hoverHighlightWidth: layerHoverHighlightWidth = null,
+    stroke = null,
+  }) {
+    if (!canvas || !field || !xScale || !animatedPointYScale || !svgWidth || !svgHeight) return
 
     let pixelRatio = typeof window == "undefined" ? 1 : window.devicePixelRatio || 1
-    let canvasWidth = Math.ceil(currentSvgWidth * pixelRatio)
-    let canvasHeight = Math.ceil(currentSvgHeight * pixelRatio)
+    let canvasWidth = Math.ceil(svgWidth * pixelRatio)
+    let canvasHeight = Math.ceil(svgHeight * pixelRatio)
 
     if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
       canvas.width = canvasWidth
@@ -292,22 +311,75 @@
 
     let context = canvas.getContext("2d")
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-    context.clearRect(0, 0, currentSvgWidth, currentSvgHeight)
-    context.fillStyle = color
-    context.beginPath()
+    context.clearRect(0, 0, svgWidth, svgHeight)
+    let strokeColor = stroke?.color
+    let strokeWidth = stroke?.width || 0
+    let hasStroke = strokeColor && strokeWidth > 0
+    let highlightedPoints = []
+    let fadedPoints = []
 
     rows.forEach(row => {
       let value = row[field]
       if (!value) return
 
-      let x = plotMargin.left + currentXScale(row.parsedDate)
-      let y = currentYScale(value)
+      let plotX = xScale(row.parsedDate)
+      let x = plotMargin.left + plotX
+      let y = animatedPointYScale(value)
 
-      context.moveTo(x + 4, y)
-      context.arc(x, y, 4, 0, Math.PI * 2)
+      if (layerHoverHighlightWidth != null && plotX > layerHoverHighlightWidth) {
+        fadedPoints.push([x, y])
+      } else {
+        highlightedPoints.push([x, y])
+      }
     })
 
-    context.fill()
+    let configurePointContext = drawContext => {
+      drawContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+      drawContext.fillStyle = color
+      drawContext.strokeStyle = strokeColor || "transparent"
+      drawContext.lineWidth = strokeWidth
+      drawContext.globalAlpha = 1
+    }
+
+    let paintPoints = (drawContext, points) => {
+      if (!points.length) return
+
+      points.forEach(([x, y]) => {
+        drawContext.beginPath()
+        drawContext.moveTo(x + pointRadius, y)
+        drawContext.arc(x, y, pointRadius, 0, Math.PI * 2)
+        drawContext.fill()
+        if (hasStroke) drawContext.stroke()
+      })
+    }
+
+    let drawPoints = (points, alpha) => {
+      if (!points.length) return
+
+      if (alpha == 1) {
+        configurePointContext(context)
+        paintPoints(context, points)
+        return
+      }
+
+      let layer = canvas.ownerDocument.createElement("canvas")
+      layer.width = canvasWidth
+      layer.height = canvasHeight
+
+      let layerContext = layer.getContext("2d")
+      configurePointContext(layerContext)
+      paintPoints(layerContext, points)
+
+      context.save()
+      context.setTransform(1, 0, 0, 1, 0, 0)
+      context.globalAlpha = alpha
+      context.drawImage(layer, 0, 0)
+      context.restore()
+    }
+
+    drawPoints(fadedPoints, fadedPointAlpha)
+    drawPoints(highlightedPoints, 1)
+    context.globalAlpha = 1
   }
 
   function yearlyTrendAt(rowIndex, field) {
@@ -452,14 +524,29 @@
       </div>
       {#if svgWidth && svgHeight}
         <div
-          class="relative w-full overflow-hidden border border-solid border-black"
-          style="max-width:{chartViewportWidth}px"
+          class="relative w-full overflow-hidden border border-solid"
+          style="max-width:{chartViewportWidth}px; border-color:black"
         >
           <div class="h-full w-full overflow-x-scroll overflow-y-hidden" style="height:{svgHeight}px">
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
+              <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={svgHeight}>
+                {#if comparing}
+                  <g transform="translate({plotMargin.left}, {0})">
+                    <rect
+                      class="non-reactive"
+                      x={0}
+                      y={plotMargin.top}
+                      width={hoverHighlightWidth}
+                      height={plotHeight}
+                      fill="black"
+                      fill-opacity={0.04}
+                    />
+                  </g>
+                {/if}
+              </svg>
               <canvas
                 bind:this={observationsCanvas}
-                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-100={observationPointsVisible}
                 class:opacity-0={!observationPointsVisible}
                 aria-hidden="true"
@@ -467,7 +554,7 @@
               />
               <canvas
                 bind:this={timeSeriesCanvas}
-                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-100={timeSeriesPointsVisible}
                 class:opacity-0={!timeSeriesPointsVisible}
                 aria-hidden="true"
@@ -475,14 +562,14 @@
               />
               <canvas
                 bind:this={comparativeCanvas}
-                class="pointer-events-none absolute left-0 top-0 {fadeClasses}"
+                class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-90={comparativePointsVisible}
                 class:opacity-0={!comparativePointsVisible}
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{svgHeight}px"
               />
               <svg
-                class="absolute left-0 top-0 flex flex-col justify-center items-center"
+                class="absolute left-0 top-0 z-20 flex flex-col justify-center items-center"
                 width={svgWidth}
                 height={svgHeight}
                 id="graph"
@@ -494,26 +581,11 @@
                   on:mousemove={handleHover}
                   on:mouseleave={clearHover}
                 >
-                  <rect
-                    x={0}
-                    y={plotMargin.top}
-                    width={xAxisWidth}
-                    height={yScale(0) - plotMargin.top}
-                    fill="transparent"
-                  />
+                  <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
                   {#if comparing}
-                    <rect
-                      class="non-reactive"
-                      x={0}
-                      y={plotMargin.top}
-                      width={hoverHighlightWidth}
-                      height={yScale(0) - plotMargin.top}
-                      fill="black"
-                      fill-opacity={0.04}
-                    />
                     <path
                       class="non-reactive"
-                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{yScale(0)}H0"
+                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
                       stroke="black"
                       stroke-width={1}
@@ -521,10 +593,10 @@
                   {/if}
                   <rect
                     class="non-reactive"
-                    x={xScale(parseLocalDate(forecastStartDate))}
+                    x={forecastStartX}
                     y={plotMargin.top}
-                    width={xAxisWidth - xScale(parseLocalDate(forecastStartDate))}
-                    height={yScale(0) - plotMargin.top}
+                    width={xAxisWidth - forecastStartX}
+                    height={plotHeight}
                     fill="black"
                     opacity={0.06}
                   />
@@ -532,45 +604,41 @@
                     class="non-reactive"
                     stroke="black"
                     stroke-dasharray="4 4"
-                    x1={xScale(parseLocalDate(forecastStartDate))}
-                    x2={xScale(parseLocalDate(forecastStartDate))}
+                    x1={forecastStartX}
+                    x2={forecastStartX}
                     y1={plotMargin.top}
-                    y2={yScale(0)}
+                    y2={plotBottomY}
                   />
                   <line
                     class="non-reactive"
                     stroke="black"
                     stroke-dasharray="1 4"
                     stroke-linecap="round"
-                    x1={xScale(parseLocalDate(forecastStartDate))}
+                    x1={forecastStartX}
                     x2={xAxisWidth}
                     y1={plotMargin.top}
                     y2={plotMargin.top}
                   />
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
-                    x={(xScale(parseLocalDate(forecastStartDate)) + xAxisWidth) / 2}
+                    x={(forecastStartX + xAxisWidth) / 2}
                     y={plotMargin.top + forecastLabelTopPadding}
                     text-anchor="middle"
                   >
                     Next {forecastDayCount.toLocaleString()} days...
                   </text>
                   <path
-                    class={observationPathVisible
-                      ? `${fadeClasses} hover:stroke-4 hover:stroke-teal`
-                      : `${fadeClasses} non-reactive`}
+                    class={observationPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
                     fill="transparent"
-                    stroke="teal"
+                    stroke={chartColors.observations}
                     stroke-width={3}
                     style="opacity:{observationPathVisible ? 1 : 0}"
                     d={$animatedPaths.observations}
                   />
                   <path
-                    class={timeSeriesPathVisible
-                      ? `${fadeClasses} hover:stroke-4 hover:stroke-orange`
-                      : `${fadeClasses} non-reactive`}
+                    class={timeSeriesPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
                     fill="transparent"
-                    stroke="orange"
+                    stroke={chartColors.overallModel}
                     stroke-width={3}
                     style="opacity:{timeSeriesPathVisible ? 1 : 0}"
                     d={$animatedPaths.timeSeries}
@@ -579,44 +647,30 @@
                     <path
                       class="non-reactive {fadeClasses}"
                       fill="transparent"
-                      stroke="#00c07f"
+                      stroke={chartColors.comparativeModel}
                       stroke-width={3}
                       style="opacity:{comparativePathVisible ? 0.9 : 0}"
                       d={comparativePath}
                     />
                   {/if}
                 </g>
-                <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
-                  {#each legendItems as item, i (item.label)}
-                    <g transform="translate(0, {i * 16})">
-                      {#if !item.visible}
-                        <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
-                      {:else if item.aggregated}
-                        <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
-                      {:else}
-                        <circle fill={item.color} cx={8} cy={0} r={4} />
-                      {/if}
-                      <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
-                    </g>
-                  {/each}
-                </g>
                 <svg
                   class="non-reactive text-sm"
                   x={plotMargin.left}
-                  y={yScale(0)}
+                  y={plotBottomY}
                   width={xAxisWidth}
                   height={xTickHeight + 1}
                   overflow="hidden"
                 >
                   <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,0V0H{xAxisWidth}V0" />
-                  {#each xScale.ticks() as xTick (xTick)}
+                  {#each xTicks as xTick (xTick)}
                     <g transform="translate({xScale(xTick)}, {0})">
                       <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
                     </g>
                   {/each}
                 </svg>
-                <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {yScale(0)})">
-                  {#each xScale.ticks() as xTick (xTick)}
+                <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
+                  {#each xTicks as xTick (xTick)}
                     <text
                       class="fill-chart-1"
                       x={xScale(xTick)}
@@ -630,23 +684,47 @@
               </svg>
             </div>
           </div>
+          <svg class="pointer-events-none absolute left-0 top-0 z-30" width={chartViewportWidth} height={svgHeight}>
+            <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
+              {#each legendItems as item, i (item.key)}
+                <g transform="translate(0, {i * 16})">
+                  {#if !item.visible}
+                    <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                  {:else if item.aggregated}
+                    <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
+                  {:else}
+                    <circle
+                      fill={item.color}
+                      stroke={item.key == "observations" ? observationCircleStroke.color : "none"}
+                      stroke-width={item.key == "observations" ? observationCircleStroke.width : 0}
+                      cx={8}
+                      cy={0}
+                      r={4}
+                    />
+                  {/if}
+                  <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                </g>
+              {/each}
+            </g>
+          </svg>
           <div
-            class="pointer-events-none absolute left-0 top-0 z-10 bg-white"
-            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px"
+            class="pointer-events-none absolute left-0 top-0 z-10"
+            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px; background-color:white"
           />
           <div
-            class="pointer-events-none absolute left-0 z-10 bg-white"
-            style="top:{xTickLabelBandTop}px; width:{yAxisLabelBandMaskWidth}px; height:{xTickLabelBandHeight}px"
+            class="pointer-events-none absolute left-0 z-10"
+            style="top:{xTickLabelBandTop}px; width:{yAxisLabelBandMaskWidth}px; height:{xTickLabelBandHeight}px; background-color:white"
           />
           <div
-            class="pointer-events-none absolute left-0 z-10 bg-white"
-            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight - xTickLabelBandBottom}px"
+            class="pointer-events-none absolute left-0 z-10"
+            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight -
+              xTickLabelBandBottom}px; background-color:white"
           />
-          <svg class="absolute left-0 top-0 z-20" width={plotMargin.left} height={yScale(0)} overflow="visible">
-            <rect width={plotMargin.left} height={yScale(0)} fill="white" pointer-events="none" />
+          <svg class="absolute left-0 top-0 z-20" width={plotMargin.left} height={plotBottomY} overflow="visible">
+            <rect width={plotMargin.left} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-              <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{yScale(0)}" />
-              {#each yScale.ticks() as yTick (yTick)}
+              <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
+              {#each yTicks as yTick (yTick)}
                 <g transform="translate(0, {yScale(yTick)})">
                   <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
                   <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
@@ -658,17 +736,12 @@
             <text
               class="non-reactive fill-chart-1 text-lg"
               text-anchor="middle"
-              transform="translate({yAxisTitleX}, {(plotMargin.top + yScale(0)) / 2}) rotate(-90)"
+              transform="translate({yAxisTitleX}, {yAxisCenterY}) rotate(-90)"
             >
               Total Victims
             </text>
-            <g transform="rotate(-90, {yAxisInfoX}, {(plotMargin.top + yScale(0)) / 2 - 78})">
-              <InfoIcon
-                title={tooltipText.yAxis}
-                {tooltipClasses}
-                cx={yAxisInfoX}
-                cy={(plotMargin.top + yScale(0)) / 2 - 78}
-              />
+            <g transform="rotate(-90, {yAxisInfoX}, {yAxisCenterY - 78})">
+              <InfoIcon title={tooltipText.yAxis} {tooltipClasses} cx={yAxisInfoX} cy={yAxisCenterY - 78} />
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
@@ -708,12 +781,12 @@
                 </div>
               </th>
               <th
-                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[orange]"
-                >Overall Model</th
+                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px]"
+                style:border-bottom-color={chartColors.overallModel}>Overall Model</th
               >
               <th
-                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px] border-b-[#00c07f]"
-                >Comparative Model</th
+                class="pl-3 pr-px pb-1 font-medium !text-right align-bottom [border-bottom-style:solid] border-b-[3.5px]"
+                style:border-bottom-color={chartColors.comparativeModel}>Comparative Model</th
               >
             </tr>
           </thead>
