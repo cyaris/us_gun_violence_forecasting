@@ -89,7 +89,7 @@
   $: {
     if (width) {
       chartViewportWidth = width * 0.7
-      svgHeight = height * 0.65
+      svgHeight = Math.min(height * 0.65, chartViewportWidth / 2)
       svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
@@ -742,7 +742,7 @@
       {/if}
       <div class="mt-5 flex w-full items-start gap-6 text-sm" style="max-width:{chartViewportWidth}px">
         <div>
-          <div class="mb-2 flex items-center gap-2 font-medium">
+          <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
             Prediction Timeframe
             <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-[20rem]" />
           </div>
@@ -793,8 +793,9 @@
         <div class="mt-4 grid grow grid-cols-2 gap-6">
           {#each sliderItems as slider (slider.key)}
             <div>
-              <div class="flex items-center justify-center gap-2 font-medium">
-                <span class="text-center">{slider.label}</span>
+              <div class="ml-3.5 max-w-full text-left font-medium">
+                {slider.label}
+                <span class="inline-block w-px" />
                 <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-[20rem]" />
               </div>
               <Slider
