@@ -459,25 +459,13 @@
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
-  <div class="px-8 text-center text-lg lg:hidden">This visualization is best viewed on a larger screen.</div>
-  <div class="hidden lg:block">
+  <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
+  <div class="hidden min-[1300px]:block">
     {#if filteredData}
       <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
         <div class="flex flex-col items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
-            {#if checkbox.tooltipKey}
-              <div class="flex items-center gap-2">
-                <CheckboxFilter
-                  labelClasses="font-medium"
-                  label={checkbox.label}
-                  value={checkboxFilters[checkbox.key]}
-                  selection={checkboxFilters[checkbox.key] ? [true] : []}
-                  deselection={checkboxFilters[checkbox.key] ? [] : [true]}
-                  on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
-                />
-                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-[20rem]" />
-              </div>
-            {:else}
+            <div class="flex items-center gap-2">
               <CheckboxFilter
                 labelClasses="font-medium"
                 label={checkbox.label}
@@ -486,7 +474,10 @@
                 deselection={checkboxFilters[checkbox.key] ? [] : [true]}
                 on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
               />
-            {/if}
+              {#if checkbox.tooltipKey}
+                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-[20rem]" />
+              {/if}
+            </div>
           {/each}
         </div>
         <span
@@ -498,10 +489,10 @@
       </div>
       {#if svgWidth && svgHeight}
         <div
-          class="relative w-full overflow-hidden border border-solid"
-          style="max-width:{chartViewportWidth}px; border-color:black"
+          class="relative w-full overflow-hidden border border-solid border-black"
+          style="max-width:{chartViewportWidth}px"
         >
-          <div class="h-full w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
+          <div class="w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={svgHeight}>
                 {#if comparing}
@@ -542,12 +533,7 @@
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{svgHeight}px"
               />
-              <svg
-                class="absolute left-0 top-0 z-20 flex flex-col items-center justify-center"
-                width={svgWidth}
-                height={svgHeight}
-                id="graph"
-              >
+              <svg class="absolute left-0 top-0 z-20" width={svgWidth} height={svgHeight} id="graph">
                 <g
                   bind:this={plotGroup}
                   transform="translate({plotMargin.left}, {0})"
