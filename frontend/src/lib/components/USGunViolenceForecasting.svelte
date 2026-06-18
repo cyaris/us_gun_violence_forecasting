@@ -659,7 +659,7 @@
             </div>
           </div>
           <svg class="pointer-events-none absolute left-0 top-0 z-30" width={chartViewportWidth} height={svgHeight}>
-            <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 8})">
+            <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 12})">
               {#each legendItems as item, i (item.key)}
                 <g transform="translate(0, {i * 16})">
                   {#if !item.visible}
