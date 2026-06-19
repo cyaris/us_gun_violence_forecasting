@@ -459,7 +459,7 @@
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
-  <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
+  <div class="px-8 text-center text-lg min-[1650px]:hidden">This visualization is best viewed on a larger screen.</div>
   <div class="hidden min-[1300px]:block">
     {#if filteredData}
       <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
@@ -781,7 +781,7 @@
             <div>
               <div class="ml-3.5 max-w-full text-left font-medium">
                 {slider.label}
-                <span class="inline-block w-px" />
+                <span class="inline-block w-0.5" />
                 <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-[20rem]" />
               </div>
               <Slider
