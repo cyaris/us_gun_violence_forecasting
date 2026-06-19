@@ -512,7 +512,6 @@
               <canvas
                 bind:this={observationsCanvas}
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
-                class:opacity-100={observationPointsVisible}
                 class:opacity-0={!observationPointsVisible}
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{svgHeight}px"
@@ -520,7 +519,6 @@
               <canvas
                 bind:this={timeSeriesCanvas}
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
-                class:opacity-100={timeSeriesPointsVisible}
                 class:opacity-0={!timeSeriesPointsVisible}
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{svgHeight}px"
