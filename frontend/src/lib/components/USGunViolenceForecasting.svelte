@@ -6,6 +6,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
+  import { drawPointLayer } from "svelte-lib/functions"
 
   import data from "../static/data.json"
 
@@ -228,27 +229,39 @@
     let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
-      drawPointLayer({
+      let drawChartPointLayer = ({ canvas, rows, field, color, stroke = null }) =>
+        drawPointLayer({
+          canvas,
+          rows,
+          width: svgWidth,
+          height: svgHeight,
+          radius: pointRadius,
+          color,
+          stroke,
+          getX: row => plotMargin.left + xScale(row.parsedDate),
+          getY: row => animatedPointYScale(row[field]),
+          isFaded: row =>
+            pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth,
+        })
+
+      drawChartPointLayer({
         canvas: observationsCanvas,
         rows: filteredData ? filteredData.filter(d => d.observed_victims) : [],
         field: "observed_victims",
         color: chartColors.observations,
-        hoverHighlightWidth: pointLayerHoverHighlightWidth,
         stroke: observationCircleStroke,
       })
-      drawPointLayer({
+      drawChartPointLayer({
         canvas: timeSeriesCanvas,
         rows: filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : [],
         field: overallPredictionColumn,
         color: chartColors.overallModel,
-        hoverHighlightWidth: pointLayerHoverHighlightWidth,
       })
-      drawPointLayer({
+      drawChartPointLayer({
         canvas: comparativeCanvas,
         rows: comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : [],
         field: comparing ? predictionColumn(hoverYear) : null,
         color: chartColors.comparativeModel,
-        hoverHighlightWidth: pointLayerHoverHighlightWidth,
       })
     }
   }
@@ -258,98 +271,6 @@
       rows.filter(v => v[field]).map(v => v[field]),
       range
     ).map(v => parseFloat(v))
-
-  function drawPointLayer({
-    canvas,
-    rows,
-    field,
-    color,
-    hoverHighlightWidth: layerHoverHighlightWidth = null,
-    stroke = null,
-  }) {
-    if (!canvas || !field || !xScale || !animatedPointYScale || !svgWidth || !svgHeight) return
-
-    let pixelRatio = typeof window == "undefined" ? 1 : window.devicePixelRatio || 1
-    let canvasWidth = Math.ceil(svgWidth * pixelRatio)
-    let canvasHeight = Math.ceil(svgHeight * pixelRatio)
-
-    if (canvas.width != canvasWidth || canvas.height != canvasHeight) {
-      canvas.width = canvasWidth
-      canvas.height = canvasHeight
-    }
-
-    let context = canvas.getContext("2d")
-    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-    context.clearRect(0, 0, svgWidth, svgHeight)
-    let strokeColor = stroke?.color
-    let strokeWidth = stroke?.width || 0
-    let hasStroke = strokeColor && strokeWidth > 0
-    let highlightedPoints = []
-    let fadedPoints = []
-
-    rows.forEach(row => {
-      let value = row[field]
-      if (!value) return
-
-      let plotX = xScale(row.parsedDate)
-      let x = plotMargin.left + plotX
-      let y = animatedPointYScale(value)
-
-      if (layerHoverHighlightWidth != null && plotX > layerHoverHighlightWidth) {
-        fadedPoints.push([x, y])
-      } else {
-        highlightedPoints.push([x, y])
-      }
-    })
-
-    let configurePointContext = drawContext => {
-      drawContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-      drawContext.fillStyle = color
-      drawContext.strokeStyle = strokeColor || "transparent"
-      drawContext.lineWidth = strokeWidth
-      drawContext.globalAlpha = 1
-    }
-
-    let paintPoints = (drawContext, points) => {
-      if (!points.length) return
-
-      points.forEach(([x, y]) => {
-        drawContext.beginPath()
-        drawContext.moveTo(x + pointRadius, y)
-        drawContext.arc(x, y, pointRadius, 0, Math.PI * 2)
-        drawContext.fill()
-        if (hasStroke) drawContext.stroke()
-      })
-    }
-
-    let drawPoints = (points, alpha) => {
-      if (!points.length) return
-
-      if (alpha == 1) {
-        configurePointContext(context)
-        paintPoints(context, points)
-        return
-      }
-
-      let layer = canvas.ownerDocument.createElement("canvas")
-      layer.width = canvasWidth
-      layer.height = canvasHeight
-
-      let layerContext = layer.getContext("2d")
-      configurePointContext(layerContext)
-      paintPoints(layerContext, points)
-
-      context.save()
-      context.setTransform(1, 0, 0, 1, 0, 0)
-      context.globalAlpha = alpha
-      context.drawImage(layer, 0, 0)
-      context.restore()
-    }
-
-    drawPoints(fadedPoints, 0.5)
-    drawPoints(highlightedPoints, 1)
-    context.globalAlpha = 1
-  }
 
   function yearlyTrendAt(rowIndex, field) {
     let current = data[rowIndex]?.[field]
@@ -579,18 +500,18 @@
                   />
                   <path
                     class={observationPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
+                    class:opacity-0={!observationPathVisible}
                     fill="transparent"
                     stroke={chartColors.observations}
                     stroke-width={3}
-                    style="opacity:{observationPathVisible ? 1 : 0}"
                     d={$animatedPaths.observations}
                   />
                   <path
                     class={timeSeriesPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
+                    class:opacity-0={!timeSeriesPathVisible}
                     fill="transparent"
                     stroke={chartColors.overallModel}
                     stroke-width={3}
-                    style="opacity:{timeSeriesPathVisible ? 1 : 0}"
                     d={$animatedPaths.timeSeries}
                   />
                   {#if comparing && checkboxFilters.displayModels}
@@ -599,7 +520,8 @@
                       fill="transparent"
                       stroke={chartColors.comparativeModel}
                       stroke-width={3}
-                      style="opacity:{comparativePathVisible ? 0.9 : 0}"
+                      class:opacity-90={comparativePathVisible}
+                      class:opacity-0={!comparativePathVisible}
                       d={comparativePath}
                     />
                   {/if}
