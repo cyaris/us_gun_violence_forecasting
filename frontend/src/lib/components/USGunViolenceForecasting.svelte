@@ -6,7 +6,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
-  import { drawPointLayer } from "svelte-lib/functions"
+  import { drawCanvasCircles } from "svelte-lib/functions"
 
   import data from "../static/data.json"
 
@@ -230,7 +230,7 @@
 
     if (pointLayerReady) {
       let drawChartPointLayer = ({ canvas, rows, field, color, stroke = null }) =>
-        drawPointLayer({
+        drawCanvasCircles({
           canvas,
           rows,
           width: svgWidth,
