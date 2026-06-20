@@ -27,12 +27,14 @@
   let chartViewportWidth
   let svgHeight
   let graphStrokeWidth = 1
+  let axisStrokeInset = graphStrokeWidth / 2
 
   let xScale
   let yScale
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
   let plotMargin = { top: 20, right: 20, bottom: 93, left: 84 }
+  let yAxisMaskWidth = plotMargin.left - axisStrokeInset
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
@@ -223,6 +225,7 @@
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
+  $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
     let pointLayerReady = xScale && animatedPointYScale && svgWidth && svgHeight
@@ -380,7 +383,7 @@
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
-  <div class="px-8 text-center text-lg min-[1650px]:hidden">This visualization is best viewed on a larger screen.</div>
+  <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
   <div class="hidden min-[1300px]:block">
     {#if filteredData}
       <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
@@ -536,15 +539,20 @@
                 </g>
                 <svg
                   class="non-reactive text-sm"
-                  x={plotMargin.left}
+                  x={yAxisMaskWidth}
                   y={plotBottomY}
-                  width={xAxisWidth}
+                  width={xAxisClipWidth}
                   height={xTickHeight + 1}
                   overflow="hidden"
                 >
-                  <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,0V0H{xAxisWidth}V0" />
+                  <path
+                    class="stroke-chart-1"
+                    fill="transparent"
+                    opacity={0.7}
+                    d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0"
+                  />
                   {#each xTicks as xTick (xTick)}
-                    <g transform="translate({xScale(xTick)}, {0})">
+                    <g transform="translate({xScale(xTick) + axisStrokeInset}, {0})">
                       <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
                     </g>
                   {/each}
@@ -589,7 +597,7 @@
           </svg>
           <div
             class="pointer-events-none absolute left-0 top-0 z-30 bg-white"
-            style="width:{plotMargin.left}px; height:{xTickLabelBandTop}px"
+            style="width:{yAxisMaskWidth}px; height:{xTickLabelBandTop}px"
           />
           <div
             class="pointer-events-none absolute left-0 z-30 bg-white"
@@ -600,10 +608,10 @@
           />
           <div
             class="pointer-events-none absolute left-0 z-30 bg-white"
-            style="top:{xTickLabelBandBottom}px; width:{plotMargin.left}px; height:{svgHeight - xTickLabelBandBottom}px"
+            style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{svgHeight - xTickLabelBandBottom}px"
           />
-          <svg class="absolute left-0 top-0 z-40" width={plotMargin.left} height={plotBottomY} overflow="visible">
-            <rect width={plotMargin.left} height={plotBottomY} fill="white" pointer-events="none" />
+          <svg class="absolute left-0 top-0 z-40" width={yAxisMaskWidth} height={plotBottomY} overflow="visible">
+            <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yScale.ticks() as yTick (yTick)}
