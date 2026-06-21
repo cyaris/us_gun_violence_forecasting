@@ -379,7 +379,7 @@
 </script>
 
 <div
-  class="mb-10 mt-12 flex h-screen w-full flex-col items-center justify-center"
+  class="mb-10 mt-20 flex h-screen w-full flex-col items-center justify-center"
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
