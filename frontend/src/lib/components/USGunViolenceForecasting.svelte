@@ -730,5 +730,12 @@
         </div>
       </div>
     {/if}
+    <div class="mt-12" style="max-width:{chartViewportWidth}px">
+      <p>
+        All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>, a
+        not-for-profit corporation formed in 2013 to provide online public access to accurate information about
+        gun-related violence in the United States.
+      </p>
+    </div>
   </div>
 </div>
