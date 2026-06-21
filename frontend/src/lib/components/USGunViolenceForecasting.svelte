@@ -391,7 +391,7 @@
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-2">
               <CheckboxFilter
-                labelClasses="font-medium"
+                labelClasses="mb-0 font-medium"
                 label={checkbox.label}
                 value={checkboxFilters[checkbox.key]}
                 selection={checkboxFilters[checkbox.key] ? [true] : []}
@@ -413,7 +413,7 @@
       </div>
       {#if svgWidth && svgHeight}
         <div
-          class="relative w-full overflow-hidden border border-solid !border-black"
+          class="relative w-full overflow-hidden border border-solid border-black"
           style="max-width:{chartViewportWidth}px"
         >
           <div class="w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
