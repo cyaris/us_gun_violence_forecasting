@@ -379,7 +379,7 @@
 </script>
 
 <div
-  class="mb-10 flex h-screen w-full flex-col items-center justify-center"
+  class="mb-10 mt-12 flex h-screen w-full flex-col items-center justify-center"
   bind:clientWidth={width}
   bind:clientHeight={height}
 >
@@ -413,7 +413,7 @@
       </div>
       {#if svgWidth && svgHeight}
         <div
-          class="relative w-full overflow-hidden border border-solid border-black"
+          class="relative w-full overflow-hidden border border-solid !border-black"
           style="max-width:{chartViewportWidth}px"
         >
           <div class="w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
