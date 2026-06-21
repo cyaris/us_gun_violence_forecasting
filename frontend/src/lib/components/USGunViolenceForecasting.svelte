@@ -654,7 +654,7 @@
           </svg>
         </div>
       {/if}
-      <div class="mt-5 flex w-full items-start gap-6 text-sm" style="max-width:{chartViewportWidth}px">
+      <div class="mt-5 flex w-full items-start gap-8 text-sm" style="max-width:{chartViewportWidth}px">
         <div>
           <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
             Prediction Timeframe
@@ -704,7 +704,7 @@
             {/each}
           </tbody>
         </table>
-        <div class="mt-4 grid grow grid-cols-2 gap-6">
+        <div class="mt-4 grid grow grid-cols-2 gap-8">
           {#each sliderItems as slider (slider.key)}
             <div>
               <div class="ml-3.5 max-w-full text-left font-medium">
