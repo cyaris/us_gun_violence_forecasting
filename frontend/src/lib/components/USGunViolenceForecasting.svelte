@@ -399,13 +399,13 @@
                 on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
               />
               {#if checkbox.tooltipKey}
-                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-[20rem]" />
+                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-80" />
               {/if}
             </div>
           {/each}
         </div>
         <span
-          class="pointer-events-none absolute bottom-0 left-1/2 flex -translate-x-1/2 flex-col items-center whitespace-nowrap text-sm"
+          class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap text-sm"
           class:italic={comparing}
         >
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
@@ -610,7 +610,7 @@
             class="pointer-events-none absolute left-0 z-30 bg-white"
             style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{svgHeight - xTickLabelBandBottom}px"
           />
-          <svg class="absolute left-0 top-0 z-40" width={yAxisMaskWidth} height={plotBottomY} overflow="visible">
+          <svg class="absolute left-0 top-0 z-40" width={yAxisMaskWidth} height={svgHeight} overflow="visible">
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
@@ -631,12 +631,7 @@
               Total Victims
             </text>
             <g transform="rotate(-90, {yAxisInfoX}, {yAxisCenterY - 78})">
-              <InfoIcon
-                title={tooltipText.yAxis}
-                tooltipClasses="max-w-[20rem]"
-                cx={yAxisInfoX}
-                cy={yAxisCenterY - 78}
-              />
+              <InfoIcon title={tooltipText.yAxis} tooltipClasses="max-w-80" cx={yAxisInfoX} cy={yAxisCenterY - 78} />
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
@@ -644,12 +639,7 @@
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon
-                title={tooltipText.xAxis}
-                tooltipClasses="max-w-[20rem]"
-                cx={xAxisTitleX + 36}
-                cy={svgHeight - 30}
-              />
+              <InfoIcon title={tooltipText.xAxis} tooltipClasses="max-w-80" cx={xAxisTitleX + 36} cy={svgHeight - 30} />
             </g>
           </svg>
         </div>
@@ -658,7 +648,7 @@
         <div>
           <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
             Prediction Timeframe
-            <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-[20rem]" />
+            <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-80" />
           </div>
           <div class="w-36">
             <Select
@@ -671,23 +661,26 @@
             />
           </div>
         </div>
-        <table class="w-min table-fixed border-collapse">
+        <table class="w-96 table-fixed border-collapse">
+          <colgroup>
+            <col class="w-48" />
+            <col class="w-20" />
+            <col class="w-28" />
+          </colgroup>
           <thead>
             <tr>
-              <th
-                class="w-48 border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]"
-              >
+              <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
                 <div class="flex items-center gap-2 font-medium">
                   Metrics
-                  <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-[20rem]" />
+                  <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
                 </div>
               </th>
               <th
-                class="w-20 border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
+                class="whitespace-nowrap border-b-[3.5px] pb-1 pl-3 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
               >
               <th
-                class="w-20 border-b-[3.5px] pb-1 pl-3 pr-px !text-right align-bottom font-medium [border-bottom-style:solid]"
+                class="whitespace-nowrap border-b-[3.5px] pb-1 pl-3 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
               >
             </tr>
@@ -710,7 +703,7 @@
               <div class="ml-3.5 max-w-full text-left font-medium">
                 {slider.label}
                 <span class="inline-block w-0.5" />
-                <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-[20rem]" />
+                <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-80" />
               </div>
               <Slider
                 wrapperClasses="w-full"
