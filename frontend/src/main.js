@@ -5,6 +5,7 @@ import USGunViolenceForecasting from "./lib/components/USGunViolenceForecasting.
 
 let div = document.createElement("div")
 div.classList.add("us-gun-violence-forecasting")
+div.dataset.svelteLibTooltipRoot = "true"
 
 let script = document.currentScript
 script.parentNode.insertBefore(div, script)
