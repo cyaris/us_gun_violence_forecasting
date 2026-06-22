@@ -22,7 +22,7 @@
   let overallPredictionMovingAverageColumn = `${overallPredictionColumn}_moving_average`
 
   let width
-  let height
+  let viewportHeight
   let svgWidth
   let chartViewportWidth
   let svgHeight
@@ -90,9 +90,9 @@
   $: timeSeriesPathFilterColumn = sliders.timeSeries ? timeSeriesValueColumn : observedVictimsColumn
 
   $: {
-    if (width) {
+    if (width && viewportHeight) {
       chartViewportWidth = width * 0.7
-      svgHeight = Math.min(height * 0.65, chartViewportWidth / 2)
+      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.65, chartViewportWidth / 2))
       svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
@@ -378,10 +378,11 @@
   }
 </script>
 
+<svelte:window bind:innerHeight={viewportHeight} />
+
 <div
   class="flex h-full w-full flex-col items-center justify-center"
   bind:clientWidth={width}
-  bind:clientHeight={height}
 >
   <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
   <div class="hidden min-[1300px]:block">
