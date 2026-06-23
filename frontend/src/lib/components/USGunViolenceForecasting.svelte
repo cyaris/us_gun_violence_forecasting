@@ -379,7 +379,6 @@
 </script>
 
 <svelte:window bind:innerHeight={viewportHeight} />
-
 <div
   class="flex h-full w-full flex-col items-center justify-center"
   bind:clientWidth={width}
@@ -392,7 +391,7 @@
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-2">
               <CheckboxFilter
-                labelClasses="mb-0 font-medium"
+                labelClasses="font-medium"
                 label={checkbox.label}
                 value={checkboxFilters[checkbox.key]}
                 selection={checkboxFilters[checkbox.key] ? [true] : []}
