@@ -391,7 +391,7 @@
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-2">
               <CheckboxFilter
-                labelClasses="font-medium"
+                labelClasses="mb-0 font-medium"
                 label={checkbox.label}
                 value={checkboxFilters[checkbox.key]}
                 selection={checkboxFilters[checkbox.key] ? [true] : []}
@@ -610,7 +610,12 @@
             class="pointer-events-none absolute left-0 z-30 bg-white"
             style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{svgHeight - xTickLabelBandBottom}px"
           />
-          <svg class="absolute left-0 top-0 z-40" width={yAxisMaskWidth} height={svgHeight} overflow="visible">
+          <svg
+            class="absolute left-0 top-0 z-40 overflow-visible"
+            width={yAxisMaskWidth}
+            height={svgHeight}
+            overflow="visible"
+          >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
