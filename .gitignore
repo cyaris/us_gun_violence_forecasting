@@ -1,35 +1,13 @@
-# hidden files.
-**/.DS_Store
+.DS_Store
 
-# hidden folders.
-**/dist
-**/.git
-**/.svelte-kit
-**/.vscode
-**/.venv
-**/.ipynb_checkpoints
+frontend/.svelte-kit/
+frontend/dist/
+frontend/node_modules/
 
-**/__pycache__
-**/*.egg-info
+backend/.venv/
+backend/build/
+backend/src/__pycache__/
+backend/*.egg-info/
 
-# all .env except for .env.example.
-**/.env
-**/.env.*
-**/!.env.example
-
-!**/.gitkeep
-
-**/build
-**/node_modules
-**/package
-
-# files for PNPM, and YARN.
-**/pnpm-lock.yaml
-**/yarn.lock
-
-# user files.
-**/config
-
-scripts
 backend/all-shootings-2014-2023.csv
 frontend/src/lib/static/data.json
