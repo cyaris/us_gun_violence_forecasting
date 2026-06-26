@@ -19,6 +19,7 @@
     "rollup:watch": "rollup -c rollup.config.js -w"
   },
   "dependencies": {
+    "linklocal": "^2.8.2",
     "svelte-lib": "file:../../svelte-lib"
   }
 }
