@@ -1,5 +1,5 @@
-import "../node_modules/svelte-lib/src/lib/static/styles/app.css"
-import "../node_modules/svelte-lib/src/lib/static/styles/root.css"
+import "svelte-lib/styles/app.css"
+import "svelte-lib/styles/root.css"
 
 import USGunViolenceForecasting from "./lib/components/USGunViolenceForecasting.svelte"
 
