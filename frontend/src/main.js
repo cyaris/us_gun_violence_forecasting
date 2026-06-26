@@ -10,4 +10,4 @@ div.dataset.svelteLibTooltipRoot = "true"
 let script = document.currentScript
 script.parentNode.insertBefore(div, script)
 
-new USGunViolenceForecasting({target: div})
+new USGunViolenceForecasting({ target: div })
