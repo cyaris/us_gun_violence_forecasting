@@ -33,9 +33,7 @@ class LoggerFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def configure_root_logger(
-    level: Literal["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO",
-) -> None:
+def configure_root_logger(level: Literal["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO") -> None:
     root = logging.getLogger()
     root.setLevel(getattr(logging, level, logging.INFO))
 
