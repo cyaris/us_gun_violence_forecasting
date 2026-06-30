@@ -139,8 +139,7 @@ def prepare_for_visualization(df: pd.DataFrame) -> pd.DataFrame:
 
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")
     prediction_cols = sorted(
-        [col for col in df.columns if col.startswith("predicted_victims_")],
-        key=lambda col: int(col.rsplit("_", 1)[1]),
+        [col for col in df.columns if col.startswith("predicted_victims_")], key=lambda col: int(col.rsplit("_", 1)[1])
     )
 
     return df[["date", "observed_victims", "is_forecast", *prediction_cols]]
