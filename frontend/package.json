@@ -19,6 +19,11 @@
     "rollup:watch": "rollup -c rollup.config.js -w"
   },
   "dependencies": {
+    "d3-array": "3",
+    "d3-interpolate": "3",
+    "d3-scale": "4",
+    "d3-selection": "3",
+    "d3-shape": "3",
     "linklocal": "^2.8.2",
     "svelte-lib": "file:../../svelte-lib"
   }

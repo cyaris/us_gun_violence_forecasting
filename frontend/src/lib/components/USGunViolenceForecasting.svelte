@@ -1,6 +1,9 @@
 <script>
-  import * as d3 from "d3"
-  import { interpolateString } from "d3-interpolate"
+  import { extent, max } from "d3-array"
+  import { interpolateNumber, interpolateString } from "d3-interpolate"
+  import { scaleLinear, scaleTime } from "d3-scale"
+  import { pointer } from "d3-selection"
+  import { curveNatural, line } from "d3-shape"
   import { format } from "date-fns"
   import sma from "sma"
   import { cubicInOut } from "svelte/easing"
@@ -61,8 +64,8 @@
 
   let animatedYDomain = tweened([0, 1], {
     interpolate: (a, b) => {
-      let min = d3.interpolateNumber(a[0], b[0])
-      let max = d3.interpolateNumber(a[1], b[1])
+      let min = interpolateNumber(a[0], b[0])
+      let max = interpolateNumber(a[1], b[1])
 
       return t => [min(t), max(t)]
     },
@@ -118,21 +121,20 @@
           d[overallPredictionMovingAverageColumn] = timeSeries[i]
         })
 
-        xScale = d3.scaleTime(
-          d3.extent(filteredData, d => d.parsedDate),
+        xScale = scaleTime(
+          extent(filteredData, d => d.parsedDate),
           [0, xAxisWidth]
         )
 
-        let yDomain = [0, d3.max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
+        let yDomain = [0, max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
 
-        yScale = d3.scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+        yScale = scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
 
         animatedYDomain.set(yDomain)
 
         pathGeneratorFor = function (field) {
-          return d3
-            .line()
-            .curve(d3.curveNatural)
+          return line()
+            .curve(curveNatural)
             .x(d => xScale(d.parsedDate))
             .y(d => yScale(d[field]))
         }
@@ -214,7 +216,7 @@
 
   $: animatedPointYScale =
     svgHeight && $animatedYDomain
-      ? d3.scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+      ? scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
       : null
 
   $: plotBottomY = yScale ? yScale(0) : 0
@@ -314,12 +316,8 @@
     return result
   }
 
-  function clearHover() {
-    hoverYear = null
-  }
-
   function handleHover(e) {
-    let [pointerX] = d3.pointer(e, plotGroup)
+    let [pointerX] = pointer(e, plotGroup)
     let year = xScale.invert(pointerX).getFullYear()
 
     if (year != hoverYear) {
@@ -363,9 +361,8 @@
     if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
       let movingAverages = movingAverage(filteredData, predictionColumn(hoverYear), sliders.timeSeries)
 
-      comparativePath = d3
-        .line()
-        .curve(d3.curveNatural)
+      comparativePath = line()
+        .curve(curveNatural)
         .x(d => xScale(d.parsedDate))
         .y(d => yScale(d.value))(
         filteredData
@@ -458,7 +455,7 @@
                   transform="translate({plotMargin.left}, {0})"
                   role="presentation"
                   on:mousemove={handleHover}
-                  on:mouseleave={clearHover}
+                  on:mouseleave={() => (hoverYear = null)}
                 >
                   <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
                   {#if comparing}
