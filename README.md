@@ -2,7 +2,7 @@
 
 Interactive Svelte visualization for exploring historical US gun violence victim counts and Prophet-based daily forecasts.
 
-View the live tool at [cyaris.github.io/us_gun_violence_forecasting](https://cyaris.github.io/us_gun_violence_forecasting/).
+View the live tool at [charlieyaris.com/us_gun_violence_forecasting](https://charlieyaris.com/us_gun_violence_forecasting/).
 
 The project has two parts:
 
