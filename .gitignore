@@ -1,4 +1,5 @@
 .DS_Store
+.vscode/
 
 frontend/.svelte-kit/
 frontend/dist/
