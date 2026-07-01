@@ -2,6 +2,13 @@
 
 Interactive Svelte visualization for exploring historical US gun violence victim counts and Prophet-based daily forecasts.
 
+The main purpose of the tool is to compare forecasts across time. As each new
+year of observed data becomes available, the backend fits another Prophet model;
+the frontend then lets users hover over the chart to see how forecasts from
+earlier model snapshots compare with later ones and with the eventual observed
+victim counts. The hover interaction is designed to show how the forecast
+changed as more data was received.
+
 View the live tool at [charlieyaris.com/us_gun_violence_forecasting](https://charlieyaris.com/us_gun_violence_forecasting/).
 
 The project has two parts:
@@ -130,7 +137,7 @@ The frontend uses these columns to show:
 
 - daily observations
 - the latest overall model
-- historical comparative models on hover
+- historical comparative models on hover, so users can compare earlier and later forecasts for the same dates
 - smoothed moving-average views
 - past and future metric summaries
 
