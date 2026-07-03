@@ -25,11 +25,9 @@
   let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
   let observedVictimsColumn = "observed_victims"
-  let observedVictimsMovingAverageColumn = `${observedVictimsColumn}_moving_average`
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
-  let overallPredictionMovingAverageColumn = `${overallPredictionColumn}_moving_average`
 
   let width
   let viewportHeight
@@ -58,7 +56,7 @@
   let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
 
-  let filteredData
+  let chartRows = baseRows
 
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let tweenTiming = { duration: 600, easing: cubicInOut }
@@ -69,6 +67,8 @@
   let scrollContainer
   let scrollLeft = 0
   let scrollViewportWidth = 0
+  let observationSeriesRows = []
+  let overallModelSeriesRows = []
   let comparativeSeriesRows = []
   let comparativeSeriesCache = new Map()
   let modelMetricsCache = new Map()
@@ -192,24 +192,20 @@
   }
 
   function seriesRows(rows, field, range) {
-    let values = range ? movingAverage(rows, field, range) : rows.map(d => d[field])
+    let values = movingAverage(rows, field, range)
 
-    return values.map((value, i) => ({ parsedDate: rows[i].parsedDate, value })).filter(d => finiteValue(d.value))
+    return values.map((value, i) => ({ ...rows[i], value })).filter(d => finiteValue(d.value))
   }
 
-  function rowsWithFiniteValue(rows, field) {
-    return rows.filter(d => finiteValue(d[field]))
-  }
-
-  function observedRowsWithFiniteValue(rows, field) {
-    return rows.filter(d => !d.is_forecast && finiteValue(d[field]))
+  function buildSeriesRows({ rows, field, range = 0, observedOnly = false }) {
+    return seriesRows(observedOnly ? rows.filter(d => !d.is_forecast) : rows, field, range)
   }
 
   function cachedComparativeSeriesRows(field, range) {
     let key = `${field}:${range}`
 
     if (!comparativeSeriesCache.has(key)) {
-      comparativeSeriesCache.set(key, seriesRows(baseRows, field, range))
+      comparativeSeriesCache.set(key, buildSeriesRows({ rows: chartRows, field, range }))
     }
 
     return comparativeSeriesCache.get(key)
@@ -220,9 +216,6 @@
     return x >= startX && x <= endX
   }
 
-  $: observationValueColumn = movingAverageWindow ? observedVictimsMovingAverageColumn : observedVictimsColumn
-  $: timeSeriesValueColumn = movingAverageWindow ? overallPredictionMovingAverageColumn : overallPredictionColumn
-  $: timeSeriesPathFilterColumn = movingAverageWindow ? timeSeriesValueColumn : observedVictimsColumn
   $: comparing = hoverYear != null && hoverYear < latestObservedYear
   $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
   $: hoverYearEndX =
@@ -230,14 +223,17 @@
   $: hoverHighlightWidth = comparing && hoverYearEndX != null ? hoverYearEndX : 0
 
   $: {
-    let observationsMovingAverage = movingAverage(baseRows, observedVictimsColumn, movingAverageWindow)
-    let timeSeries = movingAverage(baseRows, overallPredictionColumn, movingAverageWindow)
-
-    filteredData = baseRows.map((d, i) => ({
-      ...d,
-      [observedVictimsMovingAverageColumn]: observationsMovingAverage[i],
-      [overallPredictionMovingAverageColumn]: timeSeries[i],
-    }))
+    observationSeriesRows = buildSeriesRows({
+      rows: chartRows,
+      field: observedVictimsColumn,
+      range: movingAverageWindow,
+      observedOnly: true,
+    })
+    overallModelSeriesRows = buildSeriesRows({
+      rows: chartRows,
+      field: overallPredictionColumn,
+      range: movingAverageWindow,
+    })
   }
 
   $: {
@@ -269,19 +265,22 @@
   }
 
   $: {
-    if (filteredData && xScale && svgHeight) {
+    if (chartRows && xScale && svgHeight) {
       let visibleMax = 0
-      let visibleRows = filteredData.filter(d => rowIsVisible(d, visiblePlotStartX, visiblePlotEndX))
       let addValue = value => {
         if (finiteValue(value)) visibleMax = Math.max(visibleMax, Number(value))
       }
 
       if (checkboxFilters.displayObservations) {
-        visibleRows.filter(d => !d.is_forecast).forEach(d => addValue(d[observationValueColumn]))
+        observationSeriesRows
+          .filter(d => rowIsVisible(d, visiblePlotStartX, visiblePlotEndX))
+          .forEach(d => addValue(d.value))
       }
 
       if (checkboxFilters.displayModels) {
-        visibleRows.forEach(d => addValue(d[timeSeriesValueColumn]))
+        overallModelSeriesRows
+          .filter(d => rowIsVisible(d, visiblePlotStartX, visiblePlotEndX))
+          .forEach(d => addValue(d.value))
 
         if (comparing) {
           comparativeSeriesRows
@@ -299,14 +298,10 @@
   }
 
   $: {
-    if (filteredData && yScale) {
+    if (chartRows && yScale) {
       animatedPaths.set({
-        observations: pathGeneratorFor(observationValueColumn)(
-          observedRowsWithFiniteValue(filteredData, observationValueColumn)
-        ),
-        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(
-          rowsWithFiniteValue(filteredData, timeSeriesPathFilterColumn)
-        ),
+        observations: pathGeneratorFor("value")(observationSeriesRows),
+        timeSeries: pathGeneratorFor("value")(overallModelSeriesRows),
       })
     }
   }
@@ -391,15 +386,15 @@
 
       drawChartPointLayer({
         canvas: observationsCanvas,
-        rows: filteredData ? observedRowsWithFiniteValue(filteredData, observedVictimsColumn) : [],
-        field: "observed_victims",
+        rows: observationSeriesRows,
+        field: "value",
         color: chartColors.observations,
         stroke: observationCircleStroke,
       })
       drawChartPointLayer({
         canvas: timeSeriesCanvas,
-        rows: filteredData ? rowsWithFiniteValue(filteredData, overallPredictionColumn) : [],
-        field: overallPredictionColumn,
+        rows: overallModelSeriesRows,
+        field: "value",
         color: chartColors.overallModel,
         isFaded: pointIsNeverFaded,
       })
@@ -471,7 +466,7 @@
 
   $: isFuture = selectValue.value == "Next 365 Days"
 
-  $: overallMetrics = filteredData ? modelMetrics(latestObservedYear, isFuture) : null
+  $: overallMetrics = chartRows ? modelMetrics(latestObservedYear, isFuture) : null
   $: comparativeMetrics = comparing ? modelMetrics(hoverYear, isFuture) : null
 
   $: metricRows = [
@@ -512,7 +507,7 @@
 <div class="flex h-full w-full flex-col items-center justify-center" bind:clientWidth={width}>
   <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
   <div class="hidden min-[1300px]:block">
-    {#if filteredData}
+    {#if chartRows}
       <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
         <div class="flex flex-col items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
