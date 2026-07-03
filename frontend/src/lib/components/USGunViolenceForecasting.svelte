@@ -13,14 +13,21 @@
 
   import data from "../static/data.json"
 
-  // Backend emits this time series chronologically; row order is used for yearly trend calculations.
   let parseLocalDate = date => new Date(`${date}T00:00:00`)
   let yearFromDate = d => Number(d.date.slice(0, 4))
   let predictionColumn = year => `predicted_victims_${year}`
+  let baseRows = [...data]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
+  let indexedRows = baseRows.map((d, i) => ({ d, i }))
+  let observedRows = baseRows.filter(d => !d.is_forecast)
+  let forecastRows = baseRows.filter(d => d.is_forecast)
+  let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
+  let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
   let observedVictimsColumn = "observed_victims"
   let observedVictimsMovingAverageColumn = `${observedVictimsColumn}_moving_average`
-  let minYear = Math.min(...data.map(yearFromDate))
-  let latestObservedYear = Math.max(...data.filter(d => !d.is_forecast).map(yearFromDate))
+  let minYear = Math.min(...baseRows.map(yearFromDate))
+  let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
   let overallPredictionMovingAverageColumn = `${overallPredictionColumn}_moving_average`
 
@@ -63,6 +70,8 @@
   let scrollLeft = 0
   let scrollViewportWidth = 0
   let comparativeSeriesRows = []
+  let comparativeSeriesCache = new Map()
+  let modelMetricsCache = new Map()
 
   let animatedYDomain = tweened([0, 1], {
     interpolate: (a, b) => {
@@ -137,14 +146,14 @@
     { key: "displayModels", label: "Display Time Series Models" },
   ]
 
-  let forecastDayCount = data.filter(d => d.is_forecast).length
-  let forecastStartDate = data.find(d => d.is_forecast).date
+  let forecastDayCount = forecastRows.length
+  let forecastStartDate = forecastRows[0]?.date
 
-  let firstDate = format(parseLocalDate(data[0].date), "M/d/yy")
+  let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
 
-  let numObservations = data.filter(d => !d.is_forecast).length
+  let numObservations = observedRows.length
 
   let plotGroup
 
@@ -156,10 +165,25 @@
   }
 
   function movingAverage(rows, field, range) {
-    return sma(
-      rows.filter(v => v[field]).map(v => v[field]),
+    if (!range) return rows.map(d => d[field])
+
+    let values = Array(rows.length).fill(null)
+    let finiteEntries = rows
+      .map((row, i) => ({ i, value: Number(row[field]) }))
+      .filter(({ value }) => Number.isFinite(value))
+
+    if (!finiteEntries.length) return values
+
+    let averages = sma(
+      finiteEntries.map(d => d.value),
       range
     ).map(v => parseFloat(v))
+
+    finiteEntries.forEach(({ i }, averageIndex) => {
+      values[i] = averages[averageIndex]
+    })
+
+    return values
   }
 
   function finiteValue(value) {
@@ -170,6 +194,20 @@
     let values = range ? movingAverage(rows, field, range) : rows.map(d => d[field])
 
     return values.map((value, i) => ({ parsedDate: rows[i].parsedDate, value })).filter(d => finiteValue(d.value))
+  }
+
+  function rowsWithFiniteValue(rows, field) {
+    return rows.filter(d => finiteValue(d[field]))
+  }
+
+  function cachedComparativeSeriesRows(field, range) {
+    let key = `${field}:${range}`
+
+    if (!comparativeSeriesCache.has(key)) {
+      comparativeSeriesCache.set(key, seriesRows(baseRows, field, range))
+    }
+
+    return comparativeSeriesCache.get(key)
   }
 
   function rowIsVisible(row, startX, endX) {
@@ -184,34 +222,30 @@
   $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
   $: hoverYearEndX =
     hoverYear != null && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : null
-  $: hoverHighlightWidth =
-    comparing && hoverYearEndX != null ? hoverYearEndX : 0
+  $: hoverHighlightWidth = comparing && hoverYearEndX != null ? hoverYearEndX : 0
+
+  $: {
+    let observationsMovingAverage = movingAverage(baseRows, observedVictimsColumn, movingAverageWindow)
+    let timeSeries = movingAverage(baseRows, overallPredictionColumn, movingAverageWindow)
+
+    filteredData = baseRows.map((d, i) => ({
+      ...d,
+      [observedVictimsMovingAverageColumn]: observationsMovingAverage[i],
+      [overallPredictionMovingAverageColumn]: timeSeries[i],
+    }))
+  }
 
   $: {
     if (width && viewportHeight) {
       chartViewportWidth = width * 0.7
       svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.65, chartViewportWidth / 2))
-      svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
+      svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
-      if (data.length) {
-        filteredData = [...data]
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
-
-        let observationsMovingAverage = movingAverage(filteredData, observedVictimsColumn, movingAverageWindow)
-        let timeSeries = movingAverage(filteredData, overallPredictionColumn, movingAverageWindow)
-
-        filteredData.forEach((d, i) => {
-          d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
-          d[overallPredictionMovingAverageColumn] = timeSeries[i]
-        })
-
-        xScale = scaleTime(
-          extent(filteredData, d => d.parsedDate),
-          [0, xAxisWidth]
-        )
-      }
+      xScale = scaleTime(
+        extent(baseRows, d => d.parsedDate),
+        [0, xAxisWidth]
+      )
     }
   }
 
@@ -222,8 +256,8 @@
       : 0
 
   $: {
-    if (comparing && filteredData && comparativePredictionColumn) {
-      comparativeSeriesRows = seriesRows(filteredData, comparativePredictionColumn, movingAverageWindow)
+    if (comparing && comparativePredictionColumn) {
+      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, movingAverageWindow)
     } else {
       comparativeSeriesRows = []
     }
@@ -262,8 +296,12 @@
   $: {
     if (filteredData && yScale) {
       animatedPaths.set({
-        observations: pathGeneratorFor(observationValueColumn)(filteredData.filter(v => v[observationValueColumn])),
-        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(filteredData.filter(v => v[timeSeriesPathFilterColumn])),
+        observations: pathGeneratorFor(observationValueColumn)(
+          rowsWithFiniteValue(filteredData, observationValueColumn)
+        ),
+        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(
+          rowsWithFiniteValue(filteredData, timeSeriesPathFilterColumn)
+        ),
       })
     }
   }
@@ -348,14 +386,14 @@
 
       drawChartPointLayer({
         canvas: observationsCanvas,
-        rows: filteredData ? filteredData.filter(d => d.observed_victims) : [],
+        rows: filteredData ? rowsWithFiniteValue(filteredData, observedVictimsColumn) : [],
         field: "observed_victims",
         color: chartColors.observations,
         stroke: observationCircleStroke,
       })
       drawChartPointLayer({
         canvas: timeSeriesCanvas,
-        rows: filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : [],
+        rows: filteredData ? rowsWithFiniteValue(filteredData, overallPredictionColumn) : [],
         field: overallPredictionColumn,
         color: chartColors.overallModel,
         isFaded: pointIsNeverFaded,
@@ -371,18 +409,24 @@
   }
 
   function yearlyTrendAt(rowIndex, field) {
-    let current = data[rowIndex]?.[field]
-    let previousYear = data[rowIndex - 365]?.[field]
+    let current = baseRows[rowIndex]?.[field]
+    let previousYear = baseRows[rowIndex - 365]?.[field]
 
     return current != null && previousYear != null ? current - previousYear : null
   }
 
   function modelMetrics(year, isFutureTimeframe) {
-    let predictionColumnName = predictionColumn(year)
-    let rows = data.map((d, i) => ({ d, i })).filter(({ d }) => (isFutureTimeframe ? d.is_forecast : !d.is_forecast))
+    let cacheKey = `${year}:${isFutureTimeframe}`
 
-    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] || 0), 0)
-    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumnName)).filter(v => v != null)
+    if (modelMetricsCache.has(cacheKey)) {
+      return modelMetricsCache.get(cacheKey)
+    }
+
+    let predictionColumnName = predictionColumn(year)
+    let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
+
+    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] ?? 0), 0)
+    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumnName)).filter(finiteValue)
     let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
 
     let result = {
@@ -400,11 +444,13 @@
     if (!isFutureTimeframe) {
       result.rmse = Math.round(
         Math.sqrt(
-          rows.reduce((sum, { d }) => sum + ((d[predictionColumnName] || 0) - d.observed_victims) ** 2, 0) /
+          rows.reduce((sum, { d }) => sum + ((d[predictionColumnName] ?? 0) - d.observed_victims) ** 2, 0) /
             numObservations
         )
       ).toLocaleString()
     }
+
+    modelMetricsCache.set(cacheKey, result)
 
     return result
   }
@@ -446,7 +492,10 @@
   $: {
     if (comparing && movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
-      animatedComparativePath.set(comparativePath, $animatedComparativePath ? tweenTiming : { ...tweenTiming, duration: 0 })
+      animatedComparativePath.set(
+        comparativePath,
+        $animatedComparativePath ? tweenTiming : { ...tweenTiming, duration: 0 }
+      )
     } else {
       animatedComparativePath.set(null, { duration: 0 })
     }
