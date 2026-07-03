@@ -445,9 +445,10 @@
 
   $: {
     if (comparing && movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
-      animatedComparativePath.set(pathGeneratorFor("value")(comparativeSeriesRows))
+      let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
+      animatedComparativePath.set(comparativePath, $animatedComparativePath ? tweenTiming : { ...tweenTiming, duration: 0 })
     } else {
-      animatedComparativePath.set(null)
+      animatedComparativePath.set(null, { duration: 0 })
     }
   }
 
