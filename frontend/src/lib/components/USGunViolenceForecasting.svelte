@@ -169,8 +169,9 @@
 
     let values = Array(rows.length).fill(null)
     let finiteEntries = rows
-      .map((row, i) => ({ i, value: Number(row[field]) }))
-      .filter(({ value }) => Number.isFinite(value))
+      .map((row, i) => ({ i, value: row[field] }))
+      .filter(({ value }) => finiteValue(value))
+      .map(({ i, value }) => ({ i, value: Number(value) }))
 
     if (!finiteEntries.length) return values
 
@@ -198,6 +199,10 @@
 
   function rowsWithFiniteValue(rows, field) {
     return rows.filter(d => finiteValue(d[field]))
+  }
+
+  function observedRowsWithFiniteValue(rows, field) {
+    return rows.filter(d => !d.is_forecast && finiteValue(d[field]))
   }
 
   function cachedComparativeSeriesRows(field, range) {
@@ -272,7 +277,7 @@
       }
 
       if (checkboxFilters.displayObservations) {
-        visibleRows.forEach(d => addValue(d[observationValueColumn]))
+        visibleRows.filter(d => !d.is_forecast).forEach(d => addValue(d[observationValueColumn]))
       }
 
       if (checkboxFilters.displayModels) {
@@ -297,7 +302,7 @@
     if (filteredData && yScale) {
       animatedPaths.set({
         observations: pathGeneratorFor(observationValueColumn)(
-          rowsWithFiniteValue(filteredData, observationValueColumn)
+          observedRowsWithFiniteValue(filteredData, observationValueColumn)
         ),
         timeSeries: pathGeneratorFor(timeSeriesValueColumn)(
           rowsWithFiniteValue(filteredData, timeSeriesPathFilterColumn)
@@ -386,7 +391,7 @@
 
       drawChartPointLayer({
         canvas: observationsCanvas,
-        rows: filteredData ? rowsWithFiniteValue(filteredData, observedVictimsColumn) : [],
+        rows: filteredData ? observedRowsWithFiniteValue(filteredData, observedVictimsColumn) : [],
         field: "observed_victims",
         color: chartColors.observations,
         stroke: observationCircleStroke,
@@ -492,10 +497,7 @@
   $: {
     if (comparing && movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
-      animatedComparativePath.set(
-        comparativePath,
-        $animatedComparativePath ? tweenTiming : { ...tweenTiming, duration: 0 }
-      )
+      animatedComparativePath.set(comparativePath, tweenTiming)
     } else {
       animatedComparativePath.set(null, { duration: 0 })
     }
