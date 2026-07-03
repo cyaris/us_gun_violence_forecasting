@@ -67,7 +67,7 @@
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
-  let animatedPointYScale = null
+  let animatedYScale = null
   let scrollContainer
   let scrollLeft = 0
   let scrollViewportWidth = 0
@@ -304,7 +304,7 @@
   $: comparativePointsVisible = comparing && checkboxFilters.displayModels && movingAverageWindow == 0
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && movingAverageWindow > 0
 
-  $: animatedPointYScale =
+  $: animatedYScale =
     svgHeight && $animatedYDomain
       ? scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
       : null
@@ -320,7 +320,7 @@
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
-    let pointLayerReady = xScale && animatedPointYScale && svgWidth && svgHeight
+    let pointLayerReady = xScale && animatedYScale && svgWidth && svgHeight
     let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
@@ -346,7 +346,7 @@
           color,
           stroke,
           getX: row => plotMargin.left + xScale(row.parsedDate),
-          getY: row => animatedPointYScale(row[field]),
+          getY: row => animatedYScale(row[field]),
           isFaded,
           fadedAlpha,
         })
@@ -692,7 +692,7 @@
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yScale.ticks() as yTick (yTick)}
-                <g transform="translate(0, {yScale(yTick)})">
+                <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
                   <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
                   <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                     {yTick.toLocaleString()}
