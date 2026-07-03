@@ -1,5 +1,5 @@
 <script>
-  import { extent, max } from "d3-array"
+  import { extent } from "d3-array"
   import { interpolateNumber, interpolateString } from "d3-interpolate"
   import { scaleLinear, scaleTime } from "d3-scale"
   import { pointer } from "d3-selection"
@@ -53,14 +53,16 @@
 
   let filteredData
 
-  let pathGeneratorFor
-
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let tweenTiming = { duration: 600, easing: cubicInOut }
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
   let animatedPointYScale = null
+  let scrollContainer
+  let scrollLeft = 0
+  let scrollViewportWidth = 0
+  let comparativeSeriesRows = []
 
   let animatedYDomain = tweened([0, 1], {
     interpolate: (a, b) => {
@@ -88,64 +90,34 @@
     }
   )
 
-  $: observationValueColumn = sliders.observations ? observedVictimsMovingAverageColumn : observedVictimsColumn
-  $: timeSeriesValueColumn = sliders.timeSeries ? overallPredictionMovingAverageColumn : overallPredictionColumn
-  $: timeSeriesPathFilterColumn = sliders.timeSeries ? timeSeriesValueColumn : observedVictimsColumn
+  let animatedComparativePath = tweened(null, {
+    interpolate: (a, b) => {
+      if (!a || !b) return () => b
 
-  $: {
-    if (width && viewportHeight) {
-      chartViewportWidth = width * 0.7
-      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.65, chartViewportWidth / 2))
-      svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
-      xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
+      let path = interpolateString(a, b)
+      return t => path(t)
+    },
+    ...tweenTiming,
+  })
 
-      if (data.length) {
-        filteredData = [...data]
-          .sort((a, b) => b.observed_victims - a.observed_victims)
-          .slice(checkboxFilters.lasVegasScale ? 0 : 1)
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
-
-        let getMovingAverage = function (field, range) {
-          return sma(
-            filteredData.filter(v => v[field]).map(v => v[field]),
-            range
-          ).map(v => parseFloat(v))
-        }
-
-        let observationsMovingAverage = getMovingAverage(observedVictimsColumn, sliders.observations)
-        let timeSeries = getMovingAverage(overallPredictionColumn, sliders.timeSeries)
-        // TODO: fix process so it is not based on an iterator, otherwise it will be wrong when items (last vegas) are filtered out.
-        filteredData.forEach((d, i) => {
-          d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
-          d[overallPredictionMovingAverageColumn] = timeSeries[i]
-        })
-
-        xScale = scaleTime(
-          extent(filteredData, d => d.parsedDate),
-          [0, xAxisWidth]
+  let animatedComparativePoints = tweened([], {
+    interpolate: (a, b) => {
+      let previousValues = new Map((a || []).map(d => [+d.parsedDate, d.value]))
+      let interpolators = (b || []).map(d => {
+        let previousValue = previousValues.get(+d.parsedDate)
+        let previousValueIsFinite = previousValue != null && Number.isFinite(Number(previousValue))
+        let pointValue = interpolateNumber(
+          previousValueIsFinite ? Number(previousValue) : Number(d.value),
+          Number(d.value)
         )
 
-        let yDomain = [0, max(filteredData, d => Math.max(d[observationValueColumn], d[timeSeriesValueColumn]))]
-
-        yScale = scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
-
-        animatedYDomain.set(yDomain)
-
-        pathGeneratorFor = function (field) {
-          return line()
-            .curve(curveNatural)
-            .x(d => xScale(d.parsedDate))
-            .y(d => yScale(d[field]))
-        }
-      }
-
-      animatedPaths.set({
-        observations: pathGeneratorFor(observationValueColumn)(filteredData.filter(v => v[observationValueColumn])),
-        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(filteredData.filter(v => v[timeSeriesPathFilterColumn])),
+        return { ...d, pointValue }
       })
-    }
-  }
+
+      return t => interpolators.map(({ pointValue, ...d }) => ({ ...d, value: pointValue(t) }))
+    },
+    ...tweenTiming,
+  })
 
   let selectItems = [
     { value: "Historical Data", label: "Historical Data" },
@@ -156,19 +128,13 @@
 
   let sliderStep = 5
 
-  let checkboxFilters = { lasVegasScale: true, displayObservations: true, displayModels: true }
+  let checkboxFilters = { displayObservations: true, displayModels: true }
 
-  let sliders = { observations: 0, timeSeries: 10 }
+  let movingAverageWindow = 10
 
   let checkboxFilterItems = [
-    { key: "lasVegasScale", label: "Scale to Include the Las Vegas Shooting", tooltipKey: "lasVegasScale" },
     { key: "displayObservations", label: "Display Daily Observations" },
     { key: "displayModels", label: "Display Time Series Models" },
-  ]
-
-  let sliderItems = [
-    { key: "observations", label: "Moving Average for Daily Observations", tooltipKey: "observationsSlider" },
-    { key: "timeSeries", label: "Moving Average for Time Series Models", tooltipKey: "timeSeriesSlider" },
   ]
 
   let forecastDayCount = data.filter(d => d.is_forecast).length
@@ -178,41 +144,160 @@
 
   let hoverYear = null
 
+  let numObservations = data.filter(d => !d.is_forecast).length
+
+  let plotGroup
+
+  function pathGeneratorFor(field) {
+    return line()
+      .curve(curveNatural)
+      .x(d => xScale(d.parsedDate))
+      .y(d => yScale(d[field]))
+  }
+
+  function movingAverage(rows, field, range) {
+    return sma(
+      rows.filter(v => v[field]).map(v => v[field]),
+      range
+    ).map(v => parseFloat(v))
+  }
+
+  function finiteValue(value) {
+    return value != null && Number.isFinite(Number(value))
+  }
+
+  function seriesRows(rows, field, range) {
+    let values = range ? movingAverage(rows, field, range) : rows.map(d => d[field])
+
+    return values.map((value, i) => ({ parsedDate: rows[i].parsedDate, value })).filter(d => finiteValue(d.value))
+  }
+
+  function rowIsVisible(row, startX, endX) {
+    let x = xScale(row.parsedDate)
+    return x >= startX && x <= endX
+  }
+
+  $: observationValueColumn = movingAverageWindow ? observedVictimsMovingAverageColumn : observedVictimsColumn
+  $: timeSeriesValueColumn = movingAverageWindow ? overallPredictionMovingAverageColumn : overallPredictionColumn
+  $: timeSeriesPathFilterColumn = movingAverageWindow ? timeSeriesValueColumn : observedVictimsColumn
+  $: comparing = hoverYear != null && hoverYear < latestObservedYear
+  $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
+  $: hoverYearEndX =
+    hoverYear != null && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : null
+  $: hoverHighlightWidth =
+    comparing && hoverYearEndX != null ? hoverYearEndX : 0
+
+  $: {
+    if (width && viewportHeight) {
+      chartViewportWidth = width * 0.7
+      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.65, chartViewportWidth / 2))
+      svgWidth = data.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
+      xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
+
+      if (data.length) {
+        filteredData = [...data]
+          .sort((a, b) => a.date.localeCompare(b.date))
+          .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
+
+        let observationsMovingAverage = movingAverage(filteredData, observedVictimsColumn, movingAverageWindow)
+        let timeSeries = movingAverage(filteredData, overallPredictionColumn, movingAverageWindow)
+
+        filteredData.forEach((d, i) => {
+          d[observedVictimsMovingAverageColumn] = observationsMovingAverage[i]
+          d[overallPredictionMovingAverageColumn] = timeSeries[i]
+        })
+
+        xScale = scaleTime(
+          extent(filteredData, d => d.parsedDate),
+          [0, xAxisWidth]
+        )
+      }
+    }
+  }
+
+  $: visiblePlotStartX = Math.max(0, scrollLeft - plotMargin.left)
+  $: visiblePlotEndX =
+    xAxisWidth && chartViewportWidth
+      ? Math.min(xAxisWidth, scrollLeft + (scrollViewportWidth || chartViewportWidth) - plotMargin.left)
+      : 0
+
+  $: {
+    if (comparing && filteredData && comparativePredictionColumn) {
+      comparativeSeriesRows = seriesRows(filteredData, comparativePredictionColumn, movingAverageWindow)
+    } else {
+      comparativeSeriesRows = []
+    }
+  }
+
+  $: {
+    if (filteredData && xScale && svgHeight) {
+      let visibleMax = 0
+      let visibleRows = filteredData.filter(d => rowIsVisible(d, visiblePlotStartX, visiblePlotEndX))
+      let addValue = value => {
+        if (finiteValue(value)) visibleMax = Math.max(visibleMax, Number(value))
+      }
+
+      if (checkboxFilters.displayObservations) {
+        visibleRows.forEach(d => addValue(d[observationValueColumn]))
+      }
+
+      if (checkboxFilters.displayModels) {
+        visibleRows.forEach(d => addValue(d[timeSeriesValueColumn]))
+
+        if (comparing) {
+          comparativeSeriesRows
+            .filter(d => rowIsVisible(d, visiblePlotStartX, visiblePlotEndX))
+            .forEach(d => addValue(d.value))
+        }
+      }
+
+      let yDomain = [0, visibleMax || 1]
+
+      yScale = scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+
+      animatedYDomain.set(yDomain)
+    }
+  }
+
+  $: {
+    if (filteredData && yScale) {
+      animatedPaths.set({
+        observations: pathGeneratorFor(observationValueColumn)(filteredData.filter(v => v[observationValueColumn])),
+        timeSeries: pathGeneratorFor(timeSeriesValueColumn)(filteredData.filter(v => v[timeSeriesPathFilterColumn])),
+      })
+    }
+  }
+
   $: legendItems = [
     {
       key: "observations",
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: sliders.observations > 0,
+      aggregated: movingAverageWindow > 0,
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: sliders.timeSeries > 0,
+      aggregated: movingAverageWindow > 0,
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: sliders.timeSeries > 0,
+      aggregated: movingAverageWindow > 0,
     },
   ]
 
-  let numObservations = data.filter(d => !d.is_forecast).length
-
-  let plotGroup
-  let comparativePath = null
-
-  $: observationPointsVisible = checkboxFilters.displayObservations && sliders.observations == 0
-  $: observationPathVisible = checkboxFilters.displayObservations && sliders.observations > 0
-  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliders.timeSeries == 0
-  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliders.timeSeries > 0
-  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries == 0
-  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliders.timeSeries > 0
+  $: observationPointsVisible = checkboxFilters.displayObservations && movingAverageWindow == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && movingAverageWindow > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && movingAverageWindow == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && movingAverageWindow > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && movingAverageWindow == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && movingAverageWindow > 0
 
   $: animatedPointYScale =
     svgHeight && $animatedYDomain
@@ -234,7 +319,19 @@
     let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
-      let drawChartPointLayer = ({ canvas, rows, field, color, stroke = null }) =>
+      let pointIsPastHighlight = row =>
+        pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth
+      let pointIsNeverFaded = () => false
+
+      let drawChartPointLayer = ({
+        canvas,
+        rows,
+        field,
+        color,
+        stroke = null,
+        isFaded = pointIsPastHighlight,
+        fadedAlpha = 0.5,
+      }) =>
         drawCanvasCircles({
           canvas,
           rows,
@@ -245,8 +342,8 @@
           stroke,
           getX: row => plotMargin.left + xScale(row.parsedDate),
           getY: row => animatedPointYScale(row[field]),
-          isFaded: row =>
-            pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth,
+          isFaded,
+          fadedAlpha,
         })
 
       drawChartPointLayer({
@@ -261,21 +358,17 @@
         rows: filteredData ? filteredData.filter(d => d[overallPredictionColumn]) : [],
         field: overallPredictionColumn,
         color: chartColors.overallModel,
+        isFaded: pointIsNeverFaded,
       })
       drawChartPointLayer({
         canvas: comparativeCanvas,
-        rows: comparing && filteredData ? filteredData.filter(d => d[predictionColumn(hoverYear)]) : [],
-        field: comparing ? predictionColumn(hoverYear) : null,
+        rows: $animatedComparativePoints,
+        field: "value",
         color: chartColors.comparativeModel,
+        isFaded: pointIsNeverFaded,
       })
     }
   }
-
-  let movingAverage = (rows, field, range) =>
-    sma(
-      rows.filter(v => v[field]).map(v => v[field]),
-      range
-    ).map(v => parseFloat(v))
 
   function yearlyTrendAt(rowIndex, field) {
     let current = data[rowIndex]?.[field]
@@ -325,9 +418,6 @@
     }
   }
 
-  $: comparing = hoverYear != null && hoverYear < latestObservedYear
-  $: hoverHighlightWidth =
-    comparing && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : 0
   $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = filteredData ? modelMetrics(latestObservedYear, isFuture) : null
@@ -342,15 +432,11 @@
   ]
 
   $: tooltipText = {
-    lasVegasScale:
-      "The Las Vegas shooting is the deadliest mass shooting in US history. With 548 total victims killed/injured, it is a major outlier in this dataset. Filter to see how this observation affects the scaling of the entire graph.",
     xAxis: "Individual incidents are summed together and grouped by date.",
     yAxis:
       "Includes all victims reported as injured or killed. Victims with unreported health statuses are not included.",
-    observationsSlider:
-      "Adjust the slider to specify a moving average for displaying daily observations. Units are in days, with 0 days displaying the actual/recorded observation.",
-    timeSeriesSlider:
-      "Adjust the slider to specify a moving average for displaying time series models. Units are in days, with 0 days displaying the exact prediction on a given day.",
+    movingAverageWindow:
+      "Adjust the slider to specify a moving average for all charted values. Units are in days, with 0 days displaying exact daily observations and predictions.",
     timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
     metrics: isFuture
       ? `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\n\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\n\nAvg Yearly Trend: What is the average change between these predictions annually?`
@@ -358,20 +444,15 @@
   }
 
   $: {
-    if (comparing && sliders.timeSeries && filteredData && xScale && yScale) {
-      let movingAverages = movingAverage(filteredData, predictionColumn(hoverYear), sliders.timeSeries)
-
-      comparativePath = line()
-        .curve(curveNatural)
-        .x(d => xScale(d.parsedDate))
-        .y(d => yScale(d.value))(
-        filteredData
-          .map((d, i) => ({ parsedDate: d.parsedDate, value: movingAverages[i] }))
-          .filter(d => d.value != null && !isNaN(d.value))
-      )
+    if (comparing && movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
+      animatedComparativePath.set(pathGeneratorFor("value")(comparativeSeriesRows))
     } else {
-      comparativePath = null
+      animatedComparativePath.set(null)
     }
+  }
+
+  $: {
+    animatedComparativePoints.set(comparativePointsVisible ? comparativeSeriesRows : [])
   }
 </script>
 
@@ -410,9 +491,26 @@
           class="relative w-full overflow-hidden border border-solid border-black"
           style="max-width:{chartViewportWidth}px"
         >
-          <div class="w-full overflow-y-hidden overflow-x-scroll" style="height:{svgHeight}px">
+          <div
+            bind:this={scrollContainer}
+            bind:clientWidth={scrollViewportWidth}
+            class="w-full overflow-y-hidden overflow-x-scroll"
+            style="height:{svgHeight}px"
+            on:scroll={() => (scrollLeft = scrollContainer?.scrollLeft || 0)}
+          >
             <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={svgHeight}>
+                <g transform="translate({plotMargin.left}, {0})">
+                  <rect
+                    class="non-reactive"
+                    x={forecastStartX}
+                    y={plotMargin.top}
+                    width={xAxisWidth - forecastStartX}
+                    height={plotHeight}
+                    fill="black"
+                    opacity={0.06}
+                  />
+                </g>
                 {#if comparing}
                   <g transform="translate({plotMargin.left}, {0})">
                     <rect
@@ -444,7 +542,6 @@
               <canvas
                 bind:this={comparativeCanvas}
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
-                class:opacity-90={comparativePointsVisible}
                 class:opacity-0={!comparativePointsVisible}
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{svgHeight}px"
@@ -467,15 +564,6 @@
                       stroke-width={1}
                     />
                   {/if}
-                  <rect
-                    class="non-reactive"
-                    x={forecastStartX}
-                    y={plotMargin.top}
-                    width={xAxisWidth - forecastStartX}
-                    height={plotHeight}
-                    fill="black"
-                    opacity={0.06}
-                  />
                   <line
                     class="non-reactive"
                     stroke="black"
@@ -495,31 +583,31 @@
                     y1={plotMargin.top}
                     y2={plotMargin.top}
                   />
-                  <path
-                    class={observationPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
-                    class:opacity-0={!observationPathVisible}
-                    fill="transparent"
-                    stroke={chartColors.observations}
-                    stroke-width={3}
-                    d={$animatedPaths.observations}
-                  />
-                  <path
-                    class={timeSeriesPathVisible ? `${fadeClasses} hover:stroke-4` : `${fadeClasses} non-reactive`}
-                    class:opacity-0={!timeSeriesPathVisible}
-                    fill="transparent"
-                    stroke={chartColors.overallModel}
-                    stroke-width={3}
-                    d={$animatedPaths.timeSeries}
-                  />
-                  {#if comparing && checkboxFilters.displayModels}
+                  {#if observationPathVisible}
                     <path
-                      class="non-reactive {fadeClasses}"
+                      class="hover:stroke-4"
+                      fill="transparent"
+                      stroke={chartColors.observations}
+                      stroke-width={3}
+                      d={$animatedPaths.observations}
+                    />
+                  {/if}
+                  {#if timeSeriesPathVisible}
+                    <path
+                      class="hover:stroke-4"
+                      fill="transparent"
+                      stroke={chartColors.overallModel}
+                      stroke-width={3}
+                      d={$animatedPaths.timeSeries}
+                    />
+                  {/if}
+                  {#if comparing && checkboxFilters.displayModels && comparativePathVisible}
+                    <path
+                      class="non-reactive"
                       fill="transparent"
                       stroke={chartColors.comparativeModel}
                       stroke-width={3}
-                      class:opacity-90={comparativePathVisible}
-                      class:opacity-0={!comparativePathVisible}
-                      d={comparativePath}
+                      d={$animatedComparativePath}
                     />
                   {/if}
                   <text
@@ -696,29 +784,25 @@
             {/each}
           </tbody>
         </table>
-        <div class="mt-4 grid grow grid-cols-2 gap-8">
-          {#each sliderItems as slider (slider.key)}
-            <div>
-              <div class="ml-3.5 max-w-full text-left font-medium">
-                {slider.label}
-                <span class="inline-block w-0.5" />
-                <InfoIcon title={tooltipText[slider.tooltipKey]} tooltipClasses="max-w-80" />
-              </div>
-              <Slider
-                wrapperClasses="w-full"
-                value={sliders[slider.key]}
-                step={sliderStep}
-                min={0}
-                max={30}
-                labelStep={sliderStep}
-                labelEveryXTicks={2}
-                float={true}
-                labels={true}
-                middle={true}
-                on:valueChange={({ detail: e }) => (sliders = { ...sliders, [slider.key]: e.d })}
-              />
-            </div>
-          {/each}
+        <div class="mt-4 grow">
+          <div class="ml-3.5 max-w-full text-left font-medium">
+            Moving Average Window
+            <span class="inline-block w-0.5" />
+            <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
+          </div>
+          <Slider
+            wrapperClasses="w-full"
+            value={movingAverageWindow}
+            step={sliderStep}
+            suffix=" days"
+            min={0}
+            max={30}
+            labelStep={2}
+            float={true}
+            labels={true}
+            middle={true}
+            on:valueChange={({ detail: e }) => (movingAverageWindow = e.d)}
+          />
         </div>
       </div>
     {/if}
