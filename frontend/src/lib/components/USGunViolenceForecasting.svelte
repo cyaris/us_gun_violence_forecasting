@@ -5,17 +5,21 @@
   import { pointer } from "d3-selection"
   import { curveNatural, line } from "d3-shape"
   import { format } from "date-fns"
-  import sma from "sma"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
   import { drawCanvasCircles } from "svelte-lib/functions"
 
+  import {
+    buildSeriesRows,
+    finiteValue,
+    modelMetrics,
+    parseLocalDate,
+    predictionColumn,
+    yearFromDate,
+  } from "../forecastData.js"
   import data from "../static/data.json"
 
-  let parseLocalDate = date => new Date(`${date}T00:00:00`)
-  let yearFromDate = d => Number(d.date.slice(0, 4))
-  let predictionColumn = year => `predicted_victims_${year}`
   let baseRows = [...data]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
@@ -162,43 +166,6 @@
       .curve(curveNatural)
       .x(d => xScale(d.parsedDate))
       .y(d => yScale(d[field]))
-  }
-
-  function movingAverage(rows, field, range) {
-    if (!range) return rows.map(d => d[field])
-
-    let values = Array(rows.length).fill(null)
-    let finiteEntries = rows
-      .map((row, i) => ({ i, value: row[field] }))
-      .filter(({ value }) => finiteValue(value))
-      .map(({ i, value }) => ({ i, value: Number(value) }))
-
-    if (!finiteEntries.length) return values
-
-    let averages = sma(
-      finiteEntries.map(d => d.value),
-      range
-    ).map(v => parseFloat(v))
-
-    finiteEntries.forEach(({ i }, averageIndex) => {
-      values[i] = averages[averageIndex]
-    })
-
-    return values
-  }
-
-  function finiteValue(value) {
-    return value != null && Number.isFinite(Number(value))
-  }
-
-  function seriesRows(rows, field, range) {
-    let values = movingAverage(rows, field, range)
-
-    return values.map((value, i) => ({ ...rows[i], value })).filter(d => finiteValue(d.value))
-  }
-
-  function buildSeriesRows({ rows, field, range = 0, observedOnly = false }) {
-    return seriesRows(observedOnly ? rows.filter(d => !d.is_forecast) : rows, field, range)
   }
 
   function cachedComparativeSeriesRows(field, range) {
@@ -408,47 +375,23 @@
     }
   }
 
-  function yearlyTrendAt(rowIndex, field) {
-    let current = baseRows[rowIndex]?.[field]
-    let previousYear = baseRows[rowIndex - 365]?.[field]
-
-    return current != null && previousYear != null ? current - previousYear : null
-  }
-
-  function modelMetrics(year, isFutureTimeframe) {
+  function cachedModelMetrics(year, isFutureTimeframe) {
     let cacheKey = `${year}:${isFutureTimeframe}`
 
     if (modelMetricsCache.has(cacheKey)) {
       return modelMetricsCache.get(cacheKey)
     }
 
-    let predictionColumnName = predictionColumn(year)
-    let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
-
-    let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] ?? 0), 0)
-    let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(i, predictionColumnName)).filter(finiteValue)
-    let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
-
-    let result = {
-      input:
-        year == latestObservedYear
-          ? `${minYear}–${latestObservedYear}`
-          : year == minYear
-            ? `${minYear}`
-            : `${minYear}–${year}`,
-      total: Math.round(predSum).toLocaleString(),
-      perDay: Math.round(predSum / rows.length).toLocaleString(),
-      trend: Math.round(trendSum / yearlyTrends.length).toLocaleString(),
-    }
-
-    if (!isFutureTimeframe) {
-      result.rmse = Math.round(
-        Math.sqrt(
-          rows.reduce((sum, { d }) => sum + ((d[predictionColumnName] ?? 0) - d.observed_victims) ** 2, 0) /
-            numObservations
-        )
-      ).toLocaleString()
-    }
+    let result = modelMetrics({
+      year,
+      isFutureTimeframe,
+      chartRows,
+      observedIndexedRows,
+      forecastIndexedRows,
+      minYear,
+      latestObservedYear,
+      numObservations,
+    })
 
     modelMetricsCache.set(cacheKey, result)
 
@@ -466,8 +409,8 @@
 
   $: isFuture = selectValue.value == "Next 365 Days"
 
-  $: overallMetrics = chartRows ? modelMetrics(latestObservedYear, isFuture) : null
-  $: comparativeMetrics = comparing ? modelMetrics(hoverYear, isFuture) : null
+  $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
+  $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
 
   $: metricRows = [
     { label: "Model Input", key: "input" },
