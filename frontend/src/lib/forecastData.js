@@ -46,13 +46,6 @@ export function buildSeriesRows({ rows, field, range = 0, observedOnly = false }
   return values.map((value, i) => ({ ...rows[i], value })).filter(d => finiteValue(d.value))
 }
 
-function yearlyTrendAt(rows, rowIndex, field) {
-  let current = rows[rowIndex]?.[field]
-  let previousYear = rows[rowIndex - 365]?.[field]
-
-  return current != null && previousYear != null ? current - previousYear : null
-}
-
 export function modelMetrics({
   year,
   isFutureTimeframe,
@@ -67,7 +60,14 @@ export function modelMetrics({
   let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
 
   let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] ?? 0), 0)
-  let yearlyTrends = rows.map(({ i }) => yearlyTrendAt(chartRows, i, predictionColumnName)).filter(finiteValue)
+  let yearlyTrends = rows
+    .map(({ i }) => {
+      let current = chartRows[i]?.[predictionColumnName]
+      let previousYear = chartRows[i - 365]?.[predictionColumnName]
+
+      return current != null && previousYear != null ? current - previousYear : null
+    })
+    .filter(finiteValue)
   let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
 
   let result = {
