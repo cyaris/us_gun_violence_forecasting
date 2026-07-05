@@ -9,7 +9,7 @@ earlier model snapshots compare with later ones and with the eventual observed
 victim counts. The hover interaction is designed to show how the forecast
 changed as more data was received.
 
-View the live tool at [charlieyaris.com/us_gun_violence_forecasting](https://charlieyaris.com/us_gun_violence_forecasting/).
+View the live tool at <a href="https://charlieyaris.com/us_gun_violence_forecasting/" target="_blank" rel="noopener noreferrer">charlieyaris.com/us_gun_violence_forecasting</a>.
 
 The project has two parts:
 
@@ -144,9 +144,9 @@ The frontend uses these columns to show:
 ## Data Source
 
 The source shooting data comes from the Figshare dataset
-[Gun Violence - All Shootings](https://figshare.com/articles/dataset/Gun_Violence_-_All_Shootings/25517224?file=45398359).
+<a href="https://figshare.com/articles/dataset/Gun_Violence_-_All_Shootings/25517224?file=45398359" target="_blank" rel="noopener noreferrer">Gun Violence - All Shootings</a>.
 
-Original incident data is credited to the non-profit [Gun Violence Archive](https://www.gunviolencearchive.org/).
+Original incident data is credited to the non-profit <a href="https://www.gunviolencearchive.org/" target="_blank" rel="noopener noreferrer">Gun Violence Archive</a>.
 
 ## Notes
 
