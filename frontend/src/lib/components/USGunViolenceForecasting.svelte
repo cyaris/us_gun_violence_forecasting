@@ -45,7 +45,7 @@
   let yScale
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let plotMargin = { top: 20, right: 20, bottom: 93, left: 84 }
+  let plotMargin = { top: 20, right: 20, bottom: 84, left: 84 }
   let yAxisMaskWidth = plotMargin.left - axisStrokeInset
   // the height of the x axis ticks.
   let xTickHeight = 10
@@ -206,7 +206,7 @@
   $: {
     if (width && viewportHeight) {
       chartViewportWidth = width * 0.7
-      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.65, chartViewportWidth / 2))
+      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, chartViewportWidth / 2))
       svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
@@ -712,11 +712,11 @@
             </g>
           </svg>
           <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
-            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={svgHeight - 24}>
+            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={svgHeight - 18}>
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} tooltipClasses="max-w-80" cx={xAxisTitleX + 36} cy={svgHeight - 30} />
+              <InfoIcon title={tooltipText.xAxis} tooltipClasses="max-w-80" cx={xAxisTitleX + 36} cy={svgHeight - 24} />
             </g>
           </svg>
         </div>
