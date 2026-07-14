@@ -448,7 +448,7 @@
 
 <svelte:window bind:innerHeight={viewportHeight} />
 <div class="flex h-full w-full flex-col items-center justify-center" bind:clientWidth={width}>
-  <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen.</div>
+  <div class="px-8 text-center text-lg min-[1300px]:hidden">This visualization is best viewed on a larger screen. So, grab a computer and come back soon!</div>
   <div class="hidden min-[1300px]:block">
     {#if chartRows}
       <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
