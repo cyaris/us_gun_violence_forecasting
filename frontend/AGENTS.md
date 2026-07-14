@@ -7,8 +7,7 @@
 
 ## Frontend Chart Structure
 
-- Use `svelte-routing` in `src/lib/components/Router.svelte` to simulate the GitHub Pages paths under `/us_gun_violence_forecasting`. Keep page components in `src/routes` aligned with the app routes.
-- Keep `src/routes/+page.svelte` as a navigation hub for the app's pages. The forecasting tool itself belongs on `src/routes/tool/+page.svelte`.
+- Use `/us_gun_violence_forecasting` as the simulated GitHub Pages route base. The forecasting tool itself belongs on `src/routes/tool/+page.svelte`.
 - Treat hover-based comparison of historical forecast snapshots as the core user workflow. Changes to chart interactions, data shaping, or copy should preserve the ability to compare earlier and later forecasts for the same dates as additional observed data becomes available.
 - Keep `USGunViolenceForecasting.svelte` focused on project-specific data, chart state, and markup. Move generic reusable rendering helpers to `svelte-lib` and import them from `svelte-lib/functions` or `svelte-lib/components`.
 - In `USGunViolenceForecasting.svelte`, only actual observation points should fade when they exceed the hover year. Model points and all paths should retain their normal full-opacity colors, including in the "Next 365 Days" forecast region.
@@ -17,7 +16,6 @@
 - Moving-average helpers must preserve row alignment and treat valid `0` values as data. Use finite-value checks rather than truthiness filters for chart paths, points, domains, and trends.
 - Cache hover-derived comparative series and model metrics by stable inputs such as prediction column, moving-average window, year, and timeframe.
 - Use `drawCanvasCircles` from `svelte-lib/functions` for generic canvas circle rendering instead of recreating project-local point-layer helpers.
-- Prefer Tailwind classes over inline styles when the value is static and supported by Tailwind. Avoid Tailwind `!` modifiers unless they are necessary to override external CSS in the rendered Jekyll environment.
 - Keep static constants close to use. Inline single-use numeric/static values instead of declaring top-level variables solely for one downstream reference.
 - Do not pass fixed/default markup values through helper functions when they can be declared directly in markup.
 - Inline trivial event handlers in Svelte markup when they are only used by one element, such as simple hover, mouseleave, or scroll state updates. Use named functions for reused handlers or nontrivial logic.
