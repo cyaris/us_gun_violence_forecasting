@@ -132,12 +132,14 @@
     ...tweenTiming,
   })
 
-  let selectItems = [
-    { value: "Historical Data", label: "Historical Data" },
-    { value: "Next 365 Days", label: "Next 365 Days" },
-  ]
+  let selectItems = {
+    timeframe: [
+      { value: "Historical Data", label: "Historical Data" },
+      { value: "Next 365 Days", label: "Next 365 Days" },
+    ],
+  }
 
-  let selectValue = selectItems[0]
+  let selectValue = { timeframe: selectItems.timeframe[0] }
 
   let sliderStep = 5
 
@@ -407,7 +409,7 @@
     }
   }
 
-  $: isFuture = selectValue.value == "Next 365 Days"
+  $: isFuture = selectValue.timeframe.value == "Next 365 Days"
 
   $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
   $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
@@ -729,12 +731,11 @@
           </div>
           <div class="w-36">
             <Select
-              items={selectItems}
-              value={selectValue}
+              items={selectItems.timeframe}
+              bind:value={selectValue.timeframe}
               clearable={false}
               centeredValue={true}
               centeredItems={true}
-              on:valueChange={({ detail: e }) => (selectValue = e.d)}
             />
           </div>
         </div>
