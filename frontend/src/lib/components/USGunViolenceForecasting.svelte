@@ -143,9 +143,9 @@
 
   let sliderStep = 5
 
-  let checkboxFilters = { displayObservations: true, displayModels: true }
+  let sliderValue = { movingAverageWindow: 10 }
 
-  let movingAverageWindow = 10
+  let checkboxFilters = { displayObservations: true, displayModels: true }
 
   let checkboxFilterItems = [
     { key: "displayObservations", label: "Display Daily Observations" },
@@ -195,13 +195,13 @@
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: observedVictimsColumn,
-      range: movingAverageWindow,
+      range: sliderValue.movingAverageWindow,
       observedOnly: true,
     })
     overallModelSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: overallPredictionColumn,
-      range: movingAverageWindow,
+      range: sliderValue.movingAverageWindow,
     })
   }
 
@@ -227,7 +227,10 @@
 
   $: {
     if (comparing && comparativePredictionColumn) {
-      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, movingAverageWindow)
+      comparativeSeriesRows = cachedComparativeSeriesRows(
+        comparativePredictionColumn,
+        sliderValue.movingAverageWindow
+      )
     } else {
       comparativeSeriesRows = []
     }
@@ -281,30 +284,30 @@
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: movingAverageWindow > 0,
+      aggregated: sliderValue.movingAverageWindow > 0,
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: movingAverageWindow > 0,
+      aggregated: sliderValue.movingAverageWindow > 0,
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: movingAverageWindow > 0,
+      aggregated: sliderValue.movingAverageWindow > 0,
     },
   ]
 
-  $: observationPointsVisible = checkboxFilters.displayObservations && movingAverageWindow == 0
-  $: observationPathVisible = checkboxFilters.displayObservations && movingAverageWindow > 0
-  $: timeSeriesPointsVisible = checkboxFilters.displayModels && movingAverageWindow == 0
-  $: timeSeriesPathVisible = checkboxFilters.displayModels && movingAverageWindow > 0
-  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && movingAverageWindow == 0
-  $: comparativePathVisible = comparing && checkboxFilters.displayModels && movingAverageWindow > 0
+  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
 
   $: animatedYScale =
     svgHeight && $animatedYDomain
@@ -435,7 +438,7 @@
   }
 
   $: {
-    if (comparing && movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
+    if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
       animatedComparativePath.set(comparativePath, tweenTiming)
     } else {
@@ -783,7 +786,7 @@
           </div>
           <Slider
             wrapperClasses="w-full"
-            value={movingAverageWindow}
+            value={sliderValue.movingAverageWindow}
             step={sliderStep}
             suffix=" days"
             min={0}
@@ -792,7 +795,7 @@
             float={true}
             labels={true}
             middle={true}
-            on:valueChange={({ detail: e }) => (movingAverageWindow = e.d)}
+            on:valueChange={({ detail: e }) => (sliderValue.movingAverageWindow = e.d)}
           />
         </div>
       </div>
