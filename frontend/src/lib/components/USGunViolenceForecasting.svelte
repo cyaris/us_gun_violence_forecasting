@@ -132,18 +132,16 @@
     ...tweenTiming,
   })
 
-  let selectItems = {
-    timeframe: [
-      { value: "Historical Data", label: "Historical Data" },
-      { value: "Next 365 Days", label: "Next 365 Days" },
-    ],
-  }
+  let selectItems = [
+    { value: "Historical Data", label: "Historical Data" },
+    { value: "Next 365 Days", label: "Next 365 Days" },
+  ]
 
-  let selectValue = { timeframe: selectItems.timeframe[0] }
+  let selectValue = selectItems[0]
 
   let sliderStep = 5
 
-  let sliderValue = { movingAverageWindow: 10 }
+  let sliderValue = 10
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
@@ -195,13 +193,13 @@
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: observedVictimsColumn,
-      range: sliderValue.movingAverageWindow,
+      range: sliderValue,
       observedOnly: true,
     })
     overallModelSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: overallPredictionColumn,
-      range: sliderValue.movingAverageWindow,
+      range: sliderValue,
     })
   }
 
@@ -229,7 +227,7 @@
     if (comparing && comparativePredictionColumn) {
       comparativeSeriesRows = cachedComparativeSeriesRows(
         comparativePredictionColumn,
-        sliderValue.movingAverageWindow
+        sliderValue
       )
     } else {
       comparativeSeriesRows = []
@@ -284,30 +282,30 @@
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: sliderValue.movingAverageWindow > 0,
+      aggregated: sliderValue > 0,
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: sliderValue.movingAverageWindow > 0,
+      aggregated: sliderValue > 0,
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: sliderValue.movingAverageWindow > 0,
+      aggregated: sliderValue > 0,
     },
   ]
 
-  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow == 0
-  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow > 0
-  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
-  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
-  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
-  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
+  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue > 0
 
   $: animatedYScale =
     svgHeight && $animatedYDomain
@@ -412,7 +410,7 @@
     }
   }
 
-  $: isFuture = selectValue.timeframe.value == "Next 365 Days"
+  $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
   $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
@@ -438,7 +436,7 @@
   }
 
   $: {
-    if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
+    if (comparing && sliderValue && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
       animatedComparativePath.set(comparativePath, tweenTiming)
     } else {
@@ -734,8 +732,8 @@
           </div>
           <div class="w-36">
             <Select
-              items={selectItems.timeframe}
-              bind:value={selectValue.timeframe}
+              items={selectItems}
+              bind:value={selectValue}
               clearable={false}
               centeredValue={true}
               centeredItems={true}
@@ -786,7 +784,7 @@
           </div>
           <Slider
             wrapperClasses="w-full"
-            value={sliderValue.movingAverageWindow}
+            value={sliderValue}
             step={sliderStep}
             suffix=" days"
             min={0}
@@ -795,7 +793,7 @@
             float={true}
             labels={true}
             middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue.movingAverageWindow = e.d)}
+            on:valueChange={({ detail: e }) => (sliderValue = e.d)}
           />
         </div>
       </div>
