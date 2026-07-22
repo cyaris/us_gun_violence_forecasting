@@ -33,11 +33,9 @@
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
 
-  let width
+  let windowWidth
   let viewportHeight
   let svgWidth
-  let chartViewportWidth
-  let svgHeight
   let graphStrokeWidth = 1
   let axisStrokeInset = graphStrokeWidth / 2
 
@@ -59,6 +57,7 @@
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
   let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
+  let chartLayout = { viewportWidth: 0, height: 0 }
 
   let chartRows = baseRows
 
@@ -204,9 +203,16 @@
   }
 
   $: {
-    if (width && viewportHeight) {
-      chartViewportWidth = width * 0.7
-      svgHeight = Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, chartViewportWidth / 2))
+    if (windowWidth && viewportHeight) {
+      let compactViewportWidth = Math.max(windowWidth - 24, 0)
+
+      chartLayout = {
+        viewportWidth: windowWidth >= 1300 ? windowWidth * 0.7 : compactViewportWidth,
+        height:
+          windowWidth >= 1300
+            ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (windowWidth * 0.7) / 2))
+            : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78)),
+      }
       svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
 
@@ -219,8 +225,8 @@
 
   $: visiblePlotStartX = Math.max(0, scrollLeft - plotMargin.left)
   $: visiblePlotEndX =
-    xAxisWidth && chartViewportWidth
-      ? Math.min(xAxisWidth, scrollLeft + (scrollViewportWidth || chartViewportWidth) - plotMargin.left)
+    xAxisWidth && chartLayout.viewportWidth
+      ? Math.min(xAxisWidth, scrollLeft + (scrollViewportWidth || chartLayout.viewportWidth) - plotMargin.left)
       : 0
 
   $: {
@@ -232,7 +238,7 @@
   }
 
   $: {
-    if (chartRows && xScale && svgHeight) {
+    if (chartRows && xScale && chartLayout.height) {
       let visibleMax = 0
       let addValue = value => {
         if (finiteValue(value)) visibleMax = Math.max(visibleMax, Number(value))
@@ -258,7 +264,7 @@
 
       let yDomain = [0, visibleMax || 1]
 
-      yScale = scaleLinear(yDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+      yScale = scaleLinear(yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
 
       animatedYDomain.set(yDomain)
     }
@@ -305,8 +311,8 @@
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue > 0
 
   $: animatedYScale =
-    svgHeight && $animatedYDomain
-      ? scaleLinear($animatedYDomain, [svgHeight - plotMargin.bottom, plotMargin.top])
+    chartLayout.height && $animatedYDomain
+      ? scaleLinear($animatedYDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
   $: plotBottomY = yScale ? yScale(0) : 0
@@ -316,11 +322,11 @@
   $: xTicks = xScale ? xScale.ticks() : []
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
-  $: xAxisTitleX = chartViewportWidth ? plotMargin.left + (chartViewportWidth - plotMargin.left) / 2 : 0
+  $: xAxisTitleX = chartLayout.viewportWidth ? plotMargin.left + (chartLayout.viewportWidth - plotMargin.left) / 2 : 0
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
-    let pointLayerReady = xScale && animatedYScale && svgWidth && svgHeight
+    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
     let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
@@ -341,7 +347,7 @@
           canvas,
           rows,
           width: svgWidth,
-          height: svgHeight,
+          height: chartLayout.height,
           radius: pointRadius,
           color,
           stroke,
@@ -446,15 +452,15 @@
   }
 </script>
 
-<svelte:window bind:innerHeight={viewportHeight} />
-<div class="flex h-full w-full flex-col items-center justify-center" bind:clientWidth={width}>
-  <div class="px-8 text-center text-lg min-[1300px]:hidden">
-    This visualization is best viewed on a larger screen. So, grab a computer and come back soon!
-  </div>
-  <div class="hidden min-[1300px]:block">
+<svelte:window bind:innerWidth={windowWidth} bind:innerHeight={viewportHeight} />
+<div class="flex h-full w-full flex-col items-center justify-center">
+  <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows}
-      <div class="relative mb-3 mt-4 text-sm" style="width:{chartViewportWidth}px">
-        <div class="flex flex-col items-start">
+      <div
+        class="relative mx-auto mb-3 mt-4 grid gap-3 text-sm min-[1300px]:block"
+        style="max-width:{chartLayout.viewportWidth}px"
+      >
+        <div class="grid gap-2 min-[1300px]:flex min-[1300px]:flex-col min-[1300px]:items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-2">
               <CheckboxFilter
@@ -472,26 +478,26 @@
           {/each}
         </div>
         <span
-          class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap text-sm"
+          class="text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
         </span>
       </div>
-      {#if svgWidth && svgHeight}
+      {#if svgWidth && chartLayout.height}
         <div
-          class="relative w-full overflow-hidden border border-solid border-black"
-          style="max-width:{chartViewportWidth}px"
+          class="relative mx-auto w-full overflow-hidden border border-solid border-black"
+          style="max-width:{chartLayout.viewportWidth}px"
         >
           <div
             bind:this={scrollContainer}
             bind:clientWidth={scrollViewportWidth}
             class="w-full overflow-y-hidden overflow-x-scroll"
-            style="height:{svgHeight}px"
+            style="height:{chartLayout.height}px"
             on:scroll={() => (scrollLeft = scrollContainer?.scrollLeft || 0)}
           >
-            <div class="relative" style="width:{svgWidth}px; height:{svgHeight}px">
-              <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={svgHeight}>
+            <div class="relative" style="width:{svgWidth}px; height:{chartLayout.height}px">
+              <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={chartLayout.height}>
                 <g transform="translate({plotMargin.left}, {0})">
                   <rect
                     class="non-reactive"
@@ -522,23 +528,23 @@
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-0={!observationPointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px"
+                style="width:{svgWidth}px; height:{chartLayout.height}px"
               />
               <canvas
                 bind:this={timeSeriesCanvas}
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-0={!timeSeriesPointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px"
+                style="width:{svgWidth}px; height:{chartLayout.height}px"
               />
               <canvas
                 bind:this={comparativeCanvas}
                 class="pointer-events-none absolute left-0 top-0 z-10 {fadeClasses}"
                 class:opacity-0={!comparativePointsVisible}
                 aria-hidden="true"
-                style="width:{svgWidth}px; height:{svgHeight}px"
+                style="width:{svgWidth}px; height:{chartLayout.height}px"
               />
-              <svg class="absolute left-0 top-0 z-20" width={svgWidth} height={svgHeight} id="graph">
+              <svg class="absolute left-0 top-0 z-20" width={svgWidth} height={chartLayout.height} id="graph">
                 <g
                   bind:this={plotGroup}
                   transform="translate({plotMargin.left}, {0})"
@@ -646,7 +652,11 @@
               </svg>
             </div>
           </div>
-          <svg class="pointer-events-none absolute left-0 top-0 z-30" width={chartViewportWidth} height={svgHeight}>
+          <svg
+            class="pointer-events-none absolute left-0 top-0 z-30"
+            width={chartLayout.viewportWidth}
+            height={chartLayout.height}
+          >
             <g class="non-reactive text-sm" transform="translate({plotMargin.left + 8}, {plotMargin.top + 12})">
               {#each legendItems as item, i (item.key)}
                 <g transform="translate(0, {i * 16})">
@@ -682,12 +692,13 @@
           />
           <div
             class="pointer-events-none absolute left-0 z-30 bg-white"
-            style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{svgHeight - xTickLabelBandBottom}px"
+            style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{chartLayout.height -
+              xTickLabelBandBottom}px"
           />
           <svg
             class="absolute left-0 top-0 z-40 overflow-visible"
             width={yAxisMaskWidth}
-            height={svgHeight}
+            height={chartLayout.height}
             overflow="visible"
           >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
@@ -713,17 +724,34 @@
               <InfoIcon title={tooltipText.yAxis} tooltipClasses="max-w-80" cx={yAxisInfoX} cy={yAxisCenterY - 78} />
             </g>
           </svg>
-          <svg class="pointer-events-none absolute left-0 top-0 z-20" width={chartViewportWidth} height={svgHeight}>
-            <text class="non-reactive fill-chart-1 text-lg" text-anchor="middle" x={xAxisTitleX} y={svgHeight - 18}>
+          <svg
+            class="pointer-events-none absolute left-0 top-0 z-20"
+            width={chartLayout.viewportWidth}
+            height={chartLayout.height}
+          >
+            <text
+              class="non-reactive fill-chart-1 text-lg"
+              text-anchor="middle"
+              x={xAxisTitleX}
+              y={chartLayout.height - 18}
+            >
               Date
             </text>
             <g class="pointer-events-auto">
-              <InfoIcon title={tooltipText.xAxis} tooltipClasses="max-w-80" cx={xAxisTitleX + 36} cy={svgHeight - 24} />
+              <InfoIcon
+                title={tooltipText.xAxis}
+                tooltipClasses="max-w-80"
+                cx={xAxisTitleX + 36}
+                cy={chartLayout.height - 24}
+              />
             </g>
           </svg>
         </div>
       {/if}
-      <div class="mt-5 flex w-full items-start gap-8 text-sm" style="max-width:{chartViewportWidth}px">
+      <div
+        class="controls-layout mx-auto mt-5 grid w-full gap-y-5 text-sm"
+        style="max-width:{chartLayout.viewportWidth}px"
+      >
         <div>
           <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
             Prediction Timeframe
@@ -739,11 +767,11 @@
             />
           </div>
         </div>
-        <table class="w-96 table-fixed border-collapse">
+        <table class="metrics-table w-full table-fixed border-collapse">
           <colgroup>
-            <col class="w-48" />
-            <col class="w-20" />
-            <col class="w-28" />
+            <col class="metrics-label-column" />
+            <col class="metrics-overall-column" />
+            <col class="metrics-comparative-column" />
           </colgroup>
           <thead>
             <tr>
@@ -754,11 +782,11 @@
                 </div>
               </th>
               <th
-                class="whitespace-nowrap border-b-[3.5px] pb-1 pl-3 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
               >
               <th
-                class="whitespace-nowrap border-b-[3.5px] pb-1 pl-3 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                 style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
               >
             </tr>
@@ -766,7 +794,7 @@
           <tbody>
             {#each metricRows as row (row.key)}
               <tr>
-                <td class="whitespace-nowrap"
+                <td
                   >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                 >
                 <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
@@ -775,10 +803,9 @@
             {/each}
           </tbody>
         </table>
-        <div class="mt-4 grow">
-          <div class="ml-3.5 max-w-full text-left font-medium">
+        <div class="moving-average-control">
+          <div class="ml-3.5 flex items-center gap-2 font-medium">
             Moving Average Window
-            <span class="inline-block w-0.5" />
             <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
           </div>
           <Slider
@@ -797,7 +824,7 @@
         </div>
       </div>
     {/if}
-    <div class="mt-12" style="max-width:{chartViewportWidth}px">
+    <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
       <p>
         All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>, a
         not-for-profit corporation formed in 2013 to provide online public access to accurate information about
@@ -806,3 +833,41 @@
     </div>
   </div>
 </div>
+
+<style>
+  .metrics-label-column {
+    width: 54%;
+  }
+
+  .metrics-overall-column {
+    width: 22%;
+  }
+
+  .metrics-comparative-column {
+    width: 24%;
+  }
+
+  @media (min-width: 900px) {
+    .controls-layout {
+      grid-template-columns: 9rem minmax(20rem, 24rem) 1fr;
+      align-items: start;
+      column-gap: 2rem;
+    }
+
+    .moving-average-control {
+      margin-top: 1rem;
+    }
+
+    .metrics-label-column {
+      width: 50%;
+    }
+
+    .metrics-overall-column {
+      width: 21%;
+    }
+
+    .metrics-comparative-column {
+      width: 29%;
+    }
+  }
+</style>
