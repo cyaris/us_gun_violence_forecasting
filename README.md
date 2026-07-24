@@ -124,6 +124,24 @@ npm run lint         # eslint
 npm run format       # prettier
 ```
 
+## Embedded Bundle Deployment
+
+The `Rollup upload` GitHub Actions workflow builds the frontend rollup bundle and uploads it to
+`s3://cyaris.github.io/us_gun_violence_forecasting/`.
+
+Manual dispatch uploads staged `test_bundle.*` files by default. Set `production` during manual dispatch to upload live
+`bundle.*` files instead. Pushes to `main` or `master`, including merges into those branches, always run with production
+upload names and `dry-run` disabled.
+
+Set the repository variable `SVELTE_LIB_REF` to control which `svelte-lib` branch, tag, or SHA the automatic production
+workflow checks out. Manual dispatch exposes the same value as the `svelte-lib-ref` input.
+
+The workflow calls the reusable workflow in the private `svelte-lib` repository, which means the caller repository must
+also be private. Enable access from `svelte-lib`
+Settings, Actions, General, Access, and provide `CHECKOUT_TOKEN` with read access to `svelte-lib` and any private local
+dependency repositories. AWS authentication uses `AWS_ROLLUP_UPLOAD_ROLE_ARN` when present, otherwise it expects AWS
+access-key secrets.
+
 ## Data Model
 
 The generated JSON contains daily rows with:
