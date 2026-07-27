@@ -5,13 +5,29 @@
   import Development from "../../routes/development/+page.svelte"
   import Documentation from "../../routes/documentation/+page.svelte"
   import Tool from "../../routes/tool/+page.svelte"
+
+  let projectRouteBase = "/us_gun_violence_forecasting"
+
+  function shellPaths(path = "") {
+    let routePath = `${projectRouteBase}${path}`
+
+    return path ? [routePath, `${routePath}.html`] : [routePath, `${routePath}/`, `${routePath}/index.html`]
+  }
+
+  let routes = [
+    { paths: shellPaths(), component: Home },
+    { paths: shellPaths("/development"), component: Development },
+    { paths: shellPaths("/documentation"), component: Documentation },
+    { paths: shellPaths("/tool"), component: Tool },
+  ]
 </script>
 
 <main>
-  <Router base="/">
-    <Route path="/us_gun_violence_forecasting" component={Home} />
-    <Route path="/us_gun_violence_forecasting/development" component={Development} />
-    <Route path="/us_gun_violence_forecasting/documentation" component={Documentation} />
-    <Route path="/us_gun_violence_forecasting/tool" component={Tool} />
+  <Router>
+    {#each routes as { paths, component }}
+      {#each paths as path}
+        <Route {path} {component} />
+      {/each}
+    {/each}
   </Router>
 </main>
