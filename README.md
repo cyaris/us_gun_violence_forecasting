@@ -13,8 +13,8 @@ View the live tool at <a href="https://charlieyaris.com/us_gun_violence_forecast
 
 The project has two parts:
 
-- `backend/`: Python data pipeline that reads Gun Violence Archive exports, fits yearly Prophet models, and writes the visualization JSON.
-- `frontend/`: SvelteKit app that renders the chart, controls, metrics, and forecast comparison UI.
+- `backend/`: Python data pipeline that reads Gun Violence Archive exports, fits yearly Prophet models, and writes the visualization JSON
+- `frontend/`: SvelteKit app that renders the chart, controls, metrics, and forecast comparison UI
 
 ## Repository Structure
 
@@ -38,7 +38,9 @@ frontend/
 
 - Python 3.11+
 - Node.js and npm
-- A local `svelte-lib` checkout available at `../svelte-lib` relative to this repository's parent directory, because the frontend depends on:
+
+The frontend also expects a local `svelte-lib` checkout at `../svelte-lib` relative to this repository's parent
+directory because it depends on:
 
 ```json
 "svelte-lib": "file:../../svelte-lib"
