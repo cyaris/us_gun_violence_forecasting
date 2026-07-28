@@ -137,7 +137,7 @@ frontend dependencies and run the default format, lint, Svelte check, and build 
 The workflow can be dispatched from the GitHub Actions UI with **Actions > CI > Run workflow**. Manual dispatch exposes
 the `svelte-lib-ref` input for choosing the sibling `svelte-lib` ref checked out for the local `file:` dependency.
 Automatic push and pull-request runs use the `SVELTE_LIB_REF` repository variable when present, falling back to
-`cy_dev3`.
+`main`.
 
 ### `.github/workflows/rollup-upload.yml`
 
