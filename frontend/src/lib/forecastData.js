@@ -54,7 +54,7 @@ export function modelMetrics({
   forecastIndexedRows,
   minYear,
   latestObservedYear,
-  numObservations
+  numObservations,
 }) {
   let predictionColumnName = predictionColumn(year)
   let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
@@ -79,7 +79,7 @@ export function modelMetrics({
           : `${minYear}–${year}`,
     total: Math.round(predSum).toLocaleString(),
     perDay: Math.round(predSum / rows.length).toLocaleString(),
-    trend: Math.round(trendSum / yearlyTrends.length).toLocaleString()
+    trend: Math.round(trendSum / yearlyTrends.length).toLocaleString(),
   }
 
   if (!isFutureTimeframe) {
