@@ -134,7 +134,9 @@ These local wrappers inherit their reusable implementations from `cyaris/shared-
 
 The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the shared
 `cyaris/shared-automation/.github/workflows/ci.yml` workflow with `working-directory: frontend` to install
-frontend dependencies and run the default format, lint, Svelte check, and build commands.
+frontend dependencies and run the default format, lint, and Svelte check commands. CI skips `npm run build` because a
+clean checkout does not include the ignored generated forecast data file; run production builds after regenerating
+`frontend/src/lib/static/data.json`.
 
 The workflow can be dispatched from the GitHub Actions UI with **Actions > CI > Run workflow**. Manual dispatch exposes
 the `svelte-lib-ref` input for choosing the sibling `svelte-lib` ref checked out for the local `file:` dependency.
