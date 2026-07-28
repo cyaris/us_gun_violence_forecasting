@@ -79,4 +79,9 @@ jobs:
       metadata-refresh-files: |
         us_gun_violence_forecasting/all-shootings-2014-2023.csv:text/csv
       svelte-lib-ref: ${{ needs.resolve-inputs.outputs.svelte_lib_ref }}
-    secrets: inherit
+    secrets:
+      CHECKOUT_TOKEN: ${{ secrets.CHECKOUT_TOKEN }}
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
