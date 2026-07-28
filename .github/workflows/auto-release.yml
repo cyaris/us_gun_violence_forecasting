@@ -2,6 +2,9 @@ name: Auto release
 
 on:
   pull_request:
+    branches:
+      - main
+      - master
     types:
       - closed
   workflow_dispatch:

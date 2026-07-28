@@ -163,7 +163,7 @@ The upload refreshes cache metadata in place for
 
 ### `.github/workflows/auto-release.yml`
 
-The `Auto release` workflow runs after a pull request is closed and delegates to the shared
+The `Auto release` workflow runs after a pull request into `main` or `master` is closed and delegates to the shared
 `cyaris/svelte-lib/.github/workflows/auto-release.yml` workflow only when that pull request was merged. It evaluates the
 merge commit against the repository release policy, asks the configured OpenAI model whether the merge warrants a
 release, publishes a GitHub release when warranted, and comments the outcome on the pull request.
