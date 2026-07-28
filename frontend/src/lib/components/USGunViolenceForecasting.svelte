@@ -16,7 +16,7 @@
     modelMetrics,
     parseLocalDate,
     predictionColumn,
-    yearFromDate,
+    yearFromDate
   } from "../forecastData.js"
   import data from "../static/data.json"
 
@@ -83,7 +83,7 @@
 
       return t => [min(t), max(t)]
     },
-    ...tweenTiming,
+    ...tweenTiming
   })
 
   let animatedPaths = tweened(
@@ -95,7 +95,7 @@
 
         return t => ({ observations: observations(t), timeSeries: timeSeries(t) })
       },
-      ...tweenTiming,
+      ...tweenTiming
     }
   )
 
@@ -106,7 +106,7 @@
       let path = interpolateString(a, b)
       return t => path(t)
     },
-    ...tweenTiming,
+    ...tweenTiming
   })
 
   let animatedComparativePoints = tweened([], {
@@ -125,12 +125,12 @@
 
       return t => interpolators.map(({ pointValue, ...d }) => ({ ...d, value: pointValue(t) }))
     },
-    ...tweenTiming,
+    ...tweenTiming
   })
 
   let selectItems = [
     { value: "Historical Data", label: "Historical Data" },
-    { value: "Next 365 Days", label: "Next 365 Days" },
+    { value: "Next 365 Days", label: "Next 365 Days" }
   ]
 
   let selectValue = selectItems[0]
@@ -143,7 +143,7 @@
 
   let checkboxFilterItems = [
     { key: "displayObservations", label: "Display Daily Observations" },
-    { key: "displayModels", label: "Display Time Series Models" },
+    { key: "displayModels", label: "Display Time Series Models" }
   ]
 
   let forecastDayCount = forecastRows.length
@@ -190,7 +190,7 @@
       rows: chartRows,
       field: observedVictimsColumn,
       range: sliderValue,
-      observedOnly: true,
+      observedOnly: true
     })
     overallModelSeriesRows = buildSeriesRows({ rows: chartRows, field: overallPredictionColumn, range: sliderValue })
   }
@@ -204,7 +204,7 @@
         height:
           windowWidth >= 1300
             ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (windowWidth * 0.7) / 2))
-            : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78)),
+            : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78))
       }
       svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
       xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
@@ -267,7 +267,7 @@
     if (chartRows && yScale) {
       animatedPaths.set({
         observations: pathGeneratorFor("value")(observationSeriesRows),
-        timeSeries: pathGeneratorFor("value")(overallModelSeriesRows),
+        timeSeries: pathGeneratorFor("value")(overallModelSeriesRows)
       })
     }
   }
@@ -278,22 +278,22 @@
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: sliderValue > 0,
+      aggregated: sliderValue > 0
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: sliderValue > 0,
+      aggregated: sliderValue > 0
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: sliderValue > 0,
-    },
+      aggregated: sliderValue > 0
+    }
   ]
 
   $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue == 0
@@ -334,7 +334,7 @@
         color,
         stroke = null,
         isFaded = pointIsPastHighlight,
-        fadedAlpha = 0.5,
+        fadedAlpha = 0.5
       }) =>
         drawCanvasCircles({
           canvas,
@@ -347,7 +347,7 @@
           getX: row => plotMargin.left + xScale(row.parsedDate),
           getY: row => animatedYScale(row[field]),
           isFaded,
-          fadedAlpha,
+          fadedAlpha
         })
 
       drawChartPointLayer({
@@ -355,21 +355,21 @@
         rows: observationSeriesRows,
         field: "value",
         color: chartColors.observations,
-        stroke: observationCircleStroke,
+        stroke: observationCircleStroke
       })
       drawChartPointLayer({
         canvas: timeSeriesCanvas,
         rows: overallModelSeriesRows,
         field: "value",
         color: chartColors.overallModel,
-        isFaded: pointIsNeverFaded,
+        isFaded: pointIsNeverFaded
       })
       drawChartPointLayer({
         canvas: comparativeCanvas,
         rows: $animatedComparativePoints,
         field: "value",
         color: chartColors.comparativeModel,
-        isFaded: pointIsNeverFaded,
+        isFaded: pointIsNeverFaded
       })
     }
   }
@@ -389,7 +389,7 @@
       forecastIndexedRows,
       minYear,
       latestObservedYear,
-      numObservations,
+      numObservations
     })
 
     modelMetricsCache.set(cacheKey, result)
@@ -416,7 +416,7 @@
     { label: "Total Victims", key: "total" },
     { label: "Avg Victims per Day", key: "perDay" },
     { label: "Avg Yearly Trend", key: "trend", rounded: true },
-    ...(isFuture ? [] : [{ label: "RMSE", key: "rmse", rounded: true }]),
+    ...(isFuture ? [] : [{ label: "RMSE", key: "rmse", rounded: true }])
   ]
 
   $: tooltipText = {
@@ -428,7 +428,7 @@
     timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
     metrics: isFuture
       ? `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\n\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\n\nAvg Yearly Trend: What is the average change between these predictions annually?`
-      : `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\n\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\n\nAvg Yearly Trend: What is the average change between these predictions annually?\n\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`,
+      : `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\n\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\n\nAvg Yearly Trend: What is the average change between these predictions annually?\n\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`
   }
 
   $: {

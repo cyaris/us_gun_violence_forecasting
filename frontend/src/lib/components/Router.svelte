@@ -20,7 +20,7 @@
     { paths: shellPaths(), component: Home },
     { paths: shellPaths("/development"), component: Development },
     { paths: shellPaths("/documentation"), component: Documentation },
-    { paths: shellPaths("/tool"), component: Tool },
+    { paths: shellPaths("/tool"), component: Tool }
   ]
 </script>
 
