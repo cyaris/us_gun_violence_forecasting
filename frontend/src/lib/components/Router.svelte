@@ -11,7 +11,9 @@
   function shellPaths(path = "") {
     let routePath = `${projectRouteBase}${path}`
 
-    return path ? [routePath, `${routePath}.html`] : [routePath, `${routePath}/`, `${routePath}/index.html`]
+    return path
+      ? [routePath, `${routePath}/`, `${routePath}/index.html`, `${routePath}.html`]
+      : [routePath, `${routePath}/`, `${routePath}/index.html`]
   }
 
   let routes = [
