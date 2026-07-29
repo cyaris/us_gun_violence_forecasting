@@ -9,12 +9,16 @@ on:
         description: svelte-lib ref used for the local file dependency.
         required: false
         type: string
-        default: dev
+        default: ""
 
 jobs:
   node-package-ci:
-    uses: cyaris/svelte-lib/.github/workflows/node-package-ci.yml@dev
+    uses: cyaris/shared-automation/.github/workflows/ci.yml@main
     with:
       working-directory: frontend
-      svelte-lib-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.svelte-lib-ref || vars.SVELTE_LIB_REF || 'dev' }}
-    secrets: inherit
+      build-command: ""
+      local-dependency-repositories: |
+        cyaris/svelte-lib:svelte-lib:${{ inputs.svelte-lib-ref || vars.SVELTE_LIB_REF || github.base_ref == 'dev' && 'dev' || github.head_ref == 'dev' && 'dev' || github.ref_name == 'dev' && 'dev' || 'main' }}
+    secrets:
+      CHECKOUT_TOKEN: ${{ secrets.CHECKOUT_TOKEN }}
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

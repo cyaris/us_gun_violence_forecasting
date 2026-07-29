@@ -11,14 +11,16 @@
   function shellPaths(path = "") {
     let routePath = `${projectRouteBase}${path}`
 
-    return path ? [routePath, `${routePath}.html`] : [routePath, `${routePath}/`, `${routePath}/index.html`]
+    return path
+      ? [routePath, `${routePath}/`, `${routePath}/index.html`, `${routePath}.html`]
+      : [routePath, `${routePath}/`, `${routePath}/index.html`]
   }
 
   let routes = [
     { paths: shellPaths(), component: Home },
     { paths: shellPaths("/development"), component: Development },
     { paths: shellPaths("/documentation"), component: Documentation },
-    { paths: shellPaths("/tool"), component: Tool },
+    { paths: shellPaths("/tool"), component: Tool }
   ]
 </script>
 
