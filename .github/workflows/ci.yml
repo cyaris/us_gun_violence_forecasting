@@ -18,7 +18,7 @@ jobs:
       working-directory: frontend
       build-command: ""
       local-dependency-repositories: |
-        cyaris/svelte-lib:svelte-lib:${{ inputs.svelte-lib-ref || vars.SVELTE_LIB_REF || github.head_ref == 'dev' && 'dev' || github.ref_name == 'dev' && 'dev' || 'main' }}
+        cyaris/svelte-lib:svelte-lib:${{ inputs.svelte-lib-ref || vars.SVELTE_LIB_REF || github.base_ref == 'dev' && 'dev' || github.head_ref == 'dev' && 'dev' || github.ref_name == 'dev' && 'dev' || 'main' }}
     secrets:
       CHECKOUT_TOKEN: ${{ secrets.CHECKOUT_TOKEN }}
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

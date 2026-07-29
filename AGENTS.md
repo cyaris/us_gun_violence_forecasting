@@ -43,10 +43,10 @@
   release-policy, dispatch, and automation documentation conventions.
 - Project-specific rollup upload inputs include the S3 prefix, bundle file list, metadata refresh file, and
   `SVELTE_LIB_REF` branch selection for automatic production uploads.
-- Project release naming and milestone overrides belong in `.github/release-policy.yml`.
 
 ## Release Management
 
+- Project release naming and milestone overrides belong in `.github/release-policy.yml`.
 - While working in this repository, evaluate whether the accumulated changes represent a meaningful release milestone.
 - A release may be appropriate when the work includes a substantial user-facing feature, a major redesign or workflow change, a meaningful new integration, an important architecture change, a backward-incompatible change, a stable initial public version, a significant performance, reliability, security, accessibility, or compatibility improvement, or a coherent group of changes that materially changes how the project is used.
 - Do not recommend a release for routine maintenance, formatting, minor refactoring, isolated dependency updates, or small bug fixes unless their combined impact is significant.

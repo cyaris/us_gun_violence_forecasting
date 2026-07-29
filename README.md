@@ -130,6 +130,16 @@ npm run format       # prettier
 
 These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Manual `workflow_dispatch` paths delegated to the shared workflows are restricted to the `cyaris` GitHub actor by default.
 
+### `.github/workflows/auto-create-dev-pr.yml`
+
+The `Auto-create dev pull request` workflow runs on pushes to `dev` and delegates to the shared
+`cyaris/shared-automation/.github/workflows/auto-create-dev-pr.yml` workflow. It opens a `dev` to repository-default
+branch pull request when one does not already exist.
+
+This workflow has no GitHub Actions UI dispatch path. To run the same behavior manually, dispatch the reusable workflow
+from `cyaris/shared-automation` or create the pull request with `gh pr create`. The workflow passes `RELEASE_TOKEN` so
+the shared workflow can create pull requests when the default token is restricted.
+
 ### `.github/workflows/ci.yml`
 
 The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the shared
@@ -140,8 +150,8 @@ clean checkout does not include the ignored generated forecast data file; run pr
 
 The workflow can be dispatched from the GitHub Actions UI with **Actions > CI > Run workflow**. Manual dispatch exposes
 the `svelte-lib-ref` input for choosing the sibling `svelte-lib` ref checked out for the local `file:` dependency.
-Automatic push and pull-request runs use the `SVELTE_LIB_REF` repository variable when present, falling back to
-`main`.
+Push and pull-request runs use `SVELTE_LIB_REF` when set, otherwise they select `dev` for matching `dev` base, head, or
+ref names and `main` for all other refs.
 
 ### `.github/workflows/rollup-upload.yml`
 
@@ -174,8 +184,9 @@ release, publishes a GitHub release when warranted, and comments the outcome on 
 
 The workflow can also be dispatched from the GitHub Actions UI with **Actions > Auto release > Run workflow**. Manual
 dispatch accepts optional `release-sha`, `pr-number`, and `shared-automation-ref` inputs; when `release-sha` is blank, it
-evaluates the workflow SHA. Release runs require `OPENAI_API_KEY`; `RELEASE_TOKEN` and `CHECKOUT_TOKEN` can be provided
-when the default token cannot create releases or read private repositories.
+evaluates the workflow SHA. Release decisions use `OPENAI_API_KEY`; when it is not configured, the shared workflow skips
+release decision work without failing. `RELEASE_TOKEN` and `CHECKOUT_TOKEN` can be provided when the default token cannot
+create releases or read private repositories.
 
 ## Data Model
 
