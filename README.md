@@ -150,7 +150,8 @@ forecast data file; run production builds after regenerating `frontend/src/lib/s
 The `Rollup upload` workflow calls the
 [shared rollup-upload workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollup-uploadyml) to build
 the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`. Manual dispatch
-exposes `svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set.
+exposes `svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set. Production uploads require a pinned
+40-character `svelte-lib` commit SHA.
 
 The upload refreshes cache metadata in place for
 `us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
