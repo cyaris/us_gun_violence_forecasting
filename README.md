@@ -30,7 +30,7 @@ frontend/
   package.json                     # frontend scripts
   src/
     lib/components/USGunViolenceForecasting.svelte
-    lib/static/data.json           # generated forecast data, ignored by git
+    lib/static/data.json           # generated forecast data committed for clean Rollup builds
     routes/+page.svelte            # renders the visualization
 ```
 
@@ -63,7 +63,7 @@ The backend expects the source CSV at:
 backend/all-shootings-2014-2023.csv
 ```
 
-That file is intentionally ignored by git.
+That source CSV is intentionally ignored by git.
 
 ## Generate Forecast Data
 
@@ -87,7 +87,8 @@ By default, this writes:
 frontend/src/lib/static/data.json
 ```
 
-The generated `data.json` is also ignored by git.
+The generated `data.json` is committed so clean GitHub Actions checkouts can build the Rollup bundle. Regenerate and
+commit it after changing the source CSV or forecast settings.
 
 Useful options:
 
@@ -141,9 +142,9 @@ The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls th
 
 The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the
 [shared CI workflow](https://github.com/cyaris/shared-automation#githubworkflowsciyml) with
-`working-directory: frontend`. CI skips `npm run build` because a clean checkout does not include the ignored generated
-forecast data file; run production builds after regenerating `frontend/src/lib/static/data.json`. Manual dispatch exposes
-`svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set.
+`working-directory: frontend`. CI skips `npm run build`; run local production builds after regenerating
+`frontend/src/lib/static/data.json` when forecast data changes. Manual dispatch exposes `svelte-lib-ref`; automatic runs
+use `SVELTE_LIB_REF` when set.
 
 ### `.github/workflows/rollup-upload.yml`
 
@@ -188,6 +189,7 @@ Original incident data is credited to the non-profit <a href="https://www.gunvio
 
 ## Notes
 
-- `backend/all-shootings-2014-2023.csv` and `frontend/src/lib/static/data.json` are local/generated data artifacts and are not committed.
+- `backend/all-shootings-2014-2023.csv` is a local source data artifact and is not committed.
+- `frontend/src/lib/static/data.json` is generated from the local source data and committed for clean Rollup builds.
 - The backend fits one Prophet model per observed year, so regenerating data can take time.
 - `npm run build` may show warnings from third-party `svelte-lib` or `svelte-select` components; those are dependency warnings rather than local component errors.
