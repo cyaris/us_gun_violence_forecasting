@@ -170,6 +170,12 @@ The `Release Please` workflow runs on pushes to `master` and manual dispatches b
 complete through `cec3a25c88564179f80d4b85fdd10057bc9346dd`; `auto-release.yml` remains available for manual historical
 repair, while Release Please manages later commits.
 
+### `.github/workflows/workflow-validation.yml`
+
+The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
+[shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
+to validate rollup upload wrapper logic, release configuration, and Renovate configuration.
+
 ## Data Model
 
 The generated JSON contains daily rows with:
