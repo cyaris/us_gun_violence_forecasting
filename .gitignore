@@ -11,4 +11,3 @@ backend/src/__pycache__/
 backend/*.egg-info/
 
 backend/all-shootings-2014-2023.csv
-frontend/src/lib/static/data.json
