@@ -127,6 +127,37 @@ npm run lint         # eslint
 npm run format       # prettier
 ```
 
+## Data Model
+
+The generated JSON contains daily rows with:
+
+- `date`: `YYYY-MM-DD`
+- `observed_victims`: daily injured + killed victim count, or `null` for future forecast rows
+- `is_forecast`: whether the row is a future forecast row
+- `predicted_victims_<year>`: Prophet prediction from the model trained through that year
+
+The frontend uses these columns to show:
+
+- daily observations
+- the latest overall model
+- historical comparative models on hover, so users can compare earlier and later forecasts for the same dates
+- smoothed moving-average views
+- past and future metric summaries
+
+## Data Source
+
+The source shooting data comes from the Figshare dataset
+<a href="https://figshare.com/articles/dataset/Gun_Violence_-_All_Shootings/25517224?file=45398359" target="_blank" rel="noopener noreferrer">Gun Violence - All Shootings</a>.
+
+Original incident data is credited to the non-profit <a href="https://www.gunviolencearchive.org/" target="_blank" rel="noopener noreferrer">Gun Violence Archive</a>.
+
+## Notes
+
+- `backend/all-shootings-2014-2023.csv` is a local source data artifact and is not committed.
+- `frontend/src/lib/static/data.json` is generated from the local source data and committed for clean Rollup builds.
+- The backend fits one Prophet model per observed year, so regenerating data can take time.
+- `npm run build` may show warnings from third-party `svelte-lib` or `svelte-select` components; those are dependency warnings rather than local component errors.
+
 ## GitHub Actions Workflows
 
 These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
@@ -169,34 +200,3 @@ historical repair, while Release Please manages later commits.
 The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
 [shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
 to validate rollup upload wrapper logic, release configuration, and Renovate configuration.
-
-## Data Model
-
-The generated JSON contains daily rows with:
-
-- `date`: `YYYY-MM-DD`
-- `observed_victims`: daily injured + killed victim count, or `null` for future forecast rows
-- `is_forecast`: whether the row is a future forecast row
-- `predicted_victims_<year>`: Prophet prediction from the model trained through that year
-
-The frontend uses these columns to show:
-
-- daily observations
-- the latest overall model
-- historical comparative models on hover, so users can compare earlier and later forecasts for the same dates
-- smoothed moving-average views
-- past and future metric summaries
-
-## Data Source
-
-The source shooting data comes from the Figshare dataset
-<a href="https://figshare.com/articles/dataset/Gun_Violence_-_All_Shootings/25517224?file=45398359" target="_blank" rel="noopener noreferrer">Gun Violence - All Shootings</a>.
-
-Original incident data is credited to the non-profit <a href="https://www.gunviolencearchive.org/" target="_blank" rel="noopener noreferrer">Gun Violence Archive</a>.
-
-## Notes
-
-- `backend/all-shootings-2014-2023.csv` is a local source data artifact and is not committed.
-- `frontend/src/lib/static/data.json` is generated from the local source data and committed for clean Rollup builds.
-- The backend fits one Prophet model per observed year, so regenerating data can take time.
-- `npm run build` may show warnings from third-party `svelte-lib` or `svelte-select` components; those are dependency warnings rather than local component errors.
