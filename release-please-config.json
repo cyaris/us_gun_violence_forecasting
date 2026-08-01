@@ -2,5 +2,6 @@
   "include-component-in-tag": false,
   "include-v-in-tag": true,
   "last-release-sha": "cec3a25c88564179f80d4b85fdd10057bc9346dd",
+  "skip-changelog": true,
   "packages": { ".": { "release-type": "simple" } }
 }
