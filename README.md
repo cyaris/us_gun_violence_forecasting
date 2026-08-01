@@ -127,55 +127,6 @@ npm run lint         # eslint
 npm run format       # prettier
 ```
 
-## GitHub Actions Workflows
-
-These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
-inputs, and secrets are documented in the
-[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
-
-### `.github/workflows/auto-create-dev-pr.yml`
-
-The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls the
-[shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml).
-
-### `.github/workflows/ci.yml`
-
-The `CI` workflow runs on pushes, pull requests, and manual dispatch. It calls the
-[shared CI workflow](https://github.com/cyaris/shared-automation#githubworkflowsciyml) with
-`working-directory: frontend`. CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/data.json` when forecast data changes. Manual dispatch exposes `svelte-lib-ref`; automatic runs
-use `SVELTE_LIB_REF` when set.
-
-### `.github/workflows/rollup-upload.yml`
-
-The `Rollup upload` workflow calls the
-[shared rollup-upload workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollup-uploadyml) to build
-the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`. Manual dispatch
-exposes `svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set. Production uploads require a pinned
-40-character `svelte-lib` commit SHA.
-
-The upload refreshes cache metadata in place for
-`us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
-
-### `.github/workflows/auto-release.yml`
-
-The `Auto release` workflow runs from manual dispatch only and calls the
-[shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
-repository contributes `.github/release-policy.yml` overrides.
-
-### `.github/workflows/release-please.yml`
-
-The `Release Please` workflow runs on pushes to `master` and manual dispatches by `cyaris`, using
-`release-please-config.json` and `.release-please-manifest.json` for future releases. Historical reconciliation is
-complete through the handoff recorded in `release-please-config.json`; `auto-release.yml` remains available for manual
-historical repair, while Release Please manages later commits.
-
-### `.github/workflows/workflow-validation.yml`
-
-The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
-[shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
-to validate rollup upload wrapper logic, release configuration, and Renovate configuration.
-
 ## Data Model
 
 The generated JSON contains daily rows with:
@@ -206,3 +157,46 @@ Original incident data is credited to the non-profit <a href="https://www.gunvio
 - `frontend/src/lib/static/data.json` is generated from the local source data and committed for clean Rollup builds.
 - The backend fits one Prophet model per observed year, so regenerating data can take time.
 - `npm run build` may show warnings from third-party `svelte-lib` or `svelte-select` components; those are dependency warnings rather than local component errors.
+
+## GitHub Actions Workflows
+
+These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
+inputs, and secrets are documented in the
+[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
+
+### `.github/workflows/auto-create-dev-pr.yml`
+
+The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls the
+[shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml).
+
+### `.github/workflows/rollup.yml`
+
+The `Rollup` workflow runs on pushes, pull requests, and manual dispatch, then calls the
+[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
+`working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
+`frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `main` and `master` pushes or manual
+dispatches to build the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`.
+Manual dispatch exposes `svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set. Production uploads require a
+pinned 40-character `svelte-lib` commit SHA.
+
+The upload refreshes cache metadata in place for
+`us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
+
+### `.github/workflows/auto-release.yml`
+
+The `Auto release` workflow runs from manual dispatch only and calls the
+[shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
+repository contributes `.github/release-policy.yml` overrides.
+
+### `.github/workflows/release-please.yml`
+
+The `Release Please` workflow runs on pushes to `master` and manual dispatches by `cyaris`, using
+`release-please-config.json` and `.release-please-manifest.json` for future releases. Historical reconciliation is
+complete through the handoff recorded in `release-please-config.json`; `auto-release.yml` remains available for manual
+historical repair, while Release Please manages later commits.
+
+### `.github/workflows/workflow-validation.yml`
+
+The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
+[shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
+to validate rollup upload wrapper logic, release configuration, and Renovate configuration.
