@@ -41,9 +41,10 @@ export function movingAverage(rows, field, range) {
 
 export function buildSeriesRows({ rows, field, range = 0, observedOnly = false }) {
   rows = observedOnly ? rows.filter(d => !d.is_forecast) : rows
-  let values = movingAverage(rows, field, range)
 
-  return values.map((value, i) => ({ ...rows[i], value })).filter(d => finiteValue(d.value))
+  return movingAverage(rows, field, range)
+    .map((value, i) => ({ ...rows[i], value }))
+    .filter(d => finiteValue(d.value))
 }
 
 export function modelMetrics({
