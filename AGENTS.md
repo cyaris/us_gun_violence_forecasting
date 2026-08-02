@@ -50,9 +50,9 @@
 - Workflows must fail clearly when a requested feature requires credentials, secrets, repository variables, external
   permissions, or paid services that are not configured. Apply this to dry-run modes too unless the feature is
   explicitly documented as credential-optional.
-- Project-specific rollup upload inputs include the S3 prefix, bundle file list, metadata refresh file, and
-  `SVELTE_LIB_REF` selection for automatic push-triggered rollup uploads. Production uploads require a pinned
-  40-character `SVELTE_LIB_REF`.
+- Project-specific rollup upload inputs include the S3 prefix, bundle file list, and metadata refresh file. The shared
+  Rollup workflow uses the latest `svelte-lib` `main` commit by default and resolves that branch to an exact commit SHA
+  during each run.
 
 ## Release Management
 

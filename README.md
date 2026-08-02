@@ -171,13 +171,13 @@ The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls th
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `master`, pull requests, and manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `main` and `master` pushes or manual
-dispatches to build the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`.
-Manual dispatch exposes `svelte-lib-ref`; automatic runs use `SVELTE_LIB_REF` when set. Production uploads require a
-pinned 40-character `svelte-lib` commit SHA.
+`frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `master` pushes or manual dispatches to
+build the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`. The workflow
+checks out `svelte-lib` at its latest `main` commit as a local dependency. The shared workflow resolves that branch to
+an exact commit SHA before checkout.
 
 The upload refreshes cache metadata in place for
 `us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
