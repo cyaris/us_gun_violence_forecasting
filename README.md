@@ -29,7 +29,7 @@ backend/
 frontend/
   package.json                     # frontend scripts
   src/
-    lib/components/USGunViolenceForecasting.svelte
+    lib/components/Tool.svelte
     lib/static/data.json           # generated forecast data committed for clean Rollup builds
     routes/+page.svelte            # renders the visualization
 ```
