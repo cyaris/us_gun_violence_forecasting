@@ -1,5 +1,5 @@
 <script>
-  import USGunViolenceForecasting from "../../lib/components/USGunViolenceForecasting.svelte"
+  import Tool from "../../lib/components/Tool.svelte"
 </script>
 
-<USGunViolenceForecasting />
+<Tool />
