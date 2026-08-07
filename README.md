@@ -183,6 +183,13 @@ an exact commit SHA before checkout.
 The upload refreshes cache metadata in place for
 `us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
 
+### `.github/workflows/upstream-watch.yml`
+
+The `Upstream Watch` workflow runs daily at 13:18 UTC and on manual dispatch, then calls the
+[shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
+watches `svelte-lib`'s `main` branch and, when it has moved since the last check, dispatches this repository's own
+`Rollup` workflow on `master` so the build picks up the new upstream commit without waiting for a push here.
+
 ### `.github/workflows/auto-release.yml`
 
 The `Auto release` workflow runs from manual dispatch only and calls the
