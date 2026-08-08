@@ -455,7 +455,7 @@
       >
         <div class="grid gap-2 min-[1300px]:flex min-[1300px]:flex-col min-[1300px]:items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-x-2">
               <CheckboxFilter
                 labelClasses="mb-0 font-medium"
                 label={checkbox.label}
