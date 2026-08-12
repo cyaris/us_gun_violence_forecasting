@@ -119,6 +119,8 @@ The Vite dev server is configured to use port `3000`.
 
 ## Frontend Commands
 
+Useful commands:
+
 ```bash
 npm run check        # Svelte diagnostics
 npm run build        # production build
