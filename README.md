@@ -173,7 +173,7 @@ The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls th
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `master`, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `dev` and `master` and on manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
 `frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `dev` and `master` pushes or manual
