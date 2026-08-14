@@ -793,42 +793,44 @@
             />
           </div>
         </div>
-        <table class="metrics-table w-full table-fixed border-collapse">
-          <colgroup>
-            <col class="w-[54%] min-[900px]:w-1/2" />
-            <col class="w-[22%] min-[900px]:w-[21%]" />
-            <col class="w-[24%] min-[900px]:w-[29%]" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
-                <div class="flex items-center gap-2 font-medium">
-                  Metrics
-                  <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
-                </div>
-              </th>
-              <th
-                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
-              >
-              <th
-                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
-              >
-            </tr>
-          </thead>
-          <tbody>
-            {#each metricRows as row (row.key)}
+        <div class="overflow-x-auto">
+          <table class="metrics-table min-w-full border-collapse whitespace-nowrap">
+            <colgroup>
+              <col class="w-[54%] min-[900px]:w-1/2" />
+              <col class="w-[22%] min-[900px]:w-[21%]" />
+              <col class="w-[24%] min-[900px]:w-[29%]" />
+            </colgroup>
+            <thead>
               <tr>
-                <td
-                  >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
+                <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
+                  <div class="flex items-center gap-2 font-medium">
+                    Metrics
+                    <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
+                  </div>
+                </th>
+                <th
+                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
                 >
-                <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                <th
+                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
+                >
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each metricRows as row (row.key)}
+                <tr>
+                  <td
+                    >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
+                  >
+                  <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                  <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
         <div class="grid min-w-0 min-[900px]:col-span-2 min-[900px]:mt-4 min-[900px]:grid-cols-2 min-[900px]:gap-x-6">
           <div class="ml-3.5 flex items-center gap-2 font-medium min-[900px]:col-start-1 min-[900px]:row-start-1">
             Day Width
