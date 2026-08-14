@@ -450,10 +450,10 @@
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows}
       <div
-        class="relative mx-auto mb-3 mt-4 grid gap-3 text-sm min-[1300px]:block"
+        class="relative mx-auto mb-3 mt-4 flex flex-col gap-2 text-sm min-[1300px]:block"
         style="max-width:{chartLayout.viewportWidth}px"
       >
-        <div class="grid gap-2 min-[1300px]:flex min-[1300px]:flex-col min-[1300px]:items-start">
+        <div class="flex flex-col items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-x-2">
               <CheckboxFilter
@@ -471,7 +471,7 @@
           {/each}
         </div>
         <span
-          class="text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
+          class="hidden text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
