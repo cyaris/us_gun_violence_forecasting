@@ -187,7 +187,7 @@ The upload refreshes cache metadata in place for
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the `cyaris.github.io` Pages build, and on
+The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for `cyaris.github.io`, and on
 manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s `main` branch and, when it has moved since the last check, dispatches this repository's own
