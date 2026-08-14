@@ -842,7 +842,7 @@
 
   @media (min-width: 900px) {
     .controls-layout {
-      grid-template-columns: 9rem minmax(20rem, 24rem) 1fr;
+      grid-template-columns: 9.875rem minmax(20rem, 24rem) 1fr;
       align-items: start;
       column-gap: 2rem;
     }
