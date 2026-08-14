@@ -135,9 +135,17 @@
 
   let selectValue = selectItems[0]
 
-  let sliderStep = 5
+  let sliderItems = {
+    xAxisDayWidth: [
+      { value: "fit", label: "Fit" },
+      { value: "narrow", label: "Narrow" },
+      { value: "wide", label: "Wide" },
+      { value: "wider", label: "Wider" },
+      { value: "widest", label: "Widest" }
+    ]
+  }
 
-  let sliderValue = 10
+  let sliderValue = { movingAverageWindow: 10, xAxisDayWidth: 0 }
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
@@ -189,10 +197,14 @@
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: observedVictimsColumn,
-      range: sliderValue,
+      range: sliderValue.movingAverageWindow,
       observedOnly: true
     })
-    overallModelSeriesRows = buildSeriesRows({ rows: chartRows, field: overallPredictionColumn, range: sliderValue })
+    overallModelSeriesRows = buildSeriesRows({
+      rows: chartRows,
+      field: overallPredictionColumn,
+      range: sliderValue.movingAverageWindow
+    })
   }
 
   $: {
@@ -206,8 +218,17 @@
             ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (windowWidth * 0.7) / 2))
             : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78))
       }
-      svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
-      xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
+      let defaultXAxisWidth = baseRows.length * 0.4
+      let fittedXAxisWidth = Math.max(
+        (scrollViewportWidth || chartLayout.viewportWidth) - plotMargin.left - plotMargin.right - graphStrokeWidth * 2,
+        0
+      )
+
+      xAxisWidth =
+        sliderValue.xAxisDayWidth <= 2
+          ? fittedXAxisWidth + ((defaultXAxisWidth - fittedXAxisWidth) * sliderValue.xAxisDayWidth) / 2
+          : defaultXAxisWidth * (1 + (sliderValue.xAxisDayWidth - 2) * 0.1)
+      svgWidth = xAxisWidth + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
 
       xScale = scaleTime(
         extent(baseRows, d => d.parsedDate),
@@ -224,7 +245,7 @@
 
   $: {
     if (comparing && comparativePredictionColumn) {
-      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, sliderValue)
+      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, sliderValue.movingAverageWindow)
     } else {
       comparativeSeriesRows = []
     }
@@ -278,30 +299,30 @@
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     }
   ]
 
-  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue == 0
-  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue > 0
-  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue == 0
-  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue > 0
-  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue == 0
-  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue > 0
+  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
 
   $: animatedYScale =
     chartLayout.height && $animatedYDomain
@@ -312,6 +333,8 @@
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
   $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
+  $: forecastLabelWrap = xAxisWidth - forecastStartX < 144
+  $: forecastLabelX = forecastLabelWrap ? forecastStartX + 12 : (forecastStartX + xAxisWidth) / 2
   $: xTicks = xScale ? xScale.ticks() : []
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
@@ -423,6 +446,8 @@
     xAxis: "Individual incidents are summed together and grouped by date.",
     yAxis:
       "Includes all victims reported as injured or killed. Victims with unreported health statuses are not included.",
+    xAxisDayWidth:
+      "Adjust the horizontal space occupied by each day. Drag left to show more dates at once or right to spread dates farther apart.",
     movingAverageWindow:
       "Adjust the slider to specify a moving average for all charted values. Units are in days, with 0 days displaying exact daily observations and predictions.",
     timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
@@ -432,7 +457,7 @@
   }
 
   $: {
-    if (comparing && sliderValue && comparativeSeriesRows && xScale && yScale) {
+    if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
       animatedComparativePath.set(comparativePath, tweenTiming)
     } else {
@@ -603,11 +628,16 @@
                   {/if}
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
-                    x={(forecastStartX + xAxisWidth) / 2}
+                    x={forecastLabelX}
                     y={plotMargin.top + 22}
-                    text-anchor="middle"
+                    text-anchor={forecastLabelWrap ? "start" : "middle"}
                   >
-                    Next {forecastDayCount.toLocaleString()} days...
+                    {#if forecastLabelWrap}
+                      <tspan x={forecastLabelX}>Next {forecastDayCount.toLocaleString()}</tspan>
+                      <tspan x={forecastLabelX} dy="1.2em">days...</tspan>
+                    {:else}
+                      Next {forecastDayCount.toLocaleString()} days...
+                    {/if}
                   </text>
                 </g>
                 <svg
@@ -796,6 +826,24 @@
             {/each}
           </tbody>
         </table>
+        <div class="x-axis-day-width-control">
+          <div class="ml-3.5 flex items-center gap-2 font-medium">
+            Day Width
+            <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
+          </div>
+          <Slider
+            wrapperClasses="w-full"
+            items={sliderItems.xAxisDayWidth}
+            value={sliderValue.xAxisDayWidth}
+            min={0}
+            max={sliderItems.xAxisDayWidth.length - 1}
+            labelStep={2}
+            float={true}
+            labels={true}
+            middle={true}
+            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
+          />
+        </div>
         <div class="moving-average-control">
           <div class="ml-3.5 flex items-center gap-2 font-medium">
             Moving Average Window
@@ -803,8 +851,8 @@
           </div>
           <Slider
             wrapperClasses="w-full"
-            value={sliderValue}
-            step={sliderStep}
+            value={sliderValue.movingAverageWindow}
+            step={5}
             suffix=" days"
             min={0}
             max={30}
@@ -812,7 +860,7 @@
             float={true}
             labels={true}
             middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue = e.d)}
+            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
           />
         </div>
       </div>
@@ -842,11 +890,12 @@
 
   @media (min-width: 900px) {
     .controls-layout {
-      grid-template-columns: 9.875rem minmax(20rem, 24rem) 1fr;
+      grid-template-columns: 9.875rem minmax(18rem, 22rem) repeat(2, minmax(0, 1fr));
       align-items: start;
-      column-gap: 2rem;
+      column-gap: 1.5rem;
     }
 
+    .x-axis-day-width-control,
     .moving-average-control {
       margin-top: 1rem;
     }
