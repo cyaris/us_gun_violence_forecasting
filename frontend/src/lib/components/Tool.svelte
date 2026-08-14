@@ -30,6 +30,7 @@
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
   let observedVictimsColumn = "observed_victims"
   let minYear = Math.min(...baseRows.map(yearFromDate))
+  let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
 
@@ -333,9 +334,14 @@
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
   $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
-  $: forecastLabelWrap = xAxisWidth - forecastStartX < 144
-  $: forecastLabelX = forecastLabelWrap ? forecastStartX + 12 : (forecastStartX + xAxisWidth) / 2
-  $: xTicks = xScale ? xScale.ticks() : []
+  $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
+  $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
+  $: forecastLabelY = forecastLabelRotated ? plotMargin.top + plotHeight / 2 : plotMargin.top + 22
+  $: xTickYearStep = xAxisWidth ? Math.max(1, Math.ceil(((maxYear - minYear) * 56) / xAxisWidth)) : 1
+  $: xTicks = xScale
+    ? Array.from({ length: maxYear - minYear + 1 }, (_, i) => parseLocalDate(`${minYear + i}-01-01`))
+    : []
+  $: xTickLabels = xTicks.filter((_, i) => i % xTickYearStep == 0)
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth ? plotMargin.left + (chartLayout.viewportWidth - plotMargin.left) / 2 : 0
@@ -629,15 +635,12 @@
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
                     x={forecastLabelX}
-                    y={plotMargin.top + 22}
-                    text-anchor={forecastLabelWrap ? "start" : "middle"}
+                    y={forecastLabelY}
+                    text-anchor="middle"
+                    dominant-baseline={forecastLabelRotated ? "middle" : null}
+                    transform={forecastLabelRotated ? `rotate(90, ${forecastLabelX}, ${forecastLabelY})` : null}
                   >
-                    {#if forecastLabelWrap}
-                      <tspan x={forecastLabelX}>Next {forecastDayCount.toLocaleString()}</tspan>
-                      <tspan x={forecastLabelX} dy="1.2em">days...</tspan>
-                    {:else}
-                      Next {forecastDayCount.toLocaleString()} days...
-                    {/if}
+                    Next {forecastDayCount.toLocaleString()} days...
                   </text>
                 </g>
                 <svg
@@ -661,7 +664,7 @@
                   {/each}
                 </svg>
                 <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
-                  {#each xTicks as xTick (xTick)}
+                  {#each xTickLabels as xTick (xTick)}
                     <text
                       class="fill-chart-1"
                       x={xScale(xTick)}
