@@ -7,7 +7,7 @@
   import { format } from "date-fns"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
+  import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
   import { drawCanvasCircles } from "svelte-lib/functions"
 
   import {
@@ -479,7 +479,7 @@
 <svelte:window bind:innerWidth={windowWidth} bind:innerHeight={viewportHeight} />
 <div class="flex h-full w-full flex-col items-center justify-center">
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
-    {#if chartRows}
+    {#if chartRows && svgWidth && chartLayout.height}
       <div
         class="relative mx-auto mb-3 mt-4 flex flex-col gap-2 text-sm min-[1300px]:block"
         style="max-width:{chartLayout.viewportWidth}px"
@@ -775,7 +775,7 @@
         </div>
       {/if}
       <div
-        class="controls-layout mx-auto mt-5 grid w-full gap-y-5 text-sm"
+        class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(0,1fr)_minmax(0,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
         style="max-width:{chartLayout.viewportWidth}px"
       >
         <div>
@@ -795,9 +795,9 @@
         </div>
         <table class="metrics-table w-full table-fixed border-collapse">
           <colgroup>
-            <col class="metrics-label-column" />
-            <col class="metrics-overall-column" />
-            <col class="metrics-comparative-column" />
+            <col class="w-[54%] min-[900px]:w-1/2" />
+            <col class="w-[22%] min-[900px]:w-[21%]" />
+            <col class="w-[24%] min-[900px]:w-[29%]" />
           </colgroup>
           <thead>
             <tr>
@@ -829,90 +829,59 @@
             {/each}
           </tbody>
         </table>
-        <div class="x-axis-day-width-control">
-          <div class="ml-3.5 flex items-center gap-2 font-medium">
+        <div class="grid min-w-0 min-[900px]:col-span-2 min-[900px]:mt-4 min-[900px]:grid-cols-2 min-[900px]:gap-x-6">
+          <div class="ml-3.5 flex items-center gap-2 font-medium min-[900px]:col-start-1 min-[900px]:row-start-1">
             Day Width
             <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
           </div>
-          <Slider
-            wrapperClasses="w-full"
-            items={sliderItems.xAxisDayWidth}
-            value={sliderValue.xAxisDayWidth}
-            min={0}
-            max={sliderItems.xAxisDayWidth.length - 1}
-            labelStep={2}
-            float={true}
-            labels={true}
-            middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
-          />
-        </div>
-        <div class="moving-average-control">
-          <div class="ml-3.5 flex items-center gap-2 font-medium">
+          <div class="min-[900px]:col-start-1 min-[900px]:row-start-2">
+            <Slider
+              wrapperClasses="w-full"
+              items={sliderItems.xAxisDayWidth}
+              value={sliderValue.xAxisDayWidth}
+              min={0}
+              max={sliderItems.xAxisDayWidth.length - 1}
+              labelStep={2}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
+            />
+          </div>
+          <div
+            class="ml-3.5 mt-5 flex items-center gap-2 font-medium min-[900px]:col-start-2 min-[900px]:row-start-1 min-[900px]:mt-0"
+          >
             Moving Average Window
             <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
           </div>
-          <Slider
-            wrapperClasses="w-full"
-            value={sliderValue.movingAverageWindow}
-            step={5}
-            suffix=" days"
-            min={0}
-            max={30}
-            labelStep={2}
-            float={true}
-            labels={true}
-            middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
-          />
+          <div class="min-[900px]:col-start-2 min-[900px]:row-start-2">
+            <Slider
+              wrapperClasses="w-full"
+              value={sliderValue.movingAverageWindow}
+              step={5}
+              suffix=" days"
+              min={0}
+              max={30}
+              labelStep={2}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
+            />
+          </div>
         </div>
       </div>
+      <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
+        <p>
+          All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>,
+          a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
+          gun-related violence in the United States.
+        </p>
+      </div>
+    {:else}
+      <div class="flex min-h-[50vh] w-full items-center justify-center">
+        <Loading classes="h-16 w-16" image="circle" />
+      </div>
     {/if}
-    <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
-      <p>
-        All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>, a
-        not-for-profit corporation formed in 2013 to provide online public access to accurate information about
-        gun-related violence in the United States.
-      </p>
-    </div>
   </div>
 </div>
-
-<style>
-  .metrics-label-column {
-    width: 54%;
-  }
-
-  .metrics-overall-column {
-    width: 22%;
-  }
-
-  .metrics-comparative-column {
-    width: 24%;
-  }
-
-  @media (min-width: 900px) {
-    .controls-layout {
-      grid-template-columns: 9.875rem minmax(18rem, 22rem) repeat(2, minmax(0, 1fr));
-      align-items: start;
-      column-gap: 1.5rem;
-    }
-
-    .x-axis-day-width-control,
-    .moving-average-control {
-      margin-top: 1rem;
-    }
-
-    .metrics-label-column {
-      width: 50%;
-    }
-
-    .metrics-overall-column {
-      width: 21%;
-    }
-
-    .metrics-comparative-column {
-      width: 29%;
-    }
-  }
-</style>
