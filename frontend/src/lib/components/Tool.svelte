@@ -7,7 +7,7 @@
   import { format } from "date-fns"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, Select, Slider } from "svelte-lib/components"
+  import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
   import { drawCanvasCircles } from "svelte-lib/functions"
 
   import {
@@ -30,6 +30,7 @@
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
   let observedVictimsColumn = "observed_victims"
   let minYear = Math.min(...baseRows.map(yearFromDate))
+  let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let overallPredictionColumn = predictionColumn(latestObservedYear)
 
@@ -135,9 +136,17 @@
 
   let selectValue = selectItems[0]
 
-  let sliderStep = 5
+  let sliderItems = {
+    xAxisDayWidth: [
+      { value: "fit", label: "Fit" },
+      { value: "narrow", label: "Narrow" },
+      { value: "wide", label: "Wide" },
+      { value: "wider", label: "Wider" },
+      { value: "widest", label: "Widest" }
+    ]
+  }
 
-  let sliderValue = 10
+  let sliderValue = { movingAverageWindow: 10, xAxisDayWidth: 0 }
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
@@ -189,10 +198,14 @@
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
       field: observedVictimsColumn,
-      range: sliderValue,
+      range: sliderValue.movingAverageWindow,
       observedOnly: true
     })
-    overallModelSeriesRows = buildSeriesRows({ rows: chartRows, field: overallPredictionColumn, range: sliderValue })
+    overallModelSeriesRows = buildSeriesRows({
+      rows: chartRows,
+      field: overallPredictionColumn,
+      range: sliderValue.movingAverageWindow
+    })
   }
 
   $: {
@@ -206,8 +219,17 @@
             ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (windowWidth * 0.7) / 2))
             : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78))
       }
-      svgWidth = baseRows.length * 0.4 + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
-      xAxisWidth = svgWidth - plotMargin.right - plotMargin.left - graphStrokeWidth * 2
+      let defaultXAxisWidth = baseRows.length * 0.4
+      let fittedXAxisWidth = Math.max(
+        (scrollViewportWidth || chartLayout.viewportWidth) - plotMargin.left - plotMargin.right - graphStrokeWidth * 2,
+        0
+      )
+
+      xAxisWidth =
+        sliderValue.xAxisDayWidth <= 2
+          ? fittedXAxisWidth + ((defaultXAxisWidth - fittedXAxisWidth) * sliderValue.xAxisDayWidth) / 2
+          : defaultXAxisWidth * (1 + (sliderValue.xAxisDayWidth - 2) * 0.1)
+      svgWidth = xAxisWidth + plotMargin.left + plotMargin.right + graphStrokeWidth * 2
 
       xScale = scaleTime(
         extent(baseRows, d => d.parsedDate),
@@ -224,7 +246,7 @@
 
   $: {
     if (comparing && comparativePredictionColumn) {
-      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, sliderValue)
+      comparativeSeriesRows = cachedComparativeSeriesRows(comparativePredictionColumn, sliderValue.movingAverageWindow)
     } else {
       comparativeSeriesRows = []
     }
@@ -278,30 +300,30 @@
       label: "Daily Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     },
     {
       key: "overallModel",
       label: "Overall Model",
       color: chartColors.overallModel,
       visible: checkboxFilters.displayModels,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     },
     {
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
       visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
-      aggregated: sliderValue > 0
+      aggregated: sliderValue.movingAverageWindow > 0
     }
   ]
 
-  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue == 0
-  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue > 0
-  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue == 0
-  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue > 0
-  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue == 0
-  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue > 0
+  $: observationPointsVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow == 0
+  $: observationPathVisible = checkboxFilters.displayObservations && sliderValue.movingAverageWindow > 0
+  $: timeSeriesPointsVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
+  $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
+  $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
 
   $: animatedYScale =
     chartLayout.height && $animatedYDomain
@@ -312,7 +334,14 @@
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
   $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
-  $: xTicks = xScale ? xScale.ticks() : []
+  $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
+  $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
+  $: forecastLabelY = forecastLabelRotated ? plotMargin.top + plotHeight / 2 : plotMargin.top + 22
+  $: xTickYearStep = xAxisWidth ? Math.max(1, Math.ceil(((maxYear - minYear) * 56) / xAxisWidth)) : 1
+  $: xTicks = xScale
+    ? Array.from({ length: maxYear - minYear + 1 }, (_, i) => parseLocalDate(`${minYear + i}-01-01`))
+    : []
+  $: xTickLabels = xTicks.filter((_, i) => i % xTickYearStep == 0)
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth ? plotMargin.left + (chartLayout.viewportWidth - plotMargin.left) / 2 : 0
@@ -423,6 +452,8 @@
     xAxis: "Individual incidents are summed together and grouped by date.",
     yAxis:
       "Includes all victims reported as injured or killed. Victims with unreported health statuses are not included.",
+    xAxisDayWidth:
+      "Adjust the horizontal space occupied by each day. Drag left to show more dates at once or right to spread dates farther apart.",
     movingAverageWindow:
       "Adjust the slider to specify a moving average for all charted values. Units are in days, with 0 days displaying exact daily observations and predictions.",
     timeframe: `Use dropdown to compare time series model predictions for dates that took place in the past, or, take place in the next year (${forecastDayCount} days).`,
@@ -432,7 +463,7 @@
   }
 
   $: {
-    if (comparing && sliderValue && comparativeSeriesRows && xScale && yScale) {
+    if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
       let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
       animatedComparativePath.set(comparativePath, tweenTiming)
     } else {
@@ -448,12 +479,12 @@
 <svelte:window bind:innerWidth={windowWidth} bind:innerHeight={viewportHeight} />
 <div class="flex h-full w-full flex-col items-center justify-center">
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
-    {#if chartRows}
+    {#if chartRows && svgWidth && chartLayout.height}
       <div
-        class="relative mx-auto mb-3 mt-4 grid gap-3 text-sm min-[1300px]:block"
+        class="relative mx-auto mb-3 mt-4 flex flex-col gap-2 text-sm min-[1300px]:block"
         style="max-width:{chartLayout.viewportWidth}px"
       >
-        <div class="grid gap-2 min-[1300px]:flex min-[1300px]:flex-col min-[1300px]:items-start">
+        <div class="flex flex-col items-start">
           {#each checkboxFilterItems as checkbox (checkbox.key)}
             <div class="flex items-center gap-x-2">
               <CheckboxFilter
@@ -471,7 +502,7 @@
           {/each}
         </div>
         <span
-          class="text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
+          class="hidden text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
           {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
@@ -603,9 +634,11 @@
                   {/if}
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
-                    x={(forecastStartX + xAxisWidth) / 2}
-                    y={plotMargin.top + 22}
+                    x={forecastLabelX}
+                    y={forecastLabelY}
                     text-anchor="middle"
+                    dominant-baseline={forecastLabelRotated ? "middle" : null}
+                    transform={forecastLabelRotated ? `rotate(90, ${forecastLabelX}, ${forecastLabelY})` : null}
                   >
                     Next {forecastDayCount.toLocaleString()} days...
                   </text>
@@ -631,7 +664,7 @@
                   {/each}
                 </svg>
                 <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
-                  {#each xTicks as xTick (xTick)}
+                  {#each xTickLabels as xTick (xTick)}
                     <text
                       class="fill-chart-1"
                       x={xScale(xTick)}
@@ -742,7 +775,7 @@
         </div>
       {/if}
       <div
-        class="controls-layout mx-auto mt-5 grid w-full gap-y-5 text-sm"
+        class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(0,1fr)_minmax(0,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
         style="max-width:{chartLayout.viewportWidth}px"
       >
         <div>
@@ -760,107 +793,97 @@
             />
           </div>
         </div>
-        <table class="metrics-table w-full table-fixed border-collapse">
-          <colgroup>
-            <col class="metrics-label-column" />
-            <col class="metrics-overall-column" />
-            <col class="metrics-comparative-column" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
-                <div class="flex items-center gap-2 font-medium">
-                  Metrics
-                  <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
-                </div>
-              </th>
-              <th
-                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
-              >
-              <th
-                class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
-                style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
-              >
-            </tr>
-          </thead>
-          <tbody>
-            {#each metricRows as row (row.key)}
+        <div class="overflow-x-auto">
+          <table class="metrics-table min-w-full border-collapse whitespace-nowrap">
+            <colgroup>
+              <col class="w-[54%] min-[900px]:w-1/2" />
+              <col class="w-[22%] min-[900px]:w-[21%]" />
+              <col class="w-[24%] min-[900px]:w-[29%]" />
+            </colgroup>
+            <thead>
               <tr>
-                <td
-                  >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
+                <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
+                  <div class="flex items-center gap-2 font-medium">
+                    Metrics
+                    <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
+                  </div>
+                </th>
+                <th
+                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
                 >
-                <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                <th
+                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
+                >
               </tr>
-            {/each}
-          </tbody>
-        </table>
-        <div class="moving-average-control">
-          <div class="ml-3.5 flex items-center gap-2 font-medium">
+            </thead>
+            <tbody>
+              {#each metricRows as row (row.key)}
+                <tr>
+                  <td
+                    >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
+                  >
+                  <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                  <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <div class="grid min-w-0 min-[900px]:col-span-2 min-[900px]:mt-4 min-[900px]:grid-cols-2 min-[900px]:gap-x-6">
+          <div class="ml-3.5 flex items-center gap-2 font-medium min-[900px]:col-start-1 min-[900px]:row-start-1">
+            Day Width
+            <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
+          </div>
+          <div class="min-[900px]:col-start-1 min-[900px]:row-start-2">
+            <Slider
+              wrapperClasses="w-full"
+              items={sliderItems.xAxisDayWidth}
+              value={sliderValue.xAxisDayWidth}
+              min={0}
+              max={sliderItems.xAxisDayWidth.length - 1}
+              labelStep={2}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
+            />
+          </div>
+          <div
+            class="ml-3.5 mt-5 flex items-center gap-2 font-medium min-[900px]:col-start-2 min-[900px]:row-start-1 min-[900px]:mt-0"
+          >
             Moving Average Window
             <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
           </div>
-          <Slider
-            wrapperClasses="w-full"
-            value={sliderValue}
-            step={sliderStep}
-            suffix=" days"
-            min={0}
-            max={30}
-            labelStep={2}
-            float={true}
-            labels={true}
-            middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue = e.d)}
-          />
+          <div class="min-[900px]:col-start-2 min-[900px]:row-start-2">
+            <Slider
+              wrapperClasses="w-full"
+              value={sliderValue.movingAverageWindow}
+              step={5}
+              suffix=" days"
+              min={0}
+              max={30}
+              labelStep={2}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
+            />
+          </div>
         </div>
       </div>
+      <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
+        <p>
+          All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>,
+          a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
+          gun-related violence in the United States.
+        </p>
+      </div>
+    {:else}
+      <div class="flex min-h-[50vh] w-full items-center justify-center">
+        <Loading classes="h-16 w-16" image="circle" />
+      </div>
     {/if}
-    <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
-      <p>
-        All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>, a
-        not-for-profit corporation formed in 2013 to provide online public access to accurate information about
-        gun-related violence in the United States.
-      </p>
-    </div>
   </div>
 </div>
-
-<style>
-  .metrics-label-column {
-    width: 54%;
-  }
-
-  .metrics-overall-column {
-    width: 22%;
-  }
-
-  .metrics-comparative-column {
-    width: 24%;
-  }
-
-  @media (min-width: 900px) {
-    .controls-layout {
-      grid-template-columns: 9rem minmax(20rem, 24rem) 1fr;
-      align-items: start;
-      column-gap: 2rem;
-    }
-
-    .moving-average-control {
-      margin-top: 1rem;
-    }
-
-    .metrics-label-column {
-      width: 50%;
-    }
-
-    .metrics-overall-column {
-      width: 21%;
-    }
-
-    .metrics-comparative-column {
-      width: 29%;
-    }
-  }
-</style>

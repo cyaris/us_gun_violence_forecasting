@@ -119,6 +119,8 @@ The Vite dev server is configured to use port `3000`.
 
 ## Frontend Commands
 
+Useful commands:
+
 ```bash
 npm run check        # Svelte diagnostics
 npm run build        # production build
@@ -171,7 +173,7 @@ The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls th
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `master`, pull requests, and manual dispatch, then calls the
+The `Rollup` workflow runs on pushes to `dev` and `master` and on manual dispatch, then calls the
 [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
 `working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
 `frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `dev` and `master` pushes or manual
@@ -185,7 +187,7 @@ The upload refreshes cache metadata in place for
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 13:00 UTC, 30 minutes before the `cyaris.github.io` Pages build, and on
+The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for `cyaris.github.io`, and on
 manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s `main` branch and, when it has moved since the last check, dispatches this repository's own
