@@ -332,7 +332,7 @@
 
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
-  $: yAxisCenterY = plotBottomY ? (plotMargin.top + plotBottomY) / 2 : 0
+  $: yAxisCenterY = chartLayout.height / 2
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
   $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
   $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
@@ -344,7 +344,7 @@
   $: xTickLabels = xTicks.filter((_, i) => i % xTickYearStep == 0)
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
-  $: xAxisTitleX = chartLayout.viewportWidth ? plotMargin.left + (chartLayout.viewportWidth - plotMargin.left) / 2 : 0
+  $: xAxisTitleX = chartLayout.viewportWidth / 2
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
@@ -740,7 +740,7 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-chart-1 text-lg"
+              class="non-reactive fill-chart-1 text-sm min-[900px]:text-base"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
@@ -756,7 +756,7 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-chart-1 text-lg"
+              class="non-reactive fill-chart-1 text-sm min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
               y={chartLayout.height - 18}
