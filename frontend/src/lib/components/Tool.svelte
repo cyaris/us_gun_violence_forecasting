@@ -814,7 +814,7 @@
             />
           </div>
         {:else}
-          <div class="flex items-start gap-4">
+          <div class="flex items-start gap-8">
             <div class="w-36 shrink-0">
               <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
                 Prediction Timeframe
