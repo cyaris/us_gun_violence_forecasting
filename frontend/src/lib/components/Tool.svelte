@@ -501,6 +501,23 @@
             </div>
           {/each}
         </div>
+        {#if windowWidth < 900}
+          <div class="absolute right-0 top-0">
+            <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
+              Prediction Timeframe
+              <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-80" />
+            </div>
+            <div class="w-36">
+              <Select
+                items={selectItems}
+                bind:value={selectValue}
+                clearable={false}
+                centeredValue={true}
+                centeredItems={true}
+              />
+            </div>
+          </div>
+        {/if}
         <span
           class="hidden text-sm min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
@@ -778,22 +795,43 @@
         class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(0,1fr)_minmax(0,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
         style="max-width:{chartLayout.viewportWidth}px"
       >
-        <div>
-          <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
-            Prediction Timeframe
-            <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-80" />
+        {#if windowWidth >= 900}
+          <div class="min-[900px]:col-start-1">
+            <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
+              Prediction Timeframe
+              <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-80" />
+            </div>
+            <div class="w-36">
+              <Select
+                items={selectItems}
+                bind:value={selectValue}
+                clearable={false}
+                centeredValue={true}
+                centeredItems={true}
+              />
+            </div>
           </div>
-          <div class="w-36">
-            <Select
-              items={selectItems}
-              bind:value={selectValue}
-              clearable={false}
-              centeredValue={true}
-              centeredItems={true}
-            />
+        {/if}
+        <div class="min-[900px]:col-start-4 min-[900px]:mt-4">
+          <div class="ml-3.5 flex items-center gap-2 font-medium">
+            Moving Average Window
+            <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
           </div>
+          <Slider
+            wrapperClasses="w-full"
+            value={sliderValue.movingAverageWindow}
+            step={5}
+            suffix=" days"
+            min={0}
+            max={30}
+            labelStep={2}
+            float={true}
+            labels={true}
+            middle={true}
+            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
+          />
         </div>
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto min-[900px]:col-start-2">
           <table class="metrics-table min-w-full border-collapse whitespace-nowrap">
             <colgroup>
               <col class="w-[54%] min-[900px]:w-1/2" />
@@ -831,46 +869,23 @@
             </tbody>
           </table>
         </div>
-        <div class="grid min-w-0 min-[900px]:col-span-2 min-[900px]:mt-4 min-[900px]:grid-cols-2 min-[900px]:gap-x-6">
-          <div class="ml-3.5 flex items-center gap-2 font-medium min-[900px]:col-start-1 min-[900px]:row-start-1">
+        <div class="hidden min-[900px]:col-start-3 min-[900px]:mt-4 min-[900px]:block">
+          <div class="ml-3.5 flex items-center gap-2 font-medium">
             Day Width
             <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
           </div>
-          <div class="min-[900px]:col-start-1 min-[900px]:row-start-2">
-            <Slider
-              wrapperClasses="w-full"
-              items={sliderItems.xAxisDayWidth}
-              value={sliderValue.xAxisDayWidth}
-              min={0}
-              max={sliderItems.xAxisDayWidth.length - 1}
-              labelStep={2}
-              float={true}
-              labels={true}
-              middle={true}
-              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
-            />
-          </div>
-          <div
-            class="ml-3.5 mt-5 flex items-center gap-2 font-medium min-[900px]:col-start-2 min-[900px]:row-start-1 min-[900px]:mt-0"
-          >
-            Moving Average Window
-            <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
-          </div>
-          <div class="min-[900px]:col-start-2 min-[900px]:row-start-2">
-            <Slider
-              wrapperClasses="w-full"
-              value={sliderValue.movingAverageWindow}
-              step={5}
-              suffix=" days"
-              min={0}
-              max={30}
-              labelStep={2}
-              float={true}
-              labels={true}
-              middle={true}
-              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, movingAverageWindow: e.d })}
-            />
-          </div>
+          <Slider
+            wrapperClasses="w-full"
+            items={sliderItems.xAxisDayWidth}
+            value={sliderValue.xAxisDayWidth}
+            min={0}
+            max={sliderItems.xAxisDayWidth.length - 1}
+            labelStep={2}
+            float={true}
+            labels={true}
+            middle={true}
+            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
+          />
         </div>
       </div>
       <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
