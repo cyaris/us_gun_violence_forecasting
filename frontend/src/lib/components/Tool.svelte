@@ -798,6 +798,7 @@
                 items={selectItems}
                 bind:value={selectValue}
                 clearable={false}
+                searchable={false}
                 centeredValue={true}
                 centeredItems={true}
               />
@@ -833,6 +834,7 @@
                 items={selectItems}
                 bind:value={selectValue}
                 clearable={false}
+                searchable={false}
                 centeredValue={true}
                 centeredItems={true}
               />
