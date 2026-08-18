@@ -801,6 +801,8 @@
                 searchable={false}
                 centeredValue={true}
                 centeredItems={true}
+                label="Prediction Timeframe"
+                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
               />
             </div>
           </div>
@@ -837,6 +839,8 @@
                 searchable={false}
                 centeredValue={true}
                 centeredItems={true}
+                label="Prediction Timeframe"
+                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
               />
             </div>
             <div class="min-w-0 flex-1">
