@@ -1,6 +1,6 @@
 <script>
   import { extent } from "d3-array"
-  import { interpolateNumber, interpolateString } from "d3-interpolate"
+  import { interpolateNumber } from "d3-interpolate"
   import { scaleLinear, scaleTime } from "d3-scale"
   import { pointer } from "d3-selection"
   import { curveNatural, line } from "d3-shape"
@@ -8,7 +8,8 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles } from "svelte-lib/functions"
+  import { createAnimationLoop, drawCanvasCircles, easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
+  import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
     buildSeriesRows,
@@ -67,6 +68,8 @@
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
+  let linesCanvas
+  let hoverPoint = null
   let animatedYScale = null
   let scrollContainer
   let scrollLeft = 0
@@ -87,28 +90,51 @@
     ...tweenTiming
   })
 
-  let animatedPaths = tweened(
-    { observations: null, timeSeries: null },
-    {
-      interpolate: (a, b) => {
-        let observations = interpolateString(a.observations, b.observations)
-        let timeSeries = interpolateString(a.timeSeries, b.timeSeries)
+  function interpolateSeriesRows(previousRows, nextRows) {
+    let previousValues = new Map((previousRows || []).map(d => [+d.parsedDate, d.value]))
+    let interpolators = (nextRows || []).map(d => {
+      let previousValue = previousValues.get(+d.parsedDate)
+      let previousValueIsFinite = previousValue != null && Number.isFinite(Number(previousValue))
+      let pointValue = interpolateNumber(
+        previousValueIsFinite ? Number(previousValue) : Number(d.value),
+        Number(d.value)
+      )
 
-        return t => ({ observations: observations(t), timeSeries: timeSeries(t) })
-      },
-      ...tweenTiming
+      return { ...d, pointValue }
+    })
+
+    return progress => interpolators.map(({ pointValue, ...d }) => ({ ...d, value: pointValue(progress) }))
+  }
+
+  function createSeriesLineAnimation() {
+    let interpolator = () => []
+    let start = 0
+    let duration = 0
+
+    function getProgress(now) {
+      return duration > 0 ? getEasedProgress({ duration, ease: easeCubicInOut, now, start }) : 1
     }
-  )
 
-  let animatedComparativePath = tweened(null, {
-    interpolate: (a, b) => {
-      if (!a || !b) return () => b
+    function getCurrentRows(now) {
+      return interpolator(getProgress(now))
+    }
 
-      let path = interpolateString(a, b)
-      return t => path(t)
-    },
-    ...tweenTiming
-  })
+    function isAnimating(now) {
+      return getProgress(now) < 1
+    }
+
+    function set(rows, now, { instant = false } = {}) {
+      interpolator = instant ? () => rows : interpolateSeriesRows(getCurrentRows(now), rows)
+      start = now
+      duration = instant ? 0 : tweenTiming.duration
+    }
+
+    return { getCurrentRows, isAnimating, set }
+  }
+
+  let observationsLineAnimation = createSeriesLineAnimation()
+  let timeSeriesLineAnimation = createSeriesLineAnimation()
+  let comparativeLineAnimation = createSeriesLineAnimation()
 
   let animatedComparativePoints = tweened([], {
     interpolate: (a, b) => {
@@ -165,13 +191,6 @@
   let numObservations = observedRows.length
 
   let plotGroup
-
-  function pathGeneratorFor(field) {
-    return line()
-      .curve(curveNatural)
-      .x(d => xScale(d.parsedDate))
-      .y(d => yScale(d[field]))
-  }
 
   function cachedComparativeSeriesRows(field, range) {
     let key = `${field}:${range}`
@@ -287,10 +306,11 @@
 
   $: {
     if (chartRows && yScale) {
-      animatedPaths.set({
-        observations: pathGeneratorFor("value")(observationSeriesRows),
-        timeSeries: pathGeneratorFor("value")(overallModelSeriesRows)
-      })
+      let now = performance.now()
+
+      observationsLineAnimation.set(observationSeriesRows, now)
+      timeSeriesLineAnimation.set(overallModelSeriesRows, now)
+      lineAnimationLoop.start()
     }
   }
 
@@ -324,14 +344,69 @@
   $: timeSeriesPathVisible = checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
   $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
+  $: lineVisibility = {
+    comparative: comparing && checkboxFilters.displayModels && comparativePathVisible,
+    observations: observationPathVisible,
+    timeSeries: timeSeriesPathVisible
+  }
+
+  function drawSeriesLine(context, rows, color, hoverable) {
+    if (rows.length < 2) return
+
+    let path2D = new Path2D()
+    line()
+      .curve(curveNatural)
+      .x(d => plotMargin.left + xScale(d.parsedDate))
+      .y(d => animatedYScale(d.value))
+      .context(path2D)(rows)
+
+    context.strokeStyle = color
+    context.lineWidth = 3
+
+    if (hoverable && hoverPoint && context.isPointInStroke(path2D, hoverPoint.x, hoverPoint.y)) {
+      context.lineWidth = 4
+    }
+
+    context.stroke(path2D)
+  }
+
+  function drawLinesCanvas(timestamp) {
+    let { context } = configureCanvas2D({ canvas: linesCanvas, height: chartLayout.height, width: svgWidth })
+    if (!context) return false
+
+    context.clearRect(0, 0, svgWidth, chartLayout.height)
+
+    if (lineVisibility.observations) {
+      drawSeriesLine(context, observationsLineAnimation.getCurrentRows(timestamp), chartColors.observations, true)
+    }
+    if (lineVisibility.timeSeries) {
+      drawSeriesLine(context, timeSeriesLineAnimation.getCurrentRows(timestamp), chartColors.overallModel, true)
+    }
+    if (lineVisibility.comparative) {
+      drawSeriesLine(context, comparativeLineAnimation.getCurrentRows(timestamp), chartColors.comparativeModel, false)
+    }
+
+    return (
+      observationsLineAnimation.isAnimating(timestamp) ||
+      timeSeriesLineAnimation.isAnimating(timestamp) ||
+      comparativeLineAnimation.isAnimating(timestamp)
+    )
+  }
+
+  let lineAnimationLoop = createAnimationLoop(drawLinesCanvas)
 
   $: animatedYScale =
     chartLayout.height && $animatedYDomain
       ? scaleLinear($animatedYDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
+  $: if (linesCanvas && xScale && animatedYScale && svgWidth && chartLayout.height && lineVisibility) {
+    lineAnimationLoop.start()
+  }
+
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
+  $: yAxisTicks = yScale ? yScale.ticks() : []
   $: yAxisCenterY = chartLayout.height / 2
   // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
@@ -437,6 +512,15 @@
     if (year != hoverYear) {
       hoverYear = year
     }
+
+    hoverPoint = getCanvasPointerPoint(linesCanvas, e)
+    lineAnimationLoop.start()
+  }
+
+  function handleHoverLeave() {
+    hoverYear = null
+    hoverPoint = null
+    lineAnimationLoop.start()
   }
 
   $: isFuture = selectValue.value == "Next 365 Days"
@@ -467,12 +551,15 @@
   }
 
   $: {
+    let now = performance.now()
+
     if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
-      let comparativePath = pathGeneratorFor("value")(comparativeSeriesRows)
-      animatedComparativePath.set(comparativePath, tweenTiming)
+      comparativeLineAnimation.set(comparativeSeriesRows, now)
     } else {
-      animatedComparativePath.set(null, { duration: 0 })
+      comparativeLineAnimation.set([], now, { instant: true })
     }
+
+    lineAnimationLoop.start()
   }
 
   $: {
@@ -572,13 +659,19 @@
                 aria-hidden="true"
                 style="width:{svgWidth}px; height:{chartLayout.height}px"
               />
+              <canvas
+                bind:this={linesCanvas}
+                class="pointer-events-none absolute left-0 top-0 z-[15]"
+                aria-hidden="true"
+                style="width:{svgWidth}px; height:{chartLayout.height}px"
+              />
               <svg class="absolute left-0 top-0 z-20" width={svgWidth} height={chartLayout.height} id="graph">
                 <g
                   bind:this={plotGroup}
                   transform="translate({plotMargin.left}, {0})"
                   role="presentation"
                   on:mousemove={handleHover}
-                  on:mouseleave={() => (hoverYear = null)}
+                  on:mouseleave={handleHoverLeave}
                 >
                   <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
                   {#if comparing}
@@ -609,33 +702,6 @@
                     y1={plotMargin.top}
                     y2={plotMargin.top}
                   />
-                  {#if observationPathVisible}
-                    <path
-                      class="hover:stroke-4"
-                      fill="transparent"
-                      stroke={chartColors.observations}
-                      stroke-width={3}
-                      d={$animatedPaths.observations}
-                    />
-                  {/if}
-                  {#if timeSeriesPathVisible}
-                    <path
-                      class="hover:stroke-4"
-                      fill="transparent"
-                      stroke={chartColors.overallModel}
-                      stroke-width={3}
-                      d={$animatedPaths.timeSeries}
-                    />
-                  {/if}
-                  {#if comparing && checkboxFilters.displayModels && comparativePathVisible}
-                    <path
-                      class="non-reactive"
-                      fill="transparent"
-                      stroke={chartColors.comparativeModel}
-                      stroke-width={3}
-                      d={$animatedComparativePath}
-                    />
-                  {/if}
                   <text
                     class="non-reactive fill-chart-1 text-sm italic"
                     x={forecastLabelX}
@@ -734,12 +800,14 @@
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
-              {#each yScale.ticks() as yTick (yTick)}
+              {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
                   <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
-                  <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
-                    {yTick.toLocaleString()}
-                  </text>
+                  {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
+                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                      {yTick.toLocaleString()}
+                    </text>
+                  {/if}
                 </g>
               {/each}
             </g>
@@ -802,7 +870,7 @@
                 centeredValue={true}
                 centeredItems={true}
                 label="Prediction Timeframe"
-                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
+                labelClasses="sr-only"
               />
             </div>
           </div>
@@ -840,7 +908,7 @@
                 centeredValue={true}
                 centeredItems={true}
                 label="Prediction Timeframe"
-                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
+                labelClasses="sr-only"
               />
             </div>
             <div class="min-w-0 flex-1">
