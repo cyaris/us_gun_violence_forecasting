@@ -802,7 +802,7 @@
                 centeredValue={true}
                 centeredItems={true}
                 label="Prediction Timeframe"
-                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
+                labelClasses="sr-only"
               />
             </div>
           </div>
@@ -840,7 +840,7 @@
                 centeredValue={true}
                 centeredItems={true}
                 label="Prediction Timeframe"
-                labelClasses="mb-1 block whitespace-nowrap text-sm font-medium"
+                labelClasses="sr-only"
               />
             </div>
             <div class="min-w-0 flex-1">
