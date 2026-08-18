@@ -6,6 +6,7 @@
 
 ## Documentation
 
+- Keep `shared-automation` checked out as the sibling directory `../shared-automation` so its referenced instructions are available.
 - Use `../shared-automation/AGENTS.md` as the source of truth for README and Markdown documentation-style conventions.
 
 ## GitHub Actions
