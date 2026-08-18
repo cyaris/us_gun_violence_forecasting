@@ -332,6 +332,7 @@
 
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
+  $: yAxisTicks = yScale ? yScale.ticks() : []
   $: yAxisCenterY = chartLayout.height / 2
   // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
@@ -734,12 +735,14 @@
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
-              {#each yScale.ticks() as yTick (yTick)}
+              {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
                   <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
-                  <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
-                    {yTick.toLocaleString()}
-                  </text>
+                  {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
+                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                      {yTick.toLocaleString()}
+                    </text>
+                  {/if}
                 </g>
               {/each}
             </g>
