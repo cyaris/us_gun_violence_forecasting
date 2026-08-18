@@ -44,7 +44,7 @@
   let yScale
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let plotMargin = { top: 20, right: 20, bottom: 84, left: 84 }
+  let plotMargin = { top: 20, right: 20, bottom: 79, left: 79 }
   let yAxisMaskWidth = plotMargin.left - axisStrokeInset
   // the height of the x axis ticks.
   let xTickHeight = 10
@@ -333,6 +333,8 @@
   $: plotBottomY = yScale ? yScale(0) : 0
   $: plotHeight = yScale ? plotBottomY - plotMargin.top : 0
   $: yAxisCenterY = chartLayout.height / 2
+  // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
+  $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
   $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
   $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
@@ -345,6 +347,8 @@
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
+  // the distance from the x-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
+  $: xAxisTitleIconOffset = windowWidth >= 900 ? 34 : 31.5
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
@@ -740,14 +744,19 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-chart-1 text-sm min-[900px]:text-base"
+              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
               Total Victims
             </text>
-            <g transform="rotate(-90, {yAxisInfoX}, {yAxisCenterY - 78})">
-              <InfoIcon title={tooltipText.yAxis} tooltipClasses="max-w-80" cx={yAxisInfoX} cy={yAxisCenterY - 78} />
+            <g transform="rotate(-90, {yAxisInfoX}, {yAxisCenterY - yAxisTitleIconOffset})">
+              <InfoIcon
+                title={tooltipText.yAxis}
+                tooltipClasses="max-w-80"
+                cx={yAxisInfoX}
+                cy={yAxisCenterY - yAxisTitleIconOffset}
+              />
             </g>
           </svg>
           <svg
@@ -756,7 +765,7 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-chart-1 text-sm min-[900px]:text-base"
+              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
               y={chartLayout.height - 18}
@@ -767,7 +776,7 @@
               <InfoIcon
                 title={tooltipText.xAxis}
                 tooltipClasses="max-w-80"
-                cx={xAxisTitleX + 36}
+                cx={xAxisTitleX + xAxisTitleIconOffset}
                 cy={chartLayout.height - 24}
               />
             </g>
@@ -775,7 +784,7 @@
         </div>
       {/if}
       <div
-        class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(0,1fr)_minmax(0,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
+        class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(max-content,1fr)_minmax(max-content,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
         style="max-width:{chartLayout.viewportWidth}px"
       >
         {#if windowWidth >= 900}
@@ -794,8 +803,8 @@
               />
             </div>
           </div>
-          <div class="min-[900px]:col-start-4 min-[900px]:row-start-1 min-[900px]:mt-4">
-            <div class="ml-3.5 flex items-center gap-2 font-medium">
+          <div class="min-[900px]:col-start-4 min-[900px]:row-start-1">
+            <div class="ml-3.5 flex items-center gap-2 whitespace-nowrap font-medium">
               Moving Average Window
               <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
             </div>
@@ -858,37 +867,41 @@
             </colgroup>
             <thead>
               <tr>
-                <th class="border-b-[3.5px] border-b-chart-1 pb-1 text-left align-bottom [border-bottom-style:solid]">
+                <th
+                  class="border-b-[3.5px] border-b-chart-1 pb-[5px] text-left align-bottom [border-bottom-style:solid]"
+                >
                   <div class="flex items-center gap-2 font-medium">
                     Metrics
                     <InfoIcon title={tooltipText.metrics} tooltipClasses="max-w-80" />
                   </div>
                 </th>
                 <th
-                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  class="border-b-[3.5px] pb-[5px] pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                   style:border-bottom-color={chartColors.overallModel}>Overall<br />Model</th
                 >
                 <th
-                  class="border-b-[3.5px] pb-1 pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
+                  class="border-b-[3.5px] pb-[5px] pl-2 pr-px text-right align-bottom font-medium [border-bottom-style:solid]"
                   style:border-bottom-color={chartColors.comparativeModel}>Comparative<br />Model</th
                 >
               </tr>
             </thead>
             <tbody>
-              {#each metricRows as row (row.key)}
+              {#each metricRows as row, i (row.key)}
                 <tr>
-                  <td
+                  <td class={i == 0 ? "pt-1" : ""}
                     >{row.label}{#if row.rounded}&nbsp;<em>(Rounded)</em>{/if}</td
                   >
-                  <td class="text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
-                  <td class="text-right">{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td>
+                  <td class="{i == 0 ? 'pt-1' : ''} text-right">{overallMetrics ? overallMetrics[row.key] : ""}</td>
+                  <td class="{i == 0 ? 'pt-1' : ''} text-right"
+                    >{comparativeMetrics ? comparativeMetrics[row.key] : "—"}</td
+                  >
                 </tr>
               {/each}
             </tbody>
           </table>
         </div>
-        <div class="hidden min-[900px]:col-start-3 min-[900px]:row-start-1 min-[900px]:mt-4 min-[900px]:block">
-          <div class="ml-3.5 flex items-center gap-2 font-medium">
+        <div class="hidden min-[900px]:col-start-3 min-[900px]:row-start-1 min-[900px]:block">
+          <div class="ml-3.5 flex items-center gap-2 whitespace-nowrap font-medium">
             Day Width
             <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
           </div>
