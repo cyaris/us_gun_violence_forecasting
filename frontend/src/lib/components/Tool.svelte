@@ -5,6 +5,7 @@
   import { pointer } from "d3-selection"
   import { curveNatural, line } from "d3-shape"
   import { format } from "date-fns"
+  import { onMount } from "svelte"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
@@ -37,6 +38,7 @@
 
   let windowWidth
   let viewportHeight
+  let lastDevicePixelRatio
   let svgWidth
   let graphStrokeWidth = 1
   let axisStrokeInset = graphStrokeWidth / 2
@@ -226,6 +228,19 @@
       range: sliderValue.movingAverageWindow
     })
   }
+
+  function syncViewportSize() {
+    let devicePixelRatio = window.devicePixelRatio
+
+    if (lastDevicePixelRatio == null || devicePixelRatio === lastDevicePixelRatio) {
+      windowWidth = window.innerWidth
+      viewportHeight = window.innerHeight
+    }
+
+    lastDevicePixelRatio = devicePixelRatio
+  }
+
+  onMount(syncViewportSize)
 
   $: {
     if (windowWidth && viewportHeight) {
@@ -567,7 +582,7 @@
   }
 </script>
 
-<svelte:window bind:innerWidth={windowWidth} bind:innerHeight={viewportHeight} />
+<svelte:window on:resize={syncViewportSize} />
 <div class="flex h-full w-full flex-col items-center justify-center">
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows && svgWidth && chartLayout.height}
