@@ -92,7 +92,7 @@
     ...tweenTiming
   })
 
-  function interpolateSeriesRows(previousRows, nextRows) {
+  function createSeriesRowsInterpolator(previousRows, nextRows) {
     let previousValues = new Map((previousRows || []).map(d => [+d.parsedDate, d.value]))
     let interpolators = (nextRows || []).map(d => {
       let previousValue = previousValues.get(+d.parsedDate)
@@ -126,7 +126,7 @@
     }
 
     function set(rows, now, { instant = false } = {}) {
-      interpolator = instant ? () => rows : interpolateSeriesRows(getCurrentRows(now), rows)
+      interpolator = instant ? () => rows : createSeriesRowsInterpolator(getCurrentRows(now), rows)
       start = now
       duration = instant ? 0 : tweenTiming.duration
     }
@@ -138,24 +138,7 @@
   let timeSeriesLineAnimation = createSeriesLineAnimation()
   let comparativeLineAnimation = createSeriesLineAnimation()
 
-  let animatedComparativePoints = tweened([], {
-    interpolate: (a, b) => {
-      let previousValues = new Map((a || []).map(d => [+d.parsedDate, d.value]))
-      let interpolators = (b || []).map(d => {
-        let previousValue = previousValues.get(+d.parsedDate)
-        let previousValueIsFinite = previousValue != null && Number.isFinite(Number(previousValue))
-        let pointValue = interpolateNumber(
-          previousValueIsFinite ? Number(previousValue) : Number(d.value),
-          Number(d.value)
-        )
-
-        return { ...d, pointValue }
-      })
-
-      return t => interpolators.map(({ pointValue, ...d }) => ({ ...d, value: pointValue(t) }))
-    },
-    ...tweenTiming
-  })
+  let animatedComparativePoints = tweened([], { interpolate: createSeriesRowsInterpolator, ...tweenTiming })
 
   let selectItems = [
     { value: "Historical Data", label: "Historical Data" },
@@ -365,7 +348,7 @@
     timeSeries: timeSeriesPathVisible
   }
 
-  function drawSeriesLine(context, rows, color, hoverable) {
+  function drawSeriesLine(context, { color, hoverable, rows }) {
     if (rows.length < 2) return
 
     let path2D = new Path2D()
@@ -385,21 +368,39 @@
     context.stroke(path2D)
   }
 
+  function getLineScene(timestamp) {
+    return [
+      {
+        animation: observationsLineAnimation,
+        color: chartColors.observations,
+        hoverable: true,
+        visible: lineVisibility.observations
+      },
+      {
+        animation: timeSeriesLineAnimation,
+        color: chartColors.overallModel,
+        hoverable: true,
+        visible: lineVisibility.timeSeries
+      },
+      {
+        animation: comparativeLineAnimation,
+        color: chartColors.comparativeModel,
+        hoverable: false,
+        visible: lineVisibility.comparative
+      }
+    ]
+      .filter(({ visible }) => visible)
+      .map(({ animation, ...layer }) => ({ ...layer, rows: animation.getCurrentRows(timestamp) }))
+  }
+
   function drawLinesCanvas(timestamp) {
     let { context } = configureCanvas2D({ canvas: linesCanvas, height: chartLayout.height, width: svgWidth })
     if (!context) return false
 
     context.clearRect(0, 0, svgWidth, chartLayout.height)
-
-    if (lineVisibility.observations) {
-      drawSeriesLine(context, observationsLineAnimation.getCurrentRows(timestamp), chartColors.observations, true)
-    }
-    if (lineVisibility.timeSeries) {
-      drawSeriesLine(context, timeSeriesLineAnimation.getCurrentRows(timestamp), chartColors.overallModel, true)
-    }
-    if (lineVisibility.comparative) {
-      drawSeriesLine(context, comparativeLineAnimation.getCurrentRows(timestamp), chartColors.comparativeModel, false)
-    }
+    context.save()
+    getLineScene(timestamp).forEach(layer => drawSeriesLine(context, layer))
+    context.restore()
 
     return (
       observationsLineAnimation.isAnimating(timestamp) ||
