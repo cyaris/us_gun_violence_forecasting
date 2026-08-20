@@ -9,7 +9,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { createAnimationLoop, drawCanvasCircles, easeCubicInOut, getEasedProgress } from "svelte-lib/functions"
+  import { drawCanvasCircles } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
@@ -82,63 +82,52 @@
   let comparativeSeriesCache = new Map()
   let modelMetricsCache = new Map()
 
-  let animatedYDomain = tweened([0, 1], {
-    interpolate: (a, b) => {
-      let min = interpolateNumber(a[0], b[0])
-      let max = interpolateNumber(a[1], b[1])
-
-      return t => [min(t), max(t)]
-    },
-    ...tweenTiming
-  })
-
-  function createSeriesRowsInterpolator(previousRows, nextRows) {
-    let previousValues = new Map((previousRows || []).map(d => [+d.parsedDate, d.value]))
+  function createPositionedRowsInterpolator(previousRows, nextRows) {
+    let previousPositions = new Map((previousRows || []).map(d => [+d.parsedDate, d]))
     let interpolators = (nextRows || []).map(d => {
-      let previousValue = previousValues.get(+d.parsedDate)
-      let previousValueIsFinite = previousValue != null && Number.isFinite(Number(previousValue))
-      let pointValue = interpolateNumber(
-        previousValueIsFinite ? Number(previousValue) : Number(d.value),
-        Number(d.value)
-      )
+      let previousPosition = previousPositions.get(+d.parsedDate)
 
-      return { ...d, pointValue }
+      return {
+        ...d,
+        interpolateX: interpolateNumber(previousPosition?.x ?? d.x, d.x),
+        interpolateY: interpolateNumber(previousPosition?.y ?? d.y, d.y)
+      }
     })
 
-    return progress => interpolators.map(({ pointValue, ...d }) => ({ ...d, value: pointValue(progress) }))
+    return progress =>
+      interpolators.map(({ interpolateX, interpolateY, ...d }) => ({
+        ...d,
+        x: interpolateX(progress),
+        y: interpolateY(progress)
+      }))
   }
 
-  function createSeriesLineAnimation() {
-    let interpolator = () => []
-    let start = 0
-    let duration = 0
+  function createChartSceneInterpolator(previousScene, nextScene) {
+    let interpolateComparativePointRows = createPositionedRowsInterpolator(
+      previousScene.comparativePointRows,
+      nextScene.comparativePointRows
+    )
+    let interpolateLineRows = Object.fromEntries(
+      Object.entries(nextScene.lineRows).map(([key, rows]) => [
+        key,
+        createPositionedRowsInterpolator(previousScene.lineRows[key], rows)
+      ])
+    )
+    let interpolateYDomain = nextScene.yDomain.map((value, i) => interpolateNumber(previousScene.yDomain[i], value))
 
-    function getProgress(now) {
-      return duration > 0 ? getEasedProgress({ duration, ease: easeCubicInOut, now, start }) : 1
-    }
-
-    function getCurrentRows(now) {
-      return interpolator(getProgress(now))
-    }
-
-    function isAnimating(now) {
-      return getProgress(now) < 1
-    }
-
-    function set(rows, now, { instant = false } = {}) {
-      interpolator = instant ? () => rows : createSeriesRowsInterpolator(getCurrentRows(now), rows)
-      start = now
-      duration = instant ? 0 : tweenTiming.duration
-    }
-
-    return { getCurrentRows, isAnimating, set }
+    return progress => ({
+      comparativePointRows: interpolateComparativePointRows(progress),
+      lineRows: Object.fromEntries(
+        Object.entries(interpolateLineRows).map(([key, interpolateRows]) => [key, interpolateRows(progress)])
+      ),
+      yDomain: interpolateYDomain.map(interpolateValue => interpolateValue(progress))
+    })
   }
 
-  let observationsLineAnimation = createSeriesLineAnimation()
-  let timeSeriesLineAnimation = createSeriesLineAnimation()
-  let comparativeLineAnimation = createSeriesLineAnimation()
-
-  let animatedComparativePoints = tweened([], { interpolate: createSeriesRowsInterpolator, ...tweenTiming })
+  let animatedChartScene = tweened(
+    { comparativePointRows: [], lineRows: { comparative: [], observations: [], timeSeries: [] }, yDomain: [0, 1] },
+    { interpolate: createChartSceneInterpolator, ...tweenTiming }
+  )
 
   let selectItems = [
     { value: "Historical Data", label: "Historical Data" },
@@ -297,18 +286,6 @@
       let yDomain = [0, visibleMax || 1]
 
       yScale = scaleLinear(yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
-
-      animatedYDomain.set(yDomain)
-    }
-  }
-
-  $: {
-    if (chartRows && yScale) {
-      let now = performance.now()
-
-      observationsLineAnimation.set(observationSeriesRows, now)
-      timeSeriesLineAnimation.set(overallModelSeriesRows, now)
-      lineAnimationLoop.start()
     }
   }
 
@@ -348,76 +325,77 @@
     timeSeries: timeSeriesPathVisible
   }
 
-  function drawSeriesLine(context, { color, hoverable, rows }) {
+  function positionSeriesRows(rows) {
+    return rows.map(d => ({ ...d, x: plotMargin.left + xScale(d.parsedDate), y: yScale(d.value) }))
+  }
+
+  $: if (chartRows && xScale && yScale) {
+    animatedChartScene.set({
+      comparativePointRows: comparativePointsVisible ? positionSeriesRows(comparativeSeriesRows) : [],
+      lineRows: {
+        comparative: comparativePathVisible ? positionSeriesRows(comparativeSeriesRows) : [],
+        observations: positionSeriesRows(observationSeriesRows),
+        timeSeries: positionSeriesRows(overallModelSeriesRows)
+      },
+      yDomain: yScale.domain()
+    })
+  }
+
+  function drawSeriesLine(context, { color, hoverable, rows }, currentHoverPoint) {
     if (rows.length < 2) return
 
     let path2D = new Path2D()
     line()
       .curve(curveNatural)
-      .x(d => plotMargin.left + xScale(d.parsedDate))
-      .y(d => animatedYScale(d.value))
+      .x(d => d.x)
+      .y(d => d.y)
       .context(path2D)(rows)
 
     context.strokeStyle = color
     context.lineWidth = 3
 
-    if (hoverable && hoverPoint && context.isPointInStroke(path2D, hoverPoint.x, hoverPoint.y)) {
+    if (hoverable && currentHoverPoint && context.isPointInStroke(path2D, currentHoverPoint.x, currentHoverPoint.y)) {
       context.lineWidth = 4
     }
 
     context.stroke(path2D)
   }
 
-  function getLineScene(timestamp) {
+  function getLineScene(lineRows, visibility) {
     return [
       {
-        animation: observationsLineAnimation,
         color: chartColors.observations,
         hoverable: true,
-        visible: lineVisibility.observations
+        rows: lineRows.observations,
+        visible: visibility.observations
       },
+      { color: chartColors.overallModel, hoverable: true, rows: lineRows.timeSeries, visible: visibility.timeSeries },
       {
-        animation: timeSeriesLineAnimation,
-        color: chartColors.overallModel,
-        hoverable: true,
-        visible: lineVisibility.timeSeries
-      },
-      {
-        animation: comparativeLineAnimation,
         color: chartColors.comparativeModel,
         hoverable: false,
-        visible: lineVisibility.comparative
+        rows: lineRows.comparative,
+        visible: visibility.comparative
       }
-    ]
-      .filter(({ visible }) => visible)
-      .map(({ animation, ...layer }) => ({ ...layer, rows: animation.getCurrentRows(timestamp) }))
+    ].filter(({ visible }) => visible)
   }
 
-  function drawLinesCanvas(timestamp) {
+  function drawLinesCanvas(lineRows, visibility, currentHoverPoint) {
     let { context } = configureCanvas2D({ canvas: linesCanvas, height: chartLayout.height, width: svgWidth })
-    if (!context) return false
+    if (!context) return
 
     context.clearRect(0, 0, svgWidth, chartLayout.height)
     context.save()
-    getLineScene(timestamp).forEach(layer => drawSeriesLine(context, layer))
+    getLineScene(lineRows, visibility).forEach(layer => drawSeriesLine(context, layer, currentHoverPoint))
     context.restore()
-
-    return (
-      observationsLineAnimation.isAnimating(timestamp) ||
-      timeSeriesLineAnimation.isAnimating(timestamp) ||
-      comparativeLineAnimation.isAnimating(timestamp)
-    )
   }
 
-  let lineAnimationLoop = createAnimationLoop(drawLinesCanvas)
-
   $: animatedYScale =
-    chartLayout.height && $animatedYDomain
-      ? scaleLinear($animatedYDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
+    chartLayout.height && $animatedChartScene.yDomain
+      ? scaleLinear($animatedChartScene.yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
-  $: if (linesCanvas && xScale && animatedYScale && svgWidth && chartLayout.height && lineVisibility) {
-    lineAnimationLoop.start()
+  $: if (linesCanvas && svgWidth && chartLayout.height) {
+    drawLinesCanvas($animatedChartScene.lineRows, lineVisibility, hoverPoint)
   }
 
   $: plotBottomY = yScale ? yScale(0) : 0
@@ -457,6 +435,8 @@
         field,
         color,
         stroke = null,
+        getX = row => plotMargin.left + xScale(row.parsedDate),
+        getY = row => animatedYScale(row[field]),
         isFaded = pointIsPastHighlight,
         fadedAlpha = 0.5
       }) =>
@@ -468,8 +448,8 @@
           radius: pointRadius,
           color,
           stroke,
-          getX: row => plotMargin.left + xScale(row.parsedDate),
-          getY: row => animatedYScale(row[field]),
+          getX,
+          getY,
           isFaded,
           fadedAlpha
         })
@@ -490,9 +470,10 @@
       })
       drawChartPointLayer({
         canvas: comparativeCanvas,
-        rows: $animatedComparativePoints,
-        field: "value",
+        rows: $animatedChartScene.comparativePointRows,
         color: chartColors.comparativeModel,
+        getX: row => row.x,
+        getY: row => row.y,
         isFaded: pointIsNeverFaded
       })
     }
@@ -530,13 +511,11 @@
     }
 
     hoverPoint = getCanvasPointerPoint(linesCanvas, e)
-    lineAnimationLoop.start()
   }
 
   function handleHoverLeave() {
     hoverYear = null
     hoverPoint = null
-    lineAnimationLoop.start()
   }
 
   $: isFuture = selectValue.value == "Next 365 Days"
@@ -564,22 +543,6 @@
     metrics: isFuture
       ? `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there will be in the next ${forecastDayCount} days?\n\nAvg Victims per Day: How many victims does the model think there will be daily for the next ${forecastDayCount} days?\n\nAvg Yearly Trend: What is the average change between these predictions annually?`
       : `Model Input: What years of data were used to generate these predictions?\n\nTotal Victims: How many total victims does the model think there have been since ${firstDate}?\n\nAvg Victims per Day: How many victims does the model think there have been daily since ${firstDate}?\n\nAvg Yearly Trend: What is the average change between these predictions annually?\n\nRMSE: How do these predictions compare to the actual number of victims recorded daily since ${firstDate}?`
-  }
-
-  $: {
-    let now = performance.now()
-
-    if (comparing && sliderValue.movingAverageWindow && comparativeSeriesRows && xScale && yScale) {
-      comparativeLineAnimation.set(comparativeSeriesRows, now)
-    } else {
-      comparativeLineAnimation.set([], now, { instant: true })
-    }
-
-    lineAnimationLoop.start()
-  }
-
-  $: {
-    animatedComparativePoints.set(comparativePointsVisible ? comparativeSeriesRows : [])
   }
 </script>
 
