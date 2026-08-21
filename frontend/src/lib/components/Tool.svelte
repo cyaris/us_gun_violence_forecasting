@@ -203,8 +203,15 @@
 
   function syncViewportSize() {
     let devicePixelRatio = window.devicePixelRatio
+    let dprChanged = lastDevicePixelRatio != null && devicePixelRatio !== lastDevicePixelRatio
+    // Browser zoom scales the reported viewport by the inverse DPR ratio; a real viewport change
+    // (e.g. moving to a monitor with a different scale factor) does not match that prediction.
+    let zoomOnly =
+      dprChanged &&
+      windowWidth != null &&
+      Math.abs(window.innerWidth - (windowWidth * lastDevicePixelRatio) / devicePixelRatio) <= 2
 
-    if (lastDevicePixelRatio == null || devicePixelRatio === lastDevicePixelRatio) {
+    if (!zoomOnly) {
       windowWidth = window.innerWidth
       viewportHeight = window.innerHeight
     }
