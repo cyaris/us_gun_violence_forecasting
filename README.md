@@ -87,7 +87,7 @@ By default, this writes:
 frontend/src/lib/static/data.json
 ```
 
-The generated `data.json` is committed so clean GitHub Actions checkouts can build the Rollup bundle. Regenerate and
+The repository commits generated `data.json` so clean GitHub Actions checkouts can build the Rollup bundle. Regenerate and
 commit it after changing the source CSV or forecast settings.
 
 Useful options:
@@ -115,7 +115,7 @@ Run the dev server:
 npm run dev
 ```
 
-The Vite dev server is configured to use port `3000`.
+The Vite dev server listens on port `3000`.
 
 ## Frontend Commands
 
@@ -156,15 +156,16 @@ Original incident data is credited to the non-profit <a href="https://www.gunvio
 ## Notes
 
 - `backend/all-shootings-2014-2023.csv` is a local source data artifact and is not committed.
-- `frontend/src/lib/static/data.json` is generated from the local source data and committed for clean Rollup builds.
+- The backend generates `frontend/src/lib/static/data.json` from local source data, and the repository commits it for
+  clean Rollup builds.
 - The backend fits one Prophet model per observed year, so regenerating data can take time.
 - `npm run build` may show warnings from third-party `svelte-lib` or `svelte-select` components; those are dependency warnings rather than local component errors.
 
 ## GitHub Actions Workflows
 
-These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. Shared workflow behavior,
-inputs, and secrets are documented in the
-[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows).
+These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. The
+[shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows) documents shared
+behavior, inputs, and secrets.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
@@ -173,14 +174,18 @@ The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls th
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow runs on pushes to `dev` and `master` and on manual dispatch, then calls the
-[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with
-`working-directory: frontend`. Shared CI skips `npm run build`; run local production builds after regenerating
-`frontend/src/lib/static/data.json` when forecast data changes. Uploads run on `dev` and `master` pushes or manual
-dispatches to build the frontend rollup bundle and upload it to `s3://cyaris.github.io/us_gun_violence_forecasting/`.
-`master` runs upload unprefixed production bundles, and `dev` runs upload staged `test_bundle.*` names. The workflow
-checks out `svelte-lib` at its latest `main` commit as a local dependency. The shared workflow resolves that branch to
-an exact commit SHA before checkout.
+The `Rollup` workflow calls the
+[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these local details:
+
+- triggers: pushes to `dev` and `master`, plus manual dispatch
+- working directory: `frontend`
+- skipped shared-CI command: `npm run build`
+- destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
+- production naming: unprefixed bundles from `master`
+- staged naming: `test_bundle.*` from `dev`
+- local dependency: latest `svelte-lib` `main` ref, resolved to an exact SHA
+
+Run a local production build after regenerating `frontend/src/lib/static/data.json` when forecast data changes.
 
 The upload refreshes cache metadata in place for
 `us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
