@@ -689,7 +689,7 @@
                     y2={plotMargin.top}
                   />
                   <text
-                    class="non-reactive fill-chart-1 text-sm italic"
+                    class="non-reactive fill-chart-ink text-sm italic"
                     x={forecastLabelX}
                     y={forecastLabelY}
                     text-anchor="middle"
@@ -708,21 +708,21 @@
                   overflow="hidden"
                 >
                   <path
-                    class="stroke-chart-1"
+                    class="stroke-chart-ink"
                     fill="transparent"
                     opacity={0.7}
                     d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0"
                   />
                   {#each xTicks as xTick (xTick)}
                     <g transform="translate({xScale(xTick) + axisStrokeInset}, {0})">
-                      <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
+                      <line class="stroke-chart-ink" opacity={0.7} y1={0.5} y2={xTickHeight} />
                     </g>
                   {/each}
                 </svg>
                 <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
                   {#each xTickLabels as xTick (xTick)}
                     <text
-                      class="fill-chart-1"
+                      class="fill-chart-ink"
                       x={xScale(xTick)}
                       y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
                       text-anchor="middle"
@@ -743,7 +743,7 @@
               {#each legendItems as item, i (item.key)}
                 <g transform="translate(0, {i * 16})">
                   {#if !item.visible}
-                    <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                    <text class="fill-chart-ink" x={8} dy="0.32em" text-anchor="middle">∅</text>
                   {:else if item.aggregated}
                     <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
                   {:else}
@@ -756,7 +756,7 @@
                       r={4}
                     />
                   {/if}
-                  <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                  <text class="fill-chart-ink" x={24} dy="0.32em">{item.label}</text>
                 </g>
               {/each}
             </g>
@@ -785,12 +785,12 @@
           >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-              <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
+              <path class="stroke-chart-ink" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
-                  <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
+                  <line class="stroke-chart-ink" opacity={0.7} x1={-xTickHeight} x2={0} />
                   {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
-                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                    <text class="fill-chart-ink" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                       {yTick.toLocaleString()}
                     </text>
                   {/if}
@@ -798,7 +798,7 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-chart-ink text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
@@ -819,7 +819,7 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-chart-ink text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
               y={chartLayout.height - 18}
@@ -928,7 +928,7 @@
             <thead>
               <tr>
                 <th
-                  class="border-b-[3.5px] border-b-chart-1 pb-[5px] text-left align-bottom [border-bottom-style:solid]"
+                  class="border-b-[3.5px] border-b-chart-ink pb-[5px] text-left align-bottom [border-bottom-style:solid]"
                 >
                   <div class="flex items-center gap-2 font-medium">
                     Metrics
