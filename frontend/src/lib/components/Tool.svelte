@@ -161,7 +161,7 @@
   let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
-  let pinnedYear = null
+  let comparativeYear = null
 
   let numObservations = observedRows.length
 
@@ -188,7 +188,6 @@
     return x >= startX && x <= endX
   }
 
-  $: comparativeYear = pinnedYear ?? hoverYear
   $: comparing = comparativeYear != null
   $: comparativePredictionColumn = comparing ? predictionColumn(comparativeYear) : null
   $: comparativeYearEndX =
@@ -196,12 +195,6 @@
       ? Math.min(xScale(parseLocalDate(`${comparativeYear + 1}-01-01`)), xAxisWidth)
       : null
   $: comparativeHighlightWidth = comparing && comparativeYearEndX != null ? comparativeYearEndX : 0
-  $: hoveredCandidateYear = pinnedYear != null && hoverYear != null && hoverYear != pinnedYear ? hoverYear : null
-  $: hoveredCandidateYearEndX =
-    hoveredCandidateYear != null && xScale
-      ? Math.min(xScale(parseLocalDate(`${hoveredCandidateYear + 1}-01-01`)), xAxisWidth)
-      : null
-  $: hoveredCandidateHighlightWidth = hoveredCandidateYearEndX ?? 0
 
   $: {
     observationSeriesRows = buildSeriesRows({
@@ -440,7 +433,7 @@
     let x = xScale(date)
     let leftX = i == 0 ? 0 : (xScale(xTicks[i - 1]) + x) / 2
     let rightX = i == xTicks.length - 1 ? xAxisWidth : (x + xScale(xTicks[i + 1])) / 2
-    let highlighted = year == comparativeYear || year == hoveredCandidateYear
+    let highlighted = year == comparativeYear + 1 || year == hoverYear + 1
 
     return {
       date,
@@ -448,13 +441,15 @@
       x,
       hitX: leftX - x,
       hitWidth: rightX - leftX,
-      interactive: year < latestObservedYear,
+      comparativeYear: year - 1,
+      interactive: year > minYear && year <= latestObservedYear,
       highlighted,
       visible:
+        xTickYearStep == 1 ||
         highlighted ||
         (i % xTickYearStep == 0 &&
-          (comparativeYear == null || Math.abs(year - comparativeYear) != 1) &&
-          (hoveredCandidateYear == null || Math.abs(year - hoveredCandidateYear) != 1))
+          (comparativeYear == null || Math.abs(year - (comparativeYear + 1)) >= xTickYearStep) &&
+          (hoverYear == null || Math.abs(year - (hoverYear + 1)) >= xTickYearStep))
     }
   })
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
@@ -554,14 +549,16 @@
     return year >= minYear && year < latestObservedYear ? year : null
   }
 
-  function togglePinnedYear(year) {
+  function toggleComparativeYear(year) {
     if (year == null) return
 
-    pinnedYear = pinnedYear == year ? null : year
+    comparativeYear = comparativeYear == year ? null : year
   }
 
   function handleHover(e) {
-    hoverYear = comparativeYearAtPointer(e)
+    let year = comparativeYearAtPointer(e)
+
+    if (year != hoverYear) hoverYear = year
 
     hoverPoint = getCanvasPointerPoint(linesCanvas, e)
   }
@@ -628,7 +625,7 @@
           class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
-          {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
+          {comparing ? "Comparing Historical Forecasts..." : "Click a Year to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && chartLayout.height}
@@ -705,9 +702,16 @@
                   role="presentation"
                   on:mousemove={handleHover}
                   on:mouseleave={handleHoverLeave}
-                  on:click={e => togglePinnedYear(comparativeYearAtPointer(e))}
+                  on:click={e => toggleComparativeYear(comparativeYearAtPointer(e))}
                 >
-                  <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
+                  <rect
+                    class="cursor-pointer"
+                    x={0}
+                    y={plotMargin.top}
+                    width={xAxisWidth}
+                    height={plotHeight}
+                    fill="transparent"
+                  />
                   {#if comparing}
                     <path
                       class="non-reactive"
@@ -715,16 +719,6 @@
                       d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
                       stroke="black"
-                      stroke-width={1}
-                    />
-                  {/if}
-                  {#if hoveredCandidateYear != null}
-                    <path
-                      class="non-reactive"
-                      data-hover-highlight
-                      d="M0,{plotMargin.top}H{hoveredCandidateHighlightWidth}V{plotBottomY}H0"
-                      fill="transparent"
-                      stroke={chartColors.observations}
                       stroke-width={1}
                     />
                   {/if}
@@ -783,19 +777,20 @@
                     <g transform="translate({item.x}, {0})">
                       {#if item.interactive}
                         <g
+                          class="cursor-pointer"
                           role="button"
                           tabindex={0}
                           aria-label="Compare the model trained through {item.year}"
-                          aria-pressed={pinnedYear == item.year}
-                          on:mouseenter={() => (hoverYear = item.year)}
+                          aria-pressed={comparativeYear == item.comparativeYear}
+                          on:mouseenter={() => (hoverYear = item.comparativeYear)}
                           on:mouseleave={() => (hoverYear = null)}
-                          on:focus={() => (hoverYear = item.year)}
+                          on:focus={() => (hoverYear = item.comparativeYear)}
                           on:blur={() => (hoverYear = null)}
-                          on:click={() => togglePinnedYear(item.year)}
+                          on:click={() => toggleComparativeYear(item.comparativeYear)}
                           on:keydown={e => {
                             if (e.key == "Enter" || e.key == " ") {
                               e.preventDefault()
-                              togglePinnedYear(item.year)
+                              toggleComparativeYear(item.comparativeYear)
                             }
                           }}
                         >
