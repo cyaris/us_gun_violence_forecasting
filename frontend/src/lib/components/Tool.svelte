@@ -47,17 +47,17 @@
   let yScale
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let plotMargin = { top: 20, right: 20, bottom: 79, left: 79 }
-  let yAxisMaskWidth = plotMargin.left - axisStrokeInset
+  let plotMargin
+  let yAxisMaskWidth
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
   let xTickLabelSize = 14
-  let yAxisTitleLeftPadding = 8
+  let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
-  let yAxisInfoX = 12 + yAxisTitleLeftPadding
+  let yAxisInfoX
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
   let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
@@ -151,8 +151,8 @@
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
   let checkboxFilterItems = [
-    { key: "displayObservations", label: "Display Daily Observations" },
-    { key: "displayModels", label: "Display Time Series Models" }
+    { key: "displayObservations", label: "Observations" },
+    { key: "displayModels", label: "Time Series Models" }
   ]
 
   let forecastDayCount = forecastRows.length
@@ -165,6 +165,12 @@
   let numObservations = observedRows.length
 
   let plotGroup
+
+  $: plotMargin =
+    windowWidth >= 900 ? { top: 20, right: 20, bottom: 79, left: 79 } : { top: 12, right: 12, bottom: 71, left: 74 }
+  $: yAxisMaskWidth = plotMargin.left - axisStrokeInset
+  $: yAxisTitleLeftPadding = windowWidth >= 900 ? 8 : 3
+  $: yAxisInfoX = 12 + yAxisTitleLeftPadding
 
   function cachedComparativeSeriesRows(field, range) {
     let key = `${field}:${range}`
@@ -299,7 +305,7 @@
   $: legendItems = [
     {
       key: "observations",
-      label: "Daily Observations",
+      label: "Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
       aggregated: sliderValue.movingAverageWindow > 0
@@ -423,6 +429,7 @@
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
+  $: xAxisTitleBottomOffset = windowWidth >= 900 ? 18 : 10
   // the distance from the x-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: xAxisTitleIconOffset = windowWidth >= 900 ? 34 : 31.5
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
@@ -822,7 +829,7 @@
               class="non-reactive fill-chart-ink text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
-              y={chartLayout.height - 18}
+              y={chartLayout.height - xAxisTitleBottomOffset}
             >
               Date
             </text>
@@ -831,7 +838,7 @@
                 title={tooltipText.xAxis}
                 tooltipClasses="max-w-80"
                 cx={xAxisTitleX + xAxisTitleIconOffset}
-                cy={chartLayout.height - 24}
+                cy={chartLayout.height - xAxisTitleBottomOffset - 6}
               />
             </g>
           </svg>
