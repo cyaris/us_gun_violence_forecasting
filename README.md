@@ -182,7 +182,7 @@ The `Rollup` workflow calls the
 - skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
 - production naming: unprefixed bundles from `master`
-- staged naming: `test_bundle.*` from `dev`
+- staged naming: `dev_bundle.*` from `dev`
 - local dependency: `svelte-lib` `dev` for staged runs and `main` for production runs, resolved to an exact SHA
 
 Run a local production build after regenerating `frontend/src/lib/static/data.json` when forecast data changes.
