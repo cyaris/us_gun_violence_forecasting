@@ -183,7 +183,7 @@ The `Rollup` workflow calls the
 - destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
 - production naming: unprefixed bundles from `master`
 - staged naming: `test_bundle.*` from `dev`
-- local dependency: latest `svelte-lib` `main` ref, resolved to an exact SHA
+- local dependency: `svelte-lib` `dev` for staged runs and `main` for production runs, resolved to an exact SHA
 
 Run a local production build after regenerating `frontend/src/lib/static/data.json` when forecast data changes.
 
@@ -192,11 +192,12 @@ The upload refreshes cache metadata in place for
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for `cyaris.github.io`, and on
-manual dispatch, then calls the
+The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for
+`cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
-watches `svelte-lib`'s `main` branch and, when it has moved since the last check, dispatches this repository's own
-`Rollup` workflow on `master` so the build picks up the new upstream commit without waiting for a push here.
+watches `svelte-lib`'s `dev` and `main` branch commits independently. When either branch moves, it dispatches this
+repository's `Rollup` workflow on the matching `dev` or `master` branch so staged and production bundles pick up the
+corresponding upstream code without waiting for a push here.
 
 ### `.github/workflows/auto-release.yml`
 
