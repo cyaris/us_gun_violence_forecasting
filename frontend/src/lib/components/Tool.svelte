@@ -630,7 +630,7 @@
       </div>
       {#if svgWidth && chartLayout.height}
         <div
-          class="relative mx-auto w-full overflow-hidden border border-solid border-chart-ink"
+          class="relative mx-auto w-full overflow-hidden border border-solid border-chart-line"
           style="max-width:{chartLayout.viewportWidth}px"
         >
           <div
@@ -644,23 +644,21 @@
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={chartLayout.height}>
                 <g transform="translate({plotMargin.left}, {0})">
                   <rect
-                    class="non-reactive fill-chart-ink"
+                    class="non-reactive fill-chart-band"
                     x={forecastStartX}
                     y={plotMargin.top}
                     width={xAxisWidth - forecastStartX}
                     height={plotHeight}
-                    opacity={0.06}
                   />
                 </g>
                 {#if comparing}
                   <g transform="translate({plotMargin.left}, {0})">
                     <rect
-                      class="non-reactive fill-chart-ink"
+                      class="non-reactive fill-chart-band-subtle"
                       x={0}
                       y={plotMargin.top}
                       width={comparativeHighlightWidth}
                       height={plotHeight}
-                      fill-opacity={0.04}
                     />
                   </g>
                 {/if}
@@ -712,7 +710,7 @@
                   />
                   {#if comparing}
                     <path
-                      class="non-reactive stroke-chart-ink"
+                      class="non-reactive stroke-chart-line"
                       data-comparative-highlight
                       d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
@@ -721,7 +719,7 @@
                   {/if}
                   {#if hoveredComparisonYear != null}
                     <path
-                      class="non-reactive stroke-chart-ink"
+                      class="non-reactive stroke-chart-line"
                       data-hover-highlight
                       d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
@@ -729,7 +727,7 @@
                     />
                   {/if}
                   <line
-                    class="non-reactive stroke-chart-ink"
+                    class="non-reactive stroke-chart-line"
                     stroke-dasharray="4 4"
                     x1={forecastStartX}
                     x2={forecastStartX}
@@ -737,7 +735,7 @@
                     y2={plotBottomY}
                   />
                   <line
-                    class="non-reactive stroke-chart-ink"
+                    class="non-reactive stroke-chart-line"
                     stroke-dasharray="1 4"
                     stroke-linecap="round"
                     x1={forecastStartX}
@@ -746,7 +744,7 @@
                     y2={plotMargin.top}
                   />
                   <text
-                    class="non-reactive fill-chart-ink text-sm italic"
+                    class="non-reactive fill-ui-text text-sm italic"
                     x={forecastLabelX}
                     y={forecastLabelY}
                     text-anchor="middle"
@@ -764,11 +762,11 @@
                   height={xTickHeight + 1}
                   overflow="hidden"
                 >
-                  <path class="stroke-chart-ink" fill="transparent" d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0" />
+                  <path class="stroke-chart-line" fill="transparent" d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0" />
                   {#each xTickLabelItems as item (item.date)}
                     <g transform="translate({item.x + axisStrokeInset}, {0})">
                       <line
-                        class="stroke-chart-ink"
+                        class="stroke-chart-line"
                         stroke-width={item.highlighted ? 2 : 1}
                         y1={0.5}
                         y2={xTickHeight}
@@ -809,7 +807,7 @@
                             fill="transparent"
                           />
                           <text
-                            class="pointer-events-none fill-chart-ink"
+                            class="pointer-events-none fill-ui-text"
                             class:font-bold={item.highlighted}
                             y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
                             text-anchor="middle"
@@ -819,7 +817,7 @@
                         </g>
                       {:else}
                         <text
-                          class="non-reactive fill-chart-ink"
+                          class="non-reactive fill-ui-text"
                           class:hidden={!item.visible}
                           y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
                           text-anchor="middle"
@@ -842,7 +840,7 @@
               {#each legendItems as item, i (item.key)}
                 <g transform="translate(0, {i * 16})">
                   {#if !item.visible}
-                    <text class="fill-chart-ink" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                    <text class="fill-ui-text" x={8} dy="0.32em" text-anchor="middle">∅</text>
                   {:else if item.aggregated}
                     <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
                   {:else}
@@ -855,7 +853,7 @@
                       r={4}
                     />
                   {/if}
-                  <text class="fill-chart-ink" x={24} dy="0.32em">{item.label}</text>
+                  <text class="fill-ui-text" x={24} dy="0.32em">{item.label}</text>
                 </g>
               {/each}
             </g>
@@ -884,12 +882,12 @@
           >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-              <path class="stroke-chart-ink" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
+              <path class="stroke-chart-line" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
-                  <line class="stroke-chart-ink" x1={-xTickHeight} x2={0} />
+                  <line class="stroke-chart-line" x1={-xTickHeight} x2={0} />
                   {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
-                    <text class="fill-chart-ink" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                    <text class="fill-ui-text" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                       {yTick.toLocaleString()}
                     </text>
                   {/if}
@@ -897,7 +895,7 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-chart-ink text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
@@ -918,7 +916,7 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-chart-ink text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
               y={chartLayout.height - xAxisTitleBottomOffset}
@@ -1027,7 +1025,7 @@
             <thead>
               <tr>
                 <th
-                  class="border-b-[3.5px] border-b-chart-ink pb-[5px] text-left align-bottom [border-bottom-style:solid]"
+                  class="border-b-[3.5px] border-b-chart-line pb-[5px] text-left align-bottom [border-bottom-style:solid]"
                 >
                   <div class="flex items-center gap-2 font-medium">
                     Metrics
