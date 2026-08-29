@@ -195,6 +195,12 @@
       ? Math.min(xScale(parseLocalDate(`${comparativeYear + 1}-01-01`)), xAxisWidth)
       : null
   $: comparativeHighlightWidth = comparing && comparativeYearEndX != null ? comparativeYearEndX : 0
+  $: hoveredComparisonYear = hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
+  $: hoveredComparisonYearEndX =
+    hoveredComparisonYear != null && xScale
+      ? Math.min(xScale(parseLocalDate(`${hoveredComparisonYear + 1}-01-01`)), xAxisWidth)
+      : null
+  $: hoveredComparisonHighlightWidth = hoveredComparisonYearEndX ?? 0
 
   $: {
     observationSeriesRows = buildSeriesRows({
@@ -433,7 +439,9 @@
     let x = xScale(date)
     let leftX = i == 0 ? 0 : (xScale(xTicks[i - 1]) + x) / 2
     let rightX = i == xTicks.length - 1 ? xAxisWidth : (x + xScale(xTicks[i + 1])) / 2
-    let highlighted = year == comparativeYear + 1 || year == hoverYear + 1
+    let comparative = year == comparativeYear + 1
+    let hovered = year == hoverYear + 1
+    let highlighted = comparative || hovered
 
     return {
       date,
@@ -446,7 +454,8 @@
       highlighted,
       visible:
         xTickYearStep == 1 ||
-        highlighted ||
+        hovered ||
+        (comparative && (hoverYear == null || Math.abs(year - (hoverYear + 1)) >= xTickYearStep)) ||
         (i % xTickYearStep == 0 &&
           (comparativeYear == null || Math.abs(year - (comparativeYear + 1)) >= xTickYearStep) &&
           (hoverYear == null || Math.abs(year - (hoverYear + 1)) >= xTickYearStep))
@@ -722,6 +731,16 @@
                       stroke-width={1}
                     />
                   {/if}
+                  {#if hoveredComparisonYear != null}
+                    <path
+                      class="non-reactive"
+                      data-hover-highlight
+                      d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
+                      fill="transparent"
+                      stroke={chartColors.observations}
+                      stroke-width={1}
+                    />
+                  {/if}
                   <line
                     class="non-reactive"
                     stroke="black"
@@ -778,6 +797,9 @@
                       {#if item.interactive}
                         <g
                           class="cursor-pointer"
+                          class:reactive={item.visible}
+                          class:non-reactive={!item.visible}
+                          class:hidden={!item.visible}
                           role="button"
                           tabindex={0}
                           aria-label="Compare the model trained through {item.year}"
@@ -801,20 +823,19 @@
                             height={xTickVerticalOffset + xTickLabelBandHeight}
                             fill="transparent"
                           />
-                          {#if item.visible}
-                            <text
-                              class="pointer-events-none fill-chart-ink"
-                              class:font-bold={item.highlighted}
-                              y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
-                              text-anchor="middle"
-                            >
-                              {item.year}
-                            </text>
-                          {/if}
+                          <text
+                            class="pointer-events-none fill-chart-ink"
+                            class:font-bold={item.highlighted}
+                            y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
+                            text-anchor="middle"
+                          >
+                            {item.year}
+                          </text>
                         </g>
-                      {:else if item.visible}
+                      {:else}
                         <text
-                          class="fill-chart-ink"
+                          class="non-reactive fill-chart-ink"
+                          class:hidden={!item.visible}
                           y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
                           text-anchor="middle"
                         >
