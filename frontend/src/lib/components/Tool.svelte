@@ -630,7 +630,7 @@
       </div>
       {#if svgWidth && chartLayout.height}
         <div
-          class="relative mx-auto w-full overflow-hidden border border-solid border-black"
+          class="relative mx-auto w-full overflow-hidden border border-solid border-chart-ink"
           style="max-width:{chartLayout.viewportWidth}px"
         >
           <div
@@ -644,24 +644,22 @@
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={chartLayout.height}>
                 <g transform="translate({plotMargin.left}, {0})">
                   <rect
-                    class="non-reactive"
+                    class="non-reactive fill-chart-ink"
                     x={forecastStartX}
                     y={plotMargin.top}
                     width={xAxisWidth - forecastStartX}
                     height={plotHeight}
-                    fill="black"
                     opacity={0.06}
                   />
                 </g>
                 {#if comparing}
                   <g transform="translate({plotMargin.left}, {0})">
                     <rect
-                      class="non-reactive"
+                      class="non-reactive fill-chart-ink"
                       x={0}
                       y={plotMargin.top}
                       width={comparativeHighlightWidth}
                       height={plotHeight}
-                      fill="black"
                       fill-opacity={0.04}
                     />
                   </g>
@@ -714,27 +712,24 @@
                   />
                   {#if comparing}
                     <path
-                      class="non-reactive"
+                      class="non-reactive stroke-chart-ink"
                       data-comparative-highlight
                       d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
-                      stroke="black"
                       stroke-width={1}
                     />
                   {/if}
                   {#if hoveredComparisonYear != null}
                     <path
-                      class="non-reactive"
+                      class="non-reactive stroke-chart-ink"
                       data-hover-highlight
                       d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
-                      stroke={chartColors.observations}
                       stroke-width={1}
                     />
                   {/if}
                   <line
-                    class="non-reactive"
-                    stroke="black"
+                    class="non-reactive stroke-chart-ink"
                     stroke-dasharray="4 4"
                     x1={forecastStartX}
                     x2={forecastStartX}
@@ -742,8 +737,7 @@
                     y2={plotBottomY}
                   />
                   <line
-                    class="non-reactive"
-                    stroke="black"
+                    class="non-reactive stroke-chart-ink"
                     stroke-dasharray="1 4"
                     stroke-linecap="round"
                     x1={forecastStartX}
@@ -770,17 +764,11 @@
                   height={xTickHeight + 1}
                   overflow="hidden"
                 >
-                  <path
-                    class="stroke-chart-ink"
-                    fill="transparent"
-                    opacity={0.7}
-                    d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0"
-                  />
+                  <path class="stroke-chart-ink" fill="transparent" d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0" />
                   {#each xTickLabelItems as item (item.date)}
                     <g transform="translate({item.x + axisStrokeInset}, {0})">
                       <line
                         class="stroke-chart-ink"
-                        opacity={0.7}
                         stroke-width={item.highlighted ? 2 : 1}
                         y1={0.5}
                         y2={xTickHeight}
@@ -896,10 +884,10 @@
           >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-              <path class="stroke-chart-ink" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
+              <path class="stroke-chart-ink" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
-                  <line class="stroke-chart-ink" opacity={0.7} x1={-xTickHeight} x2={0} />
+                  <line class="stroke-chart-ink" x1={-xTickHeight} x2={0} />
                   {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
                     <text class="fill-chart-ink" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                       {yTick.toLocaleString()}
