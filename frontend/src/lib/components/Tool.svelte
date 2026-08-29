@@ -439,9 +439,6 @@
     let x = xScale(date)
     let leftX = i == 0 ? 0 : (xScale(xTicks[i - 1]) + x) / 2
     let rightX = i == xTicks.length - 1 ? xAxisWidth : (x + xScale(xTicks[i + 1])) / 2
-    let comparative = year == comparativeYear + 1
-    let hovered = year == hoverYear + 1
-    let highlighted = comparative || hovered
 
     return {
       date,
@@ -451,14 +448,8 @@
       hitWidth: rightX - leftX,
       comparativeYear: year - 1,
       interactive: year > minYear && year <= latestObservedYear,
-      highlighted,
-      visible:
-        xTickYearStep == 1 ||
-        hovered ||
-        (comparative && (hoverYear == null || Math.abs(year - (hoverYear + 1)) >= xTickYearStep)) ||
-        (i % xTickYearStep == 0 &&
-          (comparativeYear == null || Math.abs(year - (comparativeYear + 1)) >= xTickYearStep) &&
-          (hoverYear == null || Math.abs(year - (hoverYear + 1)) >= xTickYearStep))
+      highlighted: year == comparativeYear + 1 || year == hoverYear + 1,
+      visible: xTickYearStep == 1 || i % xTickYearStep == 0
     }
   })
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
@@ -785,9 +776,15 @@
                     opacity={0.7}
                     d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0"
                   />
-                  {#each xTicks as xTick (xTick)}
-                    <g transform="translate({xScale(xTick) + axisStrokeInset}, {0})">
-                      <line class="stroke-chart-ink" opacity={0.7} y1={0.5} y2={xTickHeight} />
+                  {#each xTickLabelItems as item (item.date)}
+                    <g transform="translate({item.x + axisStrokeInset}, {0})">
+                      <line
+                        class="stroke-chart-ink"
+                        opacity={0.7}
+                        stroke-width={item.highlighted ? 2 : 1}
+                        y1={0.5}
+                        y2={xTickHeight}
+                      />
                     </g>
                   {/each}
                 </svg>
