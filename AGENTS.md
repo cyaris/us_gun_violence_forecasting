@@ -10,4 +10,5 @@
 ## Rollup Delivery
 
 - Project-specific Rollup inputs include the S3 prefix, bundle file list, and metadata refresh file. The shared workflow
-  resolves the latest `svelte-lib` `main` ref to an exact commit SHA during each run.
+  resolves `svelte-lib` from `dev` for dev runs and from `main` for production runs, pinning the selected branch to an
+  exact commit SHA during each run.

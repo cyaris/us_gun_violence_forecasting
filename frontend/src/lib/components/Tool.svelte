@@ -30,11 +30,9 @@
   let forecastRows = baseRows.filter(d => d.is_forecast)
   let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
-  let observedVictimsColumn = "observed_victims"
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
-  let overallPredictionColumn = predictionColumn(latestObservedYear)
 
   let windowWidth
   let viewportHeight
@@ -47,26 +45,24 @@
   let yScale
   let xAxisWidth
   // margins around the plot, matching the proportions of the original d3 project.
-  let plotMargin = { top: 20, right: 20, bottom: 79, left: 79 }
-  let yAxisMaskWidth = plotMargin.left - axisStrokeInset
+  let plotMargin
+  let yAxisMaskWidth
   // the height of the x axis ticks.
   let xTickHeight = 10
   // the vertical distance between each xTick and xTick label.
   let xTickVerticalOffset = 8.5
   // the font size for the x tick labels.
   let xTickLabelSize = 14
-  let yAxisTitleLeftPadding = 8
+  let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
-  let yAxisInfoX = 12 + yAxisTitleLeftPadding
+  let yAxisInfoX
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
-  let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
   let chartLayout = { viewportWidth: 0, height: 0 }
 
   let chartRows = baseRows
 
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
-  let tweenTiming = { duration: 600, easing: cubicInOut }
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
@@ -126,7 +122,7 @@
 
   let animatedChartScene = tweened(
     { comparativePointRows: [], lineRows: { comparative: [], observations: [], timeSeries: [] }, yDomain: [0, 1] },
-    { interpolate: createChartSceneInterpolator, ...tweenTiming }
+    { duration: 600, easing: cubicInOut, interpolate: createChartSceneInterpolator }
   )
 
   let selectItems = [
@@ -150,21 +146,20 @@
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
-  let checkboxFilterItems = [
-    { key: "displayObservations", label: "Display Daily Observations" },
-    { key: "displayModels", label: "Display Time Series Models" }
-  ]
-
   let forecastDayCount = forecastRows.length
-  let forecastStartDate = forecastRows[0]?.date
 
   let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
-
-  let numObservations = observedRows.length
+  let comparativeYear = null
 
   let plotGroup
+
+  $: plotMargin =
+    windowWidth >= 900 ? { top: 20, right: 20, bottom: 79, left: 79 } : { top: 12, right: 12, bottom: 71, left: 74 }
+  $: yAxisMaskWidth = plotMargin.left - axisStrokeInset
+  $: yAxisTitleLeftPadding = windowWidth >= 900 ? 8 : 3
+  $: yAxisInfoX = 12 + yAxisTitleLeftPadding
 
   function cachedComparativeSeriesRows(field, range) {
     let key = `${field}:${range}`
@@ -181,22 +176,26 @@
     return x >= startX && x <= endX
   }
 
-  $: comparing = hoverYear != null && hoverYear < latestObservedYear
-  $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
-  $: hoverYearEndX =
-    hoverYear != null && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : null
-  $: hoverHighlightWidth = comparing && hoverYearEndX != null ? hoverYearEndX : 0
+  function comparisonHighlightWidth(year) {
+    return year != null && xScale ? Math.min(xScale(parseLocalDate(`${year + 1}-01-01`)), xAxisWidth) : 0
+  }
+
+  $: comparing = comparativeYear != null
+  $: comparativePredictionColumn = comparing ? predictionColumn(comparativeYear) : null
+  $: comparativeHighlightWidth = comparisonHighlightWidth(comparativeYear)
+  $: hoveredComparisonYear = hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
+  $: hoveredComparisonHighlightWidth = comparisonHighlightWidth(hoveredComparisonYear)
 
   $: {
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
-      field: observedVictimsColumn,
+      field: "observed_victims",
       range: sliderValue.movingAverageWindow,
       observedOnly: true
     })
     overallModelSeriesRows = buildSeriesRows({
       rows: chartRows,
-      field: overallPredictionColumn,
+      field: predictionColumn(latestObservedYear),
       range: sliderValue.movingAverageWindow
     })
   }
@@ -299,7 +298,7 @@
   $: legendItems = [
     {
       key: "observations",
-      label: "Daily Observations",
+      label: "Observations",
       color: chartColors.observations,
       visible: checkboxFilters.displayObservations,
       aggregated: sliderValue.movingAverageWindow > 0
@@ -315,7 +314,7 @@
       key: "comparativeModel",
       label: "Comparative Model",
       color: chartColors.comparativeModel,
-      visible: checkboxFilters.displayModels && hoverYear != null && hoverYear < latestObservedYear,
+      visible: checkboxFilters.displayModels && comparing,
       aggregated: sliderValue.movingAverageWindow > 0
     }
   ]
@@ -327,7 +326,7 @@
   $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
   $: lineVisibility = {
-    comparative: comparing && checkboxFilters.displayModels && comparativePathVisible,
+    comparative: comparativePathVisible,
     observations: observationPathVisible,
     timeSeries: timeSeriesPathVisible
   }
@@ -411,7 +410,7 @@
   $: yAxisCenterY = chartLayout.height / 2
   // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
-  $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
+  $: forecastStartX = xScale ? xScale(parseLocalDate(forecastRows[0]?.date)) : 0
   $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
   $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
   $: forecastLabelY = forecastLabelRotated ? plotMargin.top + plotHeight / 2 : plotMargin.top + 22
@@ -419,21 +418,25 @@
   $: xTicks = xScale
     ? Array.from({ length: maxYear - minYear + 1 }, (_, i) => parseLocalDate(`${minYear + i}-01-01`))
     : []
-  $: xTickLabels = xTicks.filter((_, i) => i % xTickYearStep == 0)
+  $: xTickLabelItems = xTicks.map((date, i) => {
+    let year = date.getFullYear()
+    let x = xScale(date)
+
+    return { date, year, x, visible: xTickYearStep == 1 || i % xTickYearStep == 0 }
+  })
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
+  $: xAxisTitleBottomOffset = windowWidth >= 900 ? 18 : 10
   // the distance from the x-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: xAxisTitleIconOffset = windowWidth >= 900 ? 34 : 31.5
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
     let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
-    let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
-      let pointIsPastHighlight = row =>
-        pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth
+      let pointIsPastHighlight = row => comparing && xScale(row.parsedDate) > comparativeHighlightWidth
       let pointIsNeverFaded = () => false
 
       let drawChartPointLayer = ({
@@ -452,7 +455,7 @@
           rows,
           width: svgWidth,
           height: chartLayout.height,
-          radius: pointRadius,
+          radius: 4,
           color,
           stroke,
           getX,
@@ -501,7 +504,7 @@
       forecastIndexedRows,
       minYear,
       latestObservedYear,
-      numObservations
+      numObservations: observedRows.length
     })
 
     modelMetricsCache.set(cacheKey, result)
@@ -509,13 +512,23 @@
     return result
   }
 
-  function handleHover(e) {
+  function comparativeYearAtPointer(e) {
     let [pointerX] = pointer(e, plotGroup)
     let year = xScale.invert(pointerX).getFullYear()
 
-    if (year != hoverYear) {
-      hoverYear = year
-    }
+    return year >= minYear && year < latestObservedYear ? year : null
+  }
+
+  function toggleComparativeYear(year) {
+    if (year == null) return
+
+    comparativeYear = comparativeYear == year ? null : year
+  }
+
+  function handleHover(e) {
+    let year = comparativeYearAtPointer(e)
+
+    if (year != hoverYear) hoverYear = year
 
     hoverPoint = getCanvasPointerPoint(linesCanvas, e)
   }
@@ -528,7 +541,7 @@
   $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
-  $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
+  $: comparativeMetrics = comparing ? cachedModelMetrics(comparativeYear, isFuture) : null
 
   $: metricRows = [
     { label: "Model Input", key: "input" },
@@ -562,32 +575,33 @@
         style="max-width:{chartLayout.viewportWidth}px"
       >
         <div class="flex flex-col items-start">
-          {#each checkboxFilterItems as checkbox (checkbox.key)}
-            <div class="flex items-center gap-x-2">
-              <CheckboxFilter
-                labelClasses="mb-0 font-medium"
-                label={checkbox.label}
-                value={checkboxFilters[checkbox.key]}
-                selection={checkboxFilters[checkbox.key] ? [true] : []}
-                deselection={checkboxFilters[checkbox.key] ? [] : [true]}
-                on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
-              />
-              {#if checkbox.tooltipKey}
-                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-80" />
-              {/if}
-            </div>
-          {/each}
+          <CheckboxFilter
+            labelClasses="mb-0 font-medium"
+            label="Observations"
+            value={checkboxFilters.displayObservations}
+            selection={checkboxFilters.displayObservations ? [true] : []}
+            deselection={checkboxFilters.displayObservations ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayObservations: !e.value })}
+          />
+          <CheckboxFilter
+            labelClasses="mb-0 font-medium"
+            label="Time Series Models"
+            value={checkboxFilters.displayModels}
+            selection={checkboxFilters.displayModels ? [true] : []}
+            deselection={checkboxFilters.displayModels ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayModels: !e.value })}
+          />
         </div>
         <span
           class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
-          {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
+          {comparing ? "Comparing Historical Forecasts..." : "Click a Region to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && chartLayout.height}
         <div
-          class="relative mx-auto w-full overflow-hidden border border-solid border-black"
+          class="relative mx-auto w-full overflow-hidden border border-solid border-chart-line"
           style="max-width:{chartLayout.viewportWidth}px"
         >
           <div
@@ -601,25 +615,21 @@
               <svg class="pointer-events-none absolute left-0 top-0 z-0" width={svgWidth} height={chartLayout.height}>
                 <g transform="translate({plotMargin.left}, {0})">
                   <rect
-                    class="non-reactive"
+                    class="non-reactive fill-chart-band"
                     x={forecastStartX}
                     y={plotMargin.top}
                     width={xAxisWidth - forecastStartX}
                     height={plotHeight}
-                    fill="black"
-                    opacity={0.06}
                   />
                 </g>
                 {#if comparing}
                   <g transform="translate({plotMargin.left}, {0})">
                     <rect
-                      class="non-reactive"
+                      class="non-reactive fill-chart-band-subtle"
                       x={0}
                       y={plotMargin.top}
-                      width={hoverHighlightWidth}
+                      width={comparativeHighlightWidth}
                       height={plotHeight}
-                      fill="black"
-                      fill-opacity={0.04}
                     />
                   </g>
                 {/if}
@@ -658,20 +668,36 @@
                   role="presentation"
                   on:mousemove={handleHover}
                   on:mouseleave={handleHoverLeave}
+                  on:click={e => toggleComparativeYear(comparativeYearAtPointer(e))}
                 >
-                  <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
+                  <rect
+                    class="cursor-pointer"
+                    x={0}
+                    y={plotMargin.top}
+                    width={xAxisWidth}
+                    height={plotHeight}
+                    fill="transparent"
+                  />
                   {#if comparing}
                     <path
-                      class="non-reactive"
-                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{plotBottomY}H0"
+                      class="non-reactive stroke-chart-line"
+                      data-comparative-highlight
+                      d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
-                      stroke="black"
+                      stroke-width={1}
+                    />
+                  {/if}
+                  {#if hoveredComparisonYear != null}
+                    <path
+                      class="non-reactive stroke-chart-line"
+                      data-hover-highlight
+                      d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
+                      fill="transparent"
                       stroke-width={1}
                     />
                   {/if}
                   <line
-                    class="non-reactive"
-                    stroke="black"
+                    class="non-reactive stroke-chart-line"
                     stroke-dasharray="4 4"
                     x1={forecastStartX}
                     x2={forecastStartX}
@@ -679,8 +705,7 @@
                     y2={plotBottomY}
                   />
                   <line
-                    class="non-reactive"
-                    stroke="black"
+                    class="non-reactive stroke-chart-line"
                     stroke-dasharray="1 4"
                     stroke-linecap="round"
                     x1={forecastStartX}
@@ -689,7 +714,7 @@
                     y2={plotMargin.top}
                   />
                   <text
-                    class="non-reactive fill-chart-1 text-sm italic"
+                    class="non-reactive fill-ui-text text-sm italic"
                     x={forecastLabelX}
                     y={forecastLabelY}
                     text-anchor="middle"
@@ -707,27 +732,23 @@
                   height={xTickHeight + 1}
                   overflow="hidden"
                 >
-                  <path
-                    class="stroke-chart-1"
-                    fill="transparent"
-                    opacity={0.7}
-                    d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0"
-                  />
-                  {#each xTicks as xTick (xTick)}
-                    <g transform="translate({xScale(xTick) + axisStrokeInset}, {0})">
-                      <line class="stroke-chart-1" opacity={0.7} y1={0.5} y2={xTickHeight} />
+                  <path class="stroke-chart-line" fill="transparent" d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0" />
+                  {#each xTickLabelItems as item (item.date)}
+                    <g transform="translate({item.x + axisStrokeInset}, {0})">
+                      <line class="stroke-chart-line" y1={0.5} y2={xTickHeight} />
                     </g>
                   {/each}
                 </svg>
                 <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
-                  {#each xTickLabels as xTick (xTick)}
+                  {#each xTickLabelItems as item (item.date)}
                     <text
-                      class="fill-chart-1"
-                      x={xScale(xTick)}
+                      class="fill-ui-text"
+                      class:hidden={!item.visible}
+                      x={item.x}
                       y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
                       text-anchor="middle"
                     >
-                      {xTick.getFullYear()}
+                      {item.year}
                     </text>
                   {/each}
                 </g>
@@ -743,7 +764,7 @@
               {#each legendItems as item, i (item.key)}
                 <g transform="translate(0, {i * 16})">
                   {#if !item.visible}
-                    <text class="fill-chart-1" x={8} dy="0.32em" text-anchor="middle">∅</text>
+                    <text class="fill-ui-text" x={8} dy="0.32em" text-anchor="middle">∅</text>
                   {:else if item.aggregated}
                     <line stroke={item.color} stroke-width={3.5} x1={0} x2={16} y1={0} y2={0} />
                   {:else}
@@ -756,7 +777,7 @@
                       r={4}
                     />
                   {/if}
-                  <text class="fill-chart-1" x={24} dy="0.32em">{item.label}</text>
+                  <text class="fill-ui-text" x={24} dy="0.32em">{item.label}</text>
                 </g>
               {/each}
             </g>
@@ -785,12 +806,12 @@
           >
             <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
-              <path class="stroke-chart-1" fill="transparent" opacity={0.7} d="M0,{plotMargin.top}V{plotBottomY}" />
+              <path class="stroke-chart-line" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
-                  <line class="stroke-chart-1" opacity={0.7} x1={-xTickHeight} x2={0} />
+                  <line class="stroke-chart-line" x1={-xTickHeight} x2={0} />
                   {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
-                    <text class="fill-chart-1" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
+                    <text class="fill-ui-text" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                       {yTick.toLocaleString()}
                     </text>
                   {/if}
@@ -798,7 +819,7 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
@@ -819,10 +840,10 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-chart-1 text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
               text-anchor="middle"
               x={xAxisTitleX}
-              y={chartLayout.height - 18}
+              y={chartLayout.height - xAxisTitleBottomOffset}
             >
               Date
             </text>
@@ -831,7 +852,7 @@
                 title={tooltipText.xAxis}
                 tooltipClasses="max-w-80"
                 cx={xAxisTitleX + xAxisTitleIconOffset}
-                cy={chartLayout.height - 24}
+                cy={chartLayout.height - xAxisTitleBottomOffset - 6}
               />
             </g>
           </svg>
@@ -928,7 +949,7 @@
             <thead>
               <tr>
                 <th
-                  class="border-b-[3.5px] border-b-chart-1 pb-[5px] text-left align-bottom [border-bottom-style:solid]"
+                  class="border-b-[3.5px] border-b-chart-line pb-[5px] text-left align-bottom [border-bottom-style:solid]"
                 >
                   <div class="flex items-center gap-2 font-medium">
                     Metrics
