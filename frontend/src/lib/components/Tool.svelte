@@ -161,6 +161,7 @@
   let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
+  let comparativeYear = null
 
   let numObservations = observedRows.length
 
@@ -187,11 +188,19 @@
     return x >= startX && x <= endX
   }
 
-  $: comparing = hoverYear != null && hoverYear < latestObservedYear
-  $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
-  $: hoverYearEndX =
-    hoverYear != null && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : null
-  $: hoverHighlightWidth = comparing && hoverYearEndX != null ? hoverYearEndX : 0
+  $: comparing = comparativeYear != null
+  $: comparativePredictionColumn = comparing ? predictionColumn(comparativeYear) : null
+  $: comparativeYearEndX =
+    comparativeYear != null && xScale
+      ? Math.min(xScale(parseLocalDate(`${comparativeYear + 1}-01-01`)), xAxisWidth)
+      : null
+  $: comparativeHighlightWidth = comparing && comparativeYearEndX != null ? comparativeYearEndX : 0
+  $: hoveredComparisonYear = comparing && hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
+  $: hoveredComparisonYearEndX =
+    hoveredComparisonYear != null && xScale
+      ? Math.min(xScale(parseLocalDate(`${hoveredComparisonYear + 1}-01-01`)), xAxisWidth)
+      : null
+  $: hoveredComparisonHighlightWidth = hoveredComparisonYearEndX ?? 0
 
   $: {
     observationSeriesRows = buildSeriesRows({
@@ -441,11 +450,11 @@
 
   $: {
     let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
-    let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
+    let pointLayerComparativeHighlightWidth = comparing ? comparativeHighlightWidth : null
 
     if (pointLayerReady) {
       let pointIsPastHighlight = row =>
-        pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth
+        pointLayerComparativeHighlightWidth != null && xScale(row.parsedDate) > pointLayerComparativeHighlightWidth
       let pointIsNeverFaded = () => false
 
       let drawChartPointLayer = ({
@@ -521,9 +530,21 @@
     return result
   }
 
-  function handleHover(e) {
+  function comparativeYearAtPointer(e) {
     let [pointerX] = pointer(e, plotGroup)
     let year = xScale.invert(pointerX).getFullYear()
+
+    return year >= minYear && year < latestObservedYear ? year : null
+  }
+
+  function toggleComparativeYear(year) {
+    if (year == null) return
+
+    comparativeYear = comparativeYear == year ? null : year
+  }
+
+  function handleHover(e) {
+    let year = comparativeYearAtPointer(e)
 
     if (year != hoverYear) hoverYear = year
 
@@ -538,7 +559,7 @@
   $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
-  $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
+  $: comparativeMetrics = comparing ? cachedModelMetrics(comparativeYear, isFuture) : null
 
   $: metricRows = [
     { label: "Model Input", key: "input" },
@@ -592,7 +613,7 @@
           class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
-          {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
+          {comparing ? "Comparing Historical Forecasts..." : "Click a Region to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && chartLayout.height}
@@ -624,7 +645,7 @@
                       class="non-reactive fill-chart-band-subtle"
                       x={0}
                       y={plotMargin.top}
-                      width={hoverHighlightWidth}
+                      width={comparativeHighlightWidth}
                       height={plotHeight}
                     />
                   </g>
@@ -664,13 +685,30 @@
                   role="presentation"
                   on:mousemove={handleHover}
                   on:mouseleave={handleHoverLeave}
+                  on:click={e => toggleComparativeYear(comparativeYearAtPointer(e))}
                 >
-                  <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
+                  <rect
+                    class="cursor-pointer"
+                    x={0}
+                    y={plotMargin.top}
+                    width={xAxisWidth}
+                    height={plotHeight}
+                    fill="transparent"
+                  />
                   {#if comparing}
                     <path
                       class="non-reactive stroke-chart-line"
+                      data-comparative-highlight
+                      d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
+                      fill="transparent"
+                      stroke-width={1}
+                    />
+                  {/if}
+                  {#if hoveredComparisonYear != null}
+                    <path
+                      class="non-reactive stroke-chart-line"
                       data-hover-highlight
-                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{plotBottomY}H0"
+                      d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
                       stroke-width={1}
                     />
