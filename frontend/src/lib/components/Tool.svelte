@@ -30,11 +30,9 @@
   let forecastRows = baseRows.filter(d => d.is_forecast)
   let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
-  let observedVictimsColumn = "observed_victims"
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
-  let overallPredictionColumn = predictionColumn(latestObservedYear)
 
   let windowWidth
   let viewportHeight
@@ -59,14 +57,12 @@
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX
   let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
-  let pointRadius = 4
   let observationCircleStroke = { color: "black", width: 0.5 }
   let chartLayout = { viewportWidth: 0, height: 0 }
 
   let chartRows = baseRows
 
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
-  let tweenTiming = { duration: 600, easing: cubicInOut }
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
@@ -126,7 +122,7 @@
 
   let animatedChartScene = tweened(
     { comparativePointRows: [], lineRows: { comparative: [], observations: [], timeSeries: [] }, yDomain: [0, 1] },
-    { interpolate: createChartSceneInterpolator, ...tweenTiming }
+    { duration: 600, easing: cubicInOut, interpolate: createChartSceneInterpolator }
   )
 
   let selectItems = [
@@ -150,20 +146,12 @@
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
-  let checkboxFilterItems = [
-    { key: "displayObservations", label: "Observations" },
-    { key: "displayModels", label: "Time Series Models" }
-  ]
-
   let forecastDayCount = forecastRows.length
-  let forecastStartDate = forecastRows[0]?.date
 
   let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
   let comparativeYear = null
-
-  let numObservations = observedRows.length
 
   let plotGroup
 
@@ -188,30 +176,26 @@
     return x >= startX && x <= endX
   }
 
+  function comparisonHighlightWidth(year) {
+    return year != null && xScale ? Math.min(xScale(parseLocalDate(`${year + 1}-01-01`)), xAxisWidth) : 0
+  }
+
   $: comparing = comparativeYear != null
   $: comparativePredictionColumn = comparing ? predictionColumn(comparativeYear) : null
-  $: comparativeYearEndX =
-    comparativeYear != null && xScale
-      ? Math.min(xScale(parseLocalDate(`${comparativeYear + 1}-01-01`)), xAxisWidth)
-      : null
-  $: comparativeHighlightWidth = comparing && comparativeYearEndX != null ? comparativeYearEndX : 0
-  $: hoveredComparisonYear = comparing && hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
-  $: hoveredComparisonYearEndX =
-    hoveredComparisonYear != null && xScale
-      ? Math.min(xScale(parseLocalDate(`${hoveredComparisonYear + 1}-01-01`)), xAxisWidth)
-      : null
-  $: hoveredComparisonHighlightWidth = hoveredComparisonYearEndX ?? 0
+  $: comparativeHighlightWidth = comparisonHighlightWidth(comparativeYear)
+  $: hoveredComparisonYear = hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
+  $: hoveredComparisonHighlightWidth = comparisonHighlightWidth(hoveredComparisonYear)
 
   $: {
     observationSeriesRows = buildSeriesRows({
       rows: chartRows,
-      field: observedVictimsColumn,
+      field: "observed_victims",
       range: sliderValue.movingAverageWindow,
       observedOnly: true
     })
     overallModelSeriesRows = buildSeriesRows({
       rows: chartRows,
-      field: overallPredictionColumn,
+      field: predictionColumn(latestObservedYear),
       range: sliderValue.movingAverageWindow
     })
   }
@@ -342,7 +326,7 @@
   $: comparativePointsVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow == 0
   $: comparativePathVisible = comparing && checkboxFilters.displayModels && sliderValue.movingAverageWindow > 0
   $: lineVisibility = {
-    comparative: comparing && checkboxFilters.displayModels && comparativePathVisible,
+    comparative: comparativePathVisible,
     observations: observationPathVisible,
     timeSeries: timeSeriesPathVisible
   }
@@ -426,7 +410,7 @@
   $: yAxisCenterY = chartLayout.height / 2
   // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
   $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
-  $: forecastStartX = xScale ? xScale(parseLocalDate(forecastStartDate)) : 0
+  $: forecastStartX = xScale ? xScale(parseLocalDate(forecastRows[0]?.date)) : 0
   $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
   $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
   $: forecastLabelY = forecastLabelRotated ? plotMargin.top + plotHeight / 2 : plotMargin.top + 22
@@ -450,11 +434,9 @@
 
   $: {
     let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
-    let pointLayerComparativeHighlightWidth = comparing ? comparativeHighlightWidth : null
 
     if (pointLayerReady) {
-      let pointIsPastHighlight = row =>
-        pointLayerComparativeHighlightWidth != null && xScale(row.parsedDate) > pointLayerComparativeHighlightWidth
+      let pointIsPastHighlight = row => comparing && xScale(row.parsedDate) > comparativeHighlightWidth
       let pointIsNeverFaded = () => false
 
       let drawChartPointLayer = ({
@@ -473,7 +455,7 @@
           rows,
           width: svgWidth,
           height: chartLayout.height,
-          radius: pointRadius,
+          radius: 4,
           color,
           stroke,
           getX,
@@ -522,7 +504,7 @@
       forecastIndexedRows,
       minYear,
       latestObservedYear,
-      numObservations
+      numObservations: observedRows.length
     })
 
     modelMetricsCache.set(cacheKey, result)
@@ -593,21 +575,22 @@
         style="max-width:{chartLayout.viewportWidth}px"
       >
         <div class="flex flex-col items-start">
-          {#each checkboxFilterItems as checkbox (checkbox.key)}
-            <div class="flex items-center gap-x-2">
-              <CheckboxFilter
-                labelClasses="mb-0 font-medium"
-                label={checkbox.label}
-                value={checkboxFilters[checkbox.key]}
-                selection={checkboxFilters[checkbox.key] ? [true] : []}
-                deselection={checkboxFilters[checkbox.key] ? [] : [true]}
-                on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, [checkbox.key]: !e.value })}
-              />
-              {#if checkbox.tooltipKey}
-                <InfoIcon title={tooltipText[checkbox.tooltipKey]} tooltipClasses="max-w-80" />
-              {/if}
-            </div>
-          {/each}
+          <CheckboxFilter
+            labelClasses="mb-0 font-medium"
+            label="Observations"
+            value={checkboxFilters.displayObservations}
+            selection={checkboxFilters.displayObservations ? [true] : []}
+            deselection={checkboxFilters.displayObservations ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayObservations: !e.value })}
+          />
+          <CheckboxFilter
+            labelClasses="mb-0 font-medium"
+            label="Time Series Models"
+            value={checkboxFilters.displayModels}
+            selection={checkboxFilters.displayModels ? [true] : []}
+            deselection={checkboxFilters.displayModels ? [] : [true]}
+            on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayModels: !e.value })}
+          />
         </div>
         <span
           class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
