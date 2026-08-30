@@ -10,8 +10,8 @@
 
 ## Chart Interaction Semantics
 
-- Treat hover-based comparison of historical forecast snapshots as the core user workflow. Changes to chart interactions, data shaping, or copy should preserve the ability to compare earlier and later forecasts for the same dates as additional observed data becomes available.
-- In `Tool.svelte`, only actual observation points should fade when they exceed the hover year. Model points and all paths should retain their normal full-opacity colors, including in the "Next 365 Days" forecast region.
+- Treat click-to-pin comparison of historical forecast snapshots as the core user workflow: clicking a chart region pins that year's forecast as the comparison and clicking again clears it, while hovering an eligible region only previews it with an outline. Changes to chart interactions, data shaping, or copy should preserve the ability to compare earlier and later forecasts for the same dates as additional observed data becomes available.
+- In `Tool.svelte`, only actual observation points should fade when they exceed the pinned comparison year. Model points and all paths should retain their normal full-opacity colors, including in the "Next 365 Days" forecast region.
 - Keep forecast-region shading visually behind the chart layers so it does not tint or change the perceived colors of model paths or points.
 
 ## Chart Data Derivations
