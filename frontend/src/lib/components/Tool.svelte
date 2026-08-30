@@ -161,7 +161,6 @@
   let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
 
   let hoverYear = null
-  let comparativeYear = null
 
   let numObservations = observedRows.length
 
@@ -188,19 +187,11 @@
     return x >= startX && x <= endX
   }
 
-  $: comparing = comparativeYear != null
-  $: comparativePredictionColumn = comparing ? predictionColumn(comparativeYear) : null
-  $: comparativeYearEndX =
-    comparativeYear != null && xScale
-      ? Math.min(xScale(parseLocalDate(`${comparativeYear + 1}-01-01`)), xAxisWidth)
-      : null
-  $: comparativeHighlightWidth = comparing && comparativeYearEndX != null ? comparativeYearEndX : 0
-  $: hoveredComparisonYear = hoverYear != null && hoverYear != comparativeYear ? hoverYear : null
-  $: hoveredComparisonYearEndX =
-    hoveredComparisonYear != null && xScale
-      ? Math.min(xScale(parseLocalDate(`${hoveredComparisonYear + 1}-01-01`)), xAxisWidth)
-      : null
-  $: hoveredComparisonHighlightWidth = hoveredComparisonYearEndX ?? 0
+  $: comparing = hoverYear != null && hoverYear < latestObservedYear
+  $: comparativePredictionColumn = comparing ? predictionColumn(hoverYear) : null
+  $: hoverYearEndX =
+    hoverYear != null && xScale ? Math.min(xScale(parseLocalDate(`${hoverYear + 1}-01-01`)), xAxisWidth) : null
+  $: hoverHighlightWidth = comparing && hoverYearEndX != null ? hoverYearEndX : 0
 
   $: {
     observationSeriesRows = buildSeriesRows({
@@ -437,20 +428,8 @@
   $: xTickLabelItems = xTicks.map((date, i) => {
     let year = date.getFullYear()
     let x = xScale(date)
-    let leftX = i == 0 ? 0 : (xScale(xTicks[i - 1]) + x) / 2
-    let rightX = i == xTicks.length - 1 ? xAxisWidth : (x + xScale(xTicks[i + 1])) / 2
 
-    return {
-      date,
-      year,
-      x,
-      hitX: leftX - x,
-      hitWidth: rightX - leftX,
-      comparativeYear: year - 1,
-      interactive: year > minYear && year <= latestObservedYear,
-      highlighted: year == comparativeYear + 1 || year == hoverYear + 1,
-      visible: xTickYearStep == 1 || i % xTickYearStep == 0
-    }
+    return { date, year, x, visible: xTickYearStep == 1 || i % xTickYearStep == 0 }
   })
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
@@ -462,11 +441,11 @@
 
   $: {
     let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
-    let pointLayerComparativeHighlightWidth = comparing ? comparativeHighlightWidth : null
+    let pointLayerHoverHighlightWidth = comparing ? hoverHighlightWidth : null
 
     if (pointLayerReady) {
       let pointIsPastHighlight = row =>
-        pointLayerComparativeHighlightWidth != null && xScale(row.parsedDate) > pointLayerComparativeHighlightWidth
+        pointLayerHoverHighlightWidth != null && xScale(row.parsedDate) > pointLayerHoverHighlightWidth
       let pointIsNeverFaded = () => false
 
       let drawChartPointLayer = ({
@@ -542,21 +521,9 @@
     return result
   }
 
-  function comparativeYearAtPointer(e) {
+  function handleHover(e) {
     let [pointerX] = pointer(e, plotGroup)
     let year = xScale.invert(pointerX).getFullYear()
-
-    return year >= minYear && year < latestObservedYear ? year : null
-  }
-
-  function toggleComparativeYear(year) {
-    if (year == null) return
-
-    comparativeYear = comparativeYear == year ? null : year
-  }
-
-  function handleHover(e) {
-    let year = comparativeYearAtPointer(e)
 
     if (year != hoverYear) hoverYear = year
 
@@ -571,7 +538,7 @@
   $: isFuture = selectValue.value == "Next 365 Days"
 
   $: overallMetrics = chartRows ? cachedModelMetrics(latestObservedYear, isFuture) : null
-  $: comparativeMetrics = comparing ? cachedModelMetrics(comparativeYear, isFuture) : null
+  $: comparativeMetrics = comparing ? cachedModelMetrics(hoverYear, isFuture) : null
 
   $: metricRows = [
     { label: "Model Input", key: "input" },
@@ -625,7 +592,7 @@
           class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
           class:italic={comparing}
         >
-          {comparing ? "Comparing Historical Forecasts..." : "Click a Year to Compare Historical Forecasts"}
+          {comparing ? "Comparing Historical Forecasts..." : "Hover to Compare Historical Forecasts"}
         </span>
       </div>
       {#if svgWidth && chartLayout.height}
@@ -657,7 +624,7 @@
                       class="non-reactive fill-chart-band-subtle"
                       x={0}
                       y={plotMargin.top}
-                      width={comparativeHighlightWidth}
+                      width={hoverHighlightWidth}
                       height={plotHeight}
                     />
                   </g>
@@ -691,37 +658,19 @@
                 style="width:{svgWidth}px; height:{chartLayout.height}px"
               />
               <svg class="absolute left-0 top-0 z-20" width={svgWidth} height={chartLayout.height} id="graph">
-                <!-- The keyboard-equivalent year controls are rendered directly below the pointer-driven plot. -->
                 <g
                   bind:this={plotGroup}
                   transform="translate({plotMargin.left}, {0})"
                   role="presentation"
                   on:mousemove={handleHover}
                   on:mouseleave={handleHoverLeave}
-                  on:click={e => toggleComparativeYear(comparativeYearAtPointer(e))}
                 >
-                  <rect
-                    class="cursor-pointer"
-                    x={0}
-                    y={plotMargin.top}
-                    width={xAxisWidth}
-                    height={plotHeight}
-                    fill="transparent"
-                  />
+                  <rect x={0} y={plotMargin.top} width={xAxisWidth} height={plotHeight} fill="transparent" />
                   {#if comparing}
                     <path
                       class="non-reactive stroke-chart-line"
-                      data-comparative-highlight
-                      d="M0,{plotMargin.top}H{comparativeHighlightWidth}V{plotBottomY}H0"
-                      fill="transparent"
-                      stroke-width={1}
-                    />
-                  {/if}
-                  {#if hoveredComparisonYear != null}
-                    <path
-                      class="non-reactive stroke-chart-line"
                       data-hover-highlight
-                      d="M0,{plotMargin.top}H{hoveredComparisonHighlightWidth}V{plotBottomY}H0"
+                      d="M0,{plotMargin.top}H{hoverHighlightWidth}V{plotBottomY}H0"
                       fill="transparent"
                       stroke-width={1}
                     />
@@ -765,67 +714,21 @@
                   <path class="stroke-chart-line" fill="transparent" d="M{axisStrokeInset},0V0H{xAxisClipWidth}V0" />
                   {#each xTickLabelItems as item (item.date)}
                     <g transform="translate({item.x + axisStrokeInset}, {0})">
-                      <line
-                        class="stroke-chart-line"
-                        stroke-width={item.highlighted ? 2 : 1}
-                        y1={0.5}
-                        y2={xTickHeight}
-                      />
+                      <line class="stroke-chart-line" y1={0.5} y2={xTickHeight} />
                     </g>
                   {/each}
                 </svg>
                 <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {plotBottomY})">
                   {#each xTickLabelItems as item (item.date)}
-                    <g transform="translate({item.x}, {0})">
-                      {#if item.interactive}
-                        <g
-                          class="cursor-pointer"
-                          class:reactive={item.visible}
-                          class:non-reactive={!item.visible}
-                          class:hidden={!item.visible}
-                          role="button"
-                          tabindex={0}
-                          aria-label="Compare the model trained through {item.year}"
-                          aria-pressed={comparativeYear == item.comparativeYear}
-                          on:mouseenter={() => (hoverYear = item.comparativeYear)}
-                          on:mouseleave={() => (hoverYear = null)}
-                          on:focus={() => (hoverYear = item.comparativeYear)}
-                          on:blur={() => (hoverYear = null)}
-                          on:click={() => toggleComparativeYear(item.comparativeYear)}
-                          on:keydown={e => {
-                            if (e.key == "Enter" || e.key == " ") {
-                              e.preventDefault()
-                              toggleComparativeYear(item.comparativeYear)
-                            }
-                          }}
-                        >
-                          <rect
-                            x={item.hitX}
-                            y={xTickHeight}
-                            width={item.hitWidth}
-                            height={xTickVerticalOffset + xTickLabelBandHeight}
-                            fill="transparent"
-                          />
-                          <text
-                            class="pointer-events-none fill-ui-text"
-                            class:font-bold={item.highlighted}
-                            y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
-                            text-anchor="middle"
-                          >
-                            {item.year}
-                          </text>
-                        </g>
-                      {:else}
-                        <text
-                          class="non-reactive fill-ui-text"
-                          class:hidden={!item.visible}
-                          y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
-                          text-anchor="middle"
-                        >
-                          {item.year}
-                        </text>
-                      {/if}
-                    </g>
+                    <text
+                      class="fill-ui-text"
+                      class:hidden={!item.visible}
+                      x={item.x}
+                      y={xTickHeight + xTickVerticalOffset + xTickLabelSize}
+                      text-anchor="middle"
+                    >
+                      {item.year}
+                    </text>
                   {/each}
                 </g>
               </svg>
