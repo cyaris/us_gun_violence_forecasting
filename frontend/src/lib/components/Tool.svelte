@@ -783,18 +783,18 @@
             </g>
           </svg>
           <div
-            class="pointer-events-none absolute left-0 top-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 top-0 z-30 bg-ui-surface"
             style="width:{yAxisMaskWidth}px; height:{xTickLabelBandTop}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 z-30 bg-ui-surface"
             style="top:{xTickLabelBandTop}px; width:{Math.max(
               plotMargin.left - 32,
               0
             )}px; height:{xTickLabelBandHeight}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 z-30 bg-ui-surface"
             style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{chartLayout.height -
               xTickLabelBandBottom}px"
           />
@@ -804,7 +804,7 @@
             height={chartLayout.height}
             overflow="visible"
           >
-            <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
+            <rect class="fill-ui-surface" width={yAxisMaskWidth} height={plotBottomY} pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-line" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
