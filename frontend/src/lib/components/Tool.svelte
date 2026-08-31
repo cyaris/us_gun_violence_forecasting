@@ -9,7 +9,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles } from "svelte-lib/functions"
+  import { drawCanvasCircles, getContrastingTextColor, getDataPalette } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
@@ -33,6 +33,8 @@
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
+  let toolRoot
+  let dataPalette = { categories: [], neutral: "", surface: "" }
 
   let windowWidth
   let viewportHeight
@@ -56,9 +58,22 @@
   let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX
-  let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
-  let observationCircleStroke = { color: "black", width: 0.5 }
+  let chartColors
+  let observationCircleStroke
   let chartLayout = { viewportWidth: 0, height: 0 }
+
+  $: chartColors = {
+    observations: dataPalette.neutral,
+    overallModel: dataPalette.categories[4],
+    comparativeModel: dataPalette.categories[0]
+  }
+  $: observationCircleStroke = {
+    color:
+      chartColors.observations && dataPalette.surface
+        ? getContrastingTextColor(chartColors.observations, dataPalette.surface)
+        : "transparent",
+    width: 0.5
+  }
 
   let chartRows = baseRows
 
@@ -219,6 +234,7 @@
   }
 
   onMount(syncViewportSize)
+  onMount(() => (dataPalette = getDataPalette(toolRoot)))
 
   $: {
     if (windowWidth && viewportHeight) {
@@ -400,7 +416,7 @@
       ? scaleLinear($animatedChartScene.yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
-  $: if (linesCanvas && svgWidth && chartLayout.height) {
+  $: if (linesCanvas && svgWidth && chartLayout.height && chartColors.observations) {
     drawLinesCanvas($animatedChartScene.lineRows, lineVisibility, hoverPoint)
   }
 
@@ -433,7 +449,7 @@
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
-    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
+    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height && chartColors.observations
 
     if (pointLayerReady) {
       let pointIsPastHighlight = row => comparing && xScale(row.parsedDate) > comparativeHighlightWidth
@@ -566,8 +582,8 @@
   }
 </script>
 
-<svelte:window on:resize={syncViewportSize} />
-<div class="flex h-full w-full flex-col items-center justify-center">
+<svelte:window on:resize={syncViewportSize} on:palettechange={() => (dataPalette = getDataPalette(toolRoot))} />
+<div class="flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows && svgWidth && chartLayout.height}
       <div
