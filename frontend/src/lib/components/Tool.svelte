@@ -9,7 +9,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles, getContrastingTextColor, getDataPalette } from "svelte-lib/functions"
+  import { drawCanvasCircles, getContrastingTextColor, getCSSColors } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
@@ -34,7 +34,9 @@
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let toolRoot
-  let dataPalette = { categories: [], neutral: "", surface: "" }
+  let dataPaletteColors = []
+
+  const dataPaletteProperties = ["--data-color-1", "--data-color-2", "--data-color-3", "--data-neutral", "--ui-surface"]
 
   let windowWidth
   let viewportHeight
@@ -63,14 +65,14 @@
   let chartLayout = { viewportWidth: 0, height: 0 }
 
   $: chartColors = {
-    observations: dataPalette.neutral,
-    overallModel: dataPalette.categories[4],
-    comparativeModel: dataPalette.categories[0]
+    observations: dataPaletteColors[3],
+    overallModel: dataPaletteColors[0],
+    comparativeModel: dataPaletteColors[1]
   }
   $: observationCircleStroke = {
     color:
-      chartColors.observations && dataPalette.surface
-        ? getContrastingTextColor(chartColors.observations, dataPalette.surface)
+      chartColors.observations && dataPaletteColors[4]
+        ? getContrastingTextColor(chartColors.observations, dataPaletteColors[4])
         : "transparent",
     width: 0.5
   }
@@ -234,7 +236,7 @@
   }
 
   onMount(syncViewportSize)
-  onMount(() => (dataPalette = getDataPalette(toolRoot)))
+  onMount(() => (dataPaletteColors = getCSSColors(dataPaletteProperties, toolRoot)))
 
   $: {
     if (windowWidth && viewportHeight) {
@@ -582,8 +584,11 @@
   }
 </script>
 
-<svelte:window on:resize={syncViewportSize} on:palettechange={() => (dataPalette = getDataPalette(toolRoot))} />
-<div class="flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
+<svelte:window
+  on:resize={syncViewportSize}
+  on:palettechange={() => (dataPaletteColors = getCSSColors(dataPaletteProperties, toolRoot))}
+/>
+<div class="data-palette flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows && svgWidth && chartLayout.height}
       <div
@@ -1030,3 +1035,12 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .data-palette {
+    --data-color-1: oklch(from var(--data-palette-reference) 65% 0.14 calc(h - 120));
+    --data-color-2: oklch(from var(--data-palette-reference) 65% 0.14 calc(h + 120));
+    --data-color-3: oklch(from var(--data-palette-reference) 65% 0.14 h);
+    --data-neutral: color-mix(in srgb, var(--ui-text) 70%, var(--ui-surface));
+  }
+</style>
