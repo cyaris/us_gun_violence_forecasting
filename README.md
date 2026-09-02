@@ -178,7 +178,6 @@ local details:
 
 - triggers: pushes to `dev` and `master`, plus manual dispatch
 - working directory: `frontend`
-- skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
 - production naming: unprefixed bundles from `master`
 - staged naming: `dev_bundle.*` from `dev`

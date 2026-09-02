@@ -30,7 +30,6 @@ jobs:
     uses: cyaris/shared-automation/.github/workflows/rollup.yml@main
     with:
       working-directory: frontend
-      run-build: false
       dist-directory: frontend/dist
       bundle-files: |
         bundle.css:text/css

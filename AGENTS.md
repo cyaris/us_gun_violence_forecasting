@@ -7,9 +7,7 @@
 
 ## Data Generation
 
-- Regenerate and commit `frontend/src/lib/static/data.json` after changing the source CSV or forecast settings, then
-  run a local production build; the Rollup wrapper skips the shared-CI `npm run build`, so no automated run verifies
-  the bundle against regenerated data.
+- Regenerate and commit `frontend/src/lib/static/data.json` after changing the source CSV or forecast settings.
 
 ## Rollup Delivery
 
