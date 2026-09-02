@@ -305,9 +305,7 @@
         }
       }
 
-      let yDomain = [0, visibleMax || 1]
-
-      yScale = scaleLinear(yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
+      yScale = scaleLinear([0, visibleMax || 1], [chartLayout.height - plotMargin.bottom, plotMargin.top])
     }
   }
 
@@ -434,12 +432,12 @@
   $: xTicks = xScale
     ? Array.from({ length: maxYear - minYear + 1 }, (_, i) => parseLocalDate(`${minYear + i}-01-01`))
     : []
-  $: xTickLabelItems = xTicks.map((date, i) => {
-    let year = date.getFullYear()
-    let x = xScale(date)
-
-    return { date, year, x, visible: xTickYearStep == 1 || i % xTickYearStep == 0 }
-  })
+  $: xTickLabelItems = xTicks.map((date, i) => ({
+    date,
+    x: xScale(date),
+    year: date.getFullYear(),
+    visible: xTickYearStep == 1 || i % xTickYearStep == 0
+  }))
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
@@ -457,14 +455,14 @@
 
       let drawChartPointLayer = ({
         canvas,
-        rows,
-        field,
         color,
-        stroke = null,
+        fadedAlpha = 0.5,
+        field,
         getX = row => plotMargin.left + xScale(row.parsedDate),
         getY = row => animatedYScale(row[field]),
         isFaded = pointIsPastHighlight,
-        fadedAlpha = 0.5
+        rows,
+        stroke = null
       }) =>
         drawCanvasCircles({
           canvas,

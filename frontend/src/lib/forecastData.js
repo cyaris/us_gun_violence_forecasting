@@ -39,7 +39,7 @@ export function movingAverage(rows, field, range) {
   return values
 }
 
-export function buildSeriesRows({ rows, field, range = 0, observedOnly = false }) {
+export function buildSeriesRows({ field, observedOnly = false, range = 0, rows }) {
   rows = observedOnly ? rows.filter(d => !d.is_forecast) : rows
 
   return movingAverage(rows, field, range)
@@ -48,14 +48,14 @@ export function buildSeriesRows({ rows, field, range = 0, observedOnly = false }
 }
 
 export function modelMetrics({
-  year,
-  isFutureTimeframe,
   chartRows,
-  observedIndexedRows,
   forecastIndexedRows,
-  minYear,
+  isFutureTimeframe,
   latestObservedYear,
-  numObservations
+  minYear,
+  numObservations,
+  observedIndexedRows,
+  year
 }) {
   let predictionColumnName = predictionColumn(year)
   let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
@@ -69,7 +69,6 @@ export function modelMetrics({
       return current != null && previousYear != null ? current - previousYear : null
     })
     .filter(finiteValue)
-  let trendSum = yearlyTrends.reduce((sum, d) => sum + d, 0)
 
   let result = {
     input:
@@ -80,7 +79,7 @@ export function modelMetrics({
           : `${minYear}–${year}`,
     total: Math.round(predSum).toLocaleString(),
     perDay: Math.round(predSum / rows.length).toLocaleString(),
-    trend: Math.round(trendSum / yearlyTrends.length).toLocaleString()
+    trend: Math.round(yearlyTrends.reduce((sum, d) => sum + d, 0) / yearlyTrends.length).toLocaleString()
   }
 
   if (!isFutureTimeframe) {
