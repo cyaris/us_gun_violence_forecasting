@@ -26,10 +26,10 @@
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
   let indexedRows = baseRows.map((d, i) => ({ d, i }))
-  let observedRows = baseRows.filter(d => !d.is_forecast)
-  let forecastRows = baseRows.filter(d => d.is_forecast)
   let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
+  let observedRows = observedIndexedRows.map(({ d }) => d)
+  let forecastRows = forecastIndexedRows.map(({ d }) => d)
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
@@ -65,7 +65,6 @@
   let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX
-  let observationCircleStroke
   let chartLayout = { viewportWidth: 0, height: 0 }
 
   $: observationCircleStroke = {

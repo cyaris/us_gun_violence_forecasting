@@ -195,9 +195,7 @@ The upload refreshes cache metadata in place for
 The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for
 `cyaris.github.io`, and on manual dispatch, then calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
-watches `svelte-lib`'s `dev` and `main` branch commits independently. When either branch moves, it dispatches this
-repository's `Rollup` workflow on the matching `dev` or `master` branch so staged and production bundles pick up the
-corresponding upstream code without waiting for a push here.
+watches `svelte-lib`'s `dev` and `main` branch commits independently.
 
 ### `.github/workflows/auto-release.yml`
 
