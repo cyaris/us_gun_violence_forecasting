@@ -613,12 +613,13 @@
             on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayModels: !e.value })}
           />
         </div>
-        <span
-          class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
-          class:italic={comparing}
-        >
-          {comparing ? "Comparing Historical Forecasts..." : "Click a Region to Compare Historical Forecasts"}
-        </span>
+        {#if !comparing}
+          <span
+            class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
+          >
+            Click a Region to Compare Historical Forecasts
+          </span>
+        {/if}
       </div>
       {#if svgWidth && chartLayout.height}
         <div
