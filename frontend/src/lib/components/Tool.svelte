@@ -34,9 +34,14 @@
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
   let toolRoot
-  let dataPaletteColors = []
+  let chartColors = {}
 
-  const dataPaletteProperties = ["--data-color-1", "--data-color-2", "--data-color-3", "--data-neutral", "--ui-surface"]
+  const chartColorProperties = {
+    comparativeModel: "--data-color-2",
+    observations: "--data-neutral",
+    overallModel: "--data-color-1",
+    surface: "--ui-surface"
+  }
 
   let windowWidth
   let viewportHeight
@@ -60,19 +65,13 @@
   let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX
-  let chartColors
   let observationCircleStroke
   let chartLayout = { viewportWidth: 0, height: 0 }
 
-  $: chartColors = {
-    observations: dataPaletteColors[3],
-    overallModel: dataPaletteColors[0],
-    comparativeModel: dataPaletteColors[1]
-  }
   $: observationCircleStroke = {
     color:
-      chartColors.observations && dataPaletteColors[4]
-        ? getContrastingTextColor(chartColors.observations, dataPaletteColors[4])
+      chartColors.observations && chartColors.surface
+        ? getContrastingTextColor(chartColors.observations, chartColors.surface)
         : "transparent",
     width: 0.5
   }
@@ -236,7 +235,7 @@
   }
 
   onMount(syncViewportSize)
-  onMount(() => (dataPaletteColors = getCSSColors(dataPaletteProperties, toolRoot)))
+  onMount(() => (chartColors = getCSSColors(chartColorProperties, toolRoot)))
 
   $: {
     if (windowWidth && viewportHeight) {
@@ -586,7 +585,7 @@
 
 <svelte:window
   on:resize={syncViewportSize}
-  on:palettechange={() => (dataPaletteColors = getCSSColors(dataPaletteProperties, toolRoot))}
+  on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))}
 />
 <div class="data-palette flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
@@ -1041,7 +1040,6 @@
   .data-palette {
     --data-color-1: oklch(from var(--data-palette-reference) 65% 0.14 calc(h - 120));
     --data-color-2: oklch(from var(--data-palette-reference) 65% 0.14 calc(h + 120));
-    --data-color-3: oklch(from var(--data-palette-reference) 65% 0.14 h);
     --data-neutral: color-mix(in srgb, var(--ui-text) 70%, var(--ui-surface));
   }
 </style>
