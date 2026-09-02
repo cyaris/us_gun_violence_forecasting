@@ -87,8 +87,7 @@ By default, this writes:
 frontend/src/lib/static/data.json
 ```
 
-The repository commits generated `data.json` so clean GitHub Actions checkouts can build the Rollup bundle. Regenerate and
-commit it after changing the source CSV or forecast settings.
+The repository commits generated `data.json` so clean GitHub Actions checkouts can build the Rollup bundle.
 
 Useful options:
 
@@ -169,31 +168,26 @@ behavior, inputs, and secrets.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
-The `Auto-create dev pull request` workflow runs on pushes to `dev` and calls the
+Runs on pushes to `dev` and calls the
 [shared auto-create-dev-pr workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-create-dev-pryml).
 
 ### `.github/workflows/rollup.yml`
 
-The `Rollup` workflow calls the
-[shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these local details:
+Calls the [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these
+local details:
 
 - triggers: pushes to `dev` and `master`, plus manual dispatch
 - working directory: `frontend`
-- skipped shared-CI command: `npm run build`
 - destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
 - production naming: unprefixed bundles from `master`
 - staged naming: `dev_bundle.*` from `dev`
 - local dependency: `svelte-lib` `dev` for staged runs and `main` for production runs, resolved to an exact SHA
-
-Run a local production build after regenerating `frontend/src/lib/static/data.json` when forecast data changes.
-
-The upload refreshes cache metadata in place for
-`us_gun_violence_forecasting/all-shootings-2014-2023.csv`.
+- metadata refresh: cache metadata refreshed in place for `us_gun_violence_forecasting/all-shootings-2014-2023.csv`
 
 ### `.github/workflows/upstream-watch.yml`
 
-The `Upstream Watch` workflow runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for
-`cyaris.github.io`, and on manual dispatch, then calls the
+Runs daily at 12:53 UTC, 30 minutes before the GitHub Pages build for `cyaris.github.io`, and on manual dispatch, then
+calls the
 [shared upstream-watch workflow](https://github.com/cyaris/shared-automation#githubworkflowsupstream-watchyml). It
 watches `svelte-lib`'s `dev` and `main` branch commits independently. When either branch moves, it dispatches this
 repository's `Rollup` workflow on the matching `dev` or `master` branch so staged and production bundles pick up the
@@ -201,13 +195,14 @@ corresponding upstream code without waiting for a push here.
 
 ### `.github/workflows/auto-release.yml`
 
-The `Auto release` workflow runs from manual dispatch only and calls the
+Runs from manual dispatch only and calls the
 [shared auto-release workflow](https://github.com/cyaris/shared-automation#githubworkflowsauto-releaseyml). This
 repository contributes `.github/release-policy.yml` overrides. Release creation or existing-release updates require
 reviewing the generated plan and explicitly enabling publication for an approved run.
 
 ### `.github/workflows/workflow-validation.yml`
 
-The `Workflow validation` workflow runs on local workflow and automation configuration changes, then calls the
+Runs on `dev` and `master` pushes that change `.github/release-policy.yml`, `.github/workflows/**`, or `renovate.json`,
+and on manual dispatch, then calls the
 [shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
 to validate rollup upload wrapper logic, release-policy configuration, and Renovate configuration.

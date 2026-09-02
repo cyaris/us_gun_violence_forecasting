@@ -9,7 +9,7 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles } from "svelte-lib/functions"
+  import { drawCanvasCircles, getContrastingTextColor, getCSSColors } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
@@ -26,13 +26,22 @@
     .sort((a, b) => a.date.localeCompare(b.date))
     .map(d => ({ ...d, parsedDate: parseLocalDate(d.date) }))
   let indexedRows = baseRows.map((d, i) => ({ d, i }))
-  let observedRows = baseRows.filter(d => !d.is_forecast)
-  let forecastRows = baseRows.filter(d => d.is_forecast)
   let observedIndexedRows = indexedRows.filter(({ d }) => !d.is_forecast)
   let forecastIndexedRows = indexedRows.filter(({ d }) => d.is_forecast)
+  let observedRows = observedIndexedRows.map(({ d }) => d)
+  let forecastRows = forecastIndexedRows.map(({ d }) => d)
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
+  let toolRoot
+  let chartColors = {}
+
+  const chartColorProperties = {
+    comparativeModel: "--data-color-2",
+    observations: "--data-neutral",
+    overallModel: "--data-color-1",
+    surface: "--ui-surface"
+  }
 
   let windowWidth
   let viewportHeight
@@ -56,9 +65,15 @@
   let yAxisTitleLeftPadding
   let xTickLabelBandHeight = xTickLabelSize + 4
   let yAxisInfoX
-  let chartColors = { observations: "#708090", overallModel: "orange", comparativeModel: "#00c07f" }
-  let observationCircleStroke = { color: "black", width: 0.5 }
   let chartLayout = { viewportWidth: 0, height: 0 }
+
+  $: observationCircleStroke = {
+    color:
+      chartColors.observations && chartColors.surface
+        ? getContrastingTextColor(chartColors.observations, chartColors.surface)
+        : "transparent",
+    width: 0.5
+  }
 
   let chartRows = baseRows
 
@@ -219,6 +234,7 @@
   }
 
   onMount(syncViewportSize)
+  onMount(() => (chartColors = getCSSColors(chartColorProperties, toolRoot)))
 
   $: {
     if (windowWidth && viewportHeight) {
@@ -289,9 +305,7 @@
         }
       }
 
-      let yDomain = [0, visibleMax || 1]
-
-      yScale = scaleLinear(yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
+      yScale = scaleLinear([0, visibleMax || 1], [chartLayout.height - plotMargin.bottom, plotMargin.top])
     }
   }
 
@@ -400,7 +414,7 @@
       ? scaleLinear($animatedChartScene.yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
-  $: if (linesCanvas && svgWidth && chartLayout.height) {
+  $: if (linesCanvas && svgWidth && chartLayout.height && chartColors.observations) {
     drawLinesCanvas($animatedChartScene.lineRows, lineVisibility, hoverPoint)
   }
 
@@ -418,12 +432,12 @@
   $: xTicks = xScale
     ? Array.from({ length: maxYear - minYear + 1 }, (_, i) => parseLocalDate(`${minYear + i}-01-01`))
     : []
-  $: xTickLabelItems = xTicks.map((date, i) => {
-    let year = date.getFullYear()
-    let x = xScale(date)
-
-    return { date, year, x, visible: xTickYearStep == 1 || i % xTickYearStep == 0 }
-  })
+  $: xTickLabelItems = xTicks.map((date, i) => ({
+    date,
+    x: xScale(date),
+    year: date.getFullYear(),
+    visible: xTickYearStep == 1 || i % xTickYearStep == 0
+  }))
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
@@ -433,7 +447,7 @@
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
-    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height
+    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height && chartColors.observations
 
     if (pointLayerReady) {
       let pointIsPastHighlight = row => comparing && xScale(row.parsedDate) > comparativeHighlightWidth
@@ -441,14 +455,14 @@
 
       let drawChartPointLayer = ({
         canvas,
-        rows,
-        field,
         color,
-        stroke = null,
+        fadedAlpha = 0.5,
+        field,
         getX = row => plotMargin.left + xScale(row.parsedDate),
         getY = row => animatedYScale(row[field]),
         isFaded = pointIsPastHighlight,
-        fadedAlpha = 0.5
+        rows,
+        stroke = null
       }) =>
         drawCanvasCircles({
           canvas,
@@ -566,8 +580,11 @@
   }
 </script>
 
-<svelte:window on:resize={syncViewportSize} />
-<div class="flex h-full w-full flex-col items-center justify-center">
+<svelte:window
+  on:resize={syncViewportSize}
+  on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))}
+/>
+<div class="data-palette flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
   <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
     {#if chartRows && svgWidth && chartLayout.height}
       <div
@@ -592,12 +609,13 @@
             on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayModels: !e.value })}
           />
         </div>
-        <span
-          class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
-          class:italic={comparing}
-        >
-          {comparing ? "Comparing Historical Forecasts..." : "Click a Region to Compare Historical Forecasts"}
-        </span>
+        {#if !comparing}
+          <span
+            class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
+          >
+            Click a Region to Compare Historical Forecasts
+          </span>
+        {/if}
       </div>
       {#if svgWidth && chartLayout.height}
         <div
@@ -783,18 +801,18 @@
             </g>
           </svg>
           <div
-            class="pointer-events-none absolute left-0 top-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 top-0 z-30 bg-ui-surface"
             style="width:{yAxisMaskWidth}px; height:{xTickLabelBandTop}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 z-30 bg-ui-surface"
             style="top:{xTickLabelBandTop}px; width:{Math.max(
               plotMargin.left - 32,
               0
             )}px; height:{xTickLabelBandHeight}px"
           />
           <div
-            class="pointer-events-none absolute left-0 z-30 bg-white"
+            class="pointer-events-none absolute left-0 z-30 bg-ui-surface"
             style="top:{xTickLabelBandBottom}px; width:{yAxisMaskWidth}px; height:{chartLayout.height -
               xTickLabelBandBottom}px"
           />
@@ -804,7 +822,7 @@
             height={chartLayout.height}
             overflow="visible"
           >
-            <rect width={yAxisMaskWidth} height={plotBottomY} fill="white" pointer-events="none" />
+            <rect class="fill-ui-surface" width={yAxisMaskWidth} height={plotBottomY} pointer-events="none" />
             <g class="non-reactive text-sm" transform="translate({plotMargin.left}, {0})">
               <path class="stroke-chart-line" fill="transparent" d="M0,{plotMargin.top}V{plotBottomY}" />
               {#each yAxisTicks as yTick, i (yTick)}
@@ -1014,3 +1032,11 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .data-palette {
+    --data-color-1: oklch(from var(--data-palette-reference) 65% 0.14 calc(h - 120));
+    --data-color-2: oklch(from var(--data-palette-reference) 65% 0.14 calc(h + 120));
+    --data-neutral: color-mix(in srgb, var(--ui-text) 70%, var(--ui-surface));
+  }
+</style>
