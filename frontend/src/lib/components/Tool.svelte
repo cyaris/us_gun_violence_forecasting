@@ -9,7 +9,12 @@
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles, getContrastingTextColor, getCSSColors } from "svelte-lib/functions"
+  import {
+    createZoomStableViewport,
+    drawCanvasCircles,
+    getContrastingTextColor,
+    getCSSColors
+  } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
   import {
@@ -46,8 +51,7 @@
   let layoutWidth
   let viewportHeight
   let canvasPixelRatio = 1
-  let lastPixelRatio
-  let lastViewportWidth
+  let zoomStableViewport = createZoomStableViewport()
   let svgWidth
   let graphStrokeWidth = 1
   let axisStrokeInset = graphStrokeWidth / 2
@@ -222,23 +226,14 @@
   }
 
   function syncLayoutSize() {
-    let pixelRatio = window.devicePixelRatio
-    // Browser zoom scales the reported viewport by the inverse device pixel ratio, measured against the sizes the
-    // layout was last committed at; a real viewport change (e.g. resizing the window, or moving it to a monitor with
-    // a different scale factor) does not match that prediction.
-    let zoomOnly =
-      lastPixelRatio != null &&
-      pixelRatio !== lastPixelRatio &&
-      Math.abs(window.innerWidth - (lastViewportWidth * lastPixelRatio) / pixelRatio) <= 2
+    let viewport = zoomStableViewport.update()
 
-    canvasPixelRatio = pixelRatio
+    canvasPixelRatio = viewport.pixelRatio
 
-    if (zoomOnly) return
+    if (viewport.zoomOnly) return
 
     layoutWidth = toolRoot.clientWidth
-    viewportHeight = window.innerHeight
-    lastPixelRatio = pixelRatio
-    lastViewportWidth = window.innerWidth
+    viewportHeight = viewport.height
   }
 
   onMount(() => {
