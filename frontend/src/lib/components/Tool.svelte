@@ -10,10 +10,10 @@
   import { tweened } from "svelte/motion"
   import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
   import {
-    createZoomStableViewport,
     drawCanvasCircles,
     getContrastingTextColor,
-    getCSSColors
+    getCSSColors,
+    observeZoomStableViewport
   } from "svelte-lib/functions"
   import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
 
@@ -51,7 +51,6 @@
   let layoutWidth
   let viewportHeight
   let canvasPixelRatio = 1
-  let zoomStableViewport = createZoomStableViewport()
   let svgWidth
   let graphStrokeWidth = 1
   let axisStrokeInset = graphStrokeWidth / 2
@@ -225,9 +224,7 @@
     })
   }
 
-  function syncLayoutSize() {
-    let viewport = zoomStableViewport.update()
-
+  function syncLayoutSize(viewport) {
     canvasPixelRatio = viewport.pixelRatio
 
     if (viewport.zoomOnly) return
@@ -236,12 +233,7 @@
     viewportHeight = viewport.height
   }
 
-  onMount(() => {
-    let observer = new ResizeObserver(syncLayoutSize)
-    observer.observe(toolRoot)
-
-    return () => observer.disconnect()
-  })
+  onMount(() => observeZoomStableViewport(syncLayoutSize, { element: toolRoot }))
 
   onMount(() => (chartColors = getCSSColors(chartColorProperties, toolRoot)))
 
@@ -589,10 +581,7 @@
   }
 </script>
 
-<svelte:window
-  on:resize={syncLayoutSize}
-  on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))}
-/>
+<svelte:window on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))} />
 <div class="data-palette flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
   <div
     class="box-border self-start {wideLayout ? '' : 'px-3 py-4'}"
