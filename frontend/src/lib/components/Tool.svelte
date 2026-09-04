@@ -38,6 +38,10 @@
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
+  let chartRows = baseRows
+  let forecastDayCount = forecastRows.length
+  let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
+
   let toolRoot
   let chartColors = {}
 
@@ -80,21 +84,27 @@
     width: 0.5
   }
 
-  let chartRows = baseRows
-
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
   let linesCanvas
+  let plotGroup
+
   let hoverPoint = null
+  let hoverYear = null
+  let comparativeYear = null
+
   let animatedYScale = null
+
   let scrollContainer
   let scrollLeft = 0
   let scrollViewportWidth = 0
+
   let observationSeriesRows = []
   let overallModelSeriesRows = []
   let comparativeSeriesRows = []
+
   let comparativeSeriesCache = new Map()
   let modelMetricsCache = new Map()
 
@@ -149,7 +159,6 @@
     { value: "Historical Data", label: "Historical Data" },
     { value: "Next 365 Days", label: "Next 365 Days" }
   ]
-
   let selectValue = selectItems[0]
 
   let sliderItems = {
@@ -161,19 +170,9 @@
       { value: "widest", label: "Widest" }
     ]
   }
-
   let sliderValue = { movingAverageWindow: 10, xAxisDayWidth: 0 }
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
-
-  let forecastDayCount = forecastRows.length
-
-  let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
-
-  let hoverYear = null
-  let comparativeYear = null
-
-  let plotGroup
 
   $: compactLayout = layoutWidth < 900
   $: wideLayout = layoutWidth >= 1300
