@@ -8,14 +8,14 @@
   import { onMount } from "svelte"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import {
-    drawCanvasCircles,
-    getContrastingTextColor,
-    getCSSColors,
-    observeZoomStableViewport
-  } from "svelte-lib/functions"
-  import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import CheckboxFilter from "svelte-lib/components/CheckboxFilter"
+  import InfoIcon from "svelte-lib/components/icons/InfoIcon"
+  import Loading from "svelte-lib/components/Loading"
+  import Select from "svelte-lib/components/Select"
+  import Slider from "svelte-lib/components/Slider"
+  import { configureCanvas2D, drawCanvasCircles, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { getContrastingTextColor } from "svelte-lib/functions/color"
+  import { getCSSColors, observeZoomStableViewport } from "svelte-lib/functions/dom"
 
   import {
     buildSeriesRows,
