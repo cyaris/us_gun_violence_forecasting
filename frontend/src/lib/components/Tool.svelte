@@ -8,9 +8,14 @@
   import { onMount } from "svelte"
   import { cubicInOut } from "svelte/easing"
   import { tweened } from "svelte/motion"
-  import { CheckboxFilter, InfoIcon, Loading, Select, Slider } from "svelte-lib/components"
-  import { drawCanvasCircles, getContrastingTextColor, getCSSColors } from "svelte-lib/functions"
-  import { configureCanvas2D, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import CheckboxFilter from "svelte-lib/components/CheckboxFilter"
+  import InfoIcon from "svelte-lib/components/icons/InfoIcon"
+  import Loading from "svelte-lib/components/Loading"
+  import Select from "svelte-lib/components/Select"
+  import Slider from "svelte-lib/components/Slider"
+  import { configureCanvas2D, drawCanvasCircles, getCanvasPointerPoint } from "svelte-lib/functions/canvas"
+  import { getContrastingTextColor } from "svelte-lib/functions/color"
+  import { getCSSColors, observeZoomStableViewport } from "svelte-lib/functions/dom"
 
   import {
     buildSeriesRows,
@@ -33,6 +38,10 @@
   let minYear = Math.min(...baseRows.map(yearFromDate))
   let maxYear = Math.max(...baseRows.map(yearFromDate))
   let latestObservedYear = Math.max(...observedRows.map(yearFromDate))
+  let chartRows = baseRows
+  let forecastDayCount = forecastRows.length
+  let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
+
   let toolRoot
   let chartColors = {}
 
@@ -43,9 +52,9 @@
     surface: "--ui-surface"
   }
 
-  let windowWidth
+  let layoutWidth
   let viewportHeight
-  let lastDevicePixelRatio
+  let canvasPixelRatio = 1
   let svgWidth
   let graphStrokeWidth = 1
   let axisStrokeInset = graphStrokeWidth / 2
@@ -75,21 +84,27 @@
     width: 0.5
   }
 
-  let chartRows = baseRows
-
   let fadeClasses = "transition-opacity duration-300 ease-[cubic-bezier(0.65,0,0.35,1)]"
   let observationsCanvas
   let timeSeriesCanvas
   let comparativeCanvas
   let linesCanvas
+  let plotGroup
+
   let hoverPoint = null
+  let hoverYear = null
+  let comparativeYear = null
+
   let animatedYScale = null
+
   let scrollContainer
   let scrollLeft = 0
   let scrollViewportWidth = 0
+
   let observationSeriesRows = []
   let overallModelSeriesRows = []
   let comparativeSeriesRows = []
+
   let comparativeSeriesCache = new Map()
   let modelMetricsCache = new Map()
 
@@ -144,7 +159,6 @@
     { value: "Historical Data", label: "Historical Data" },
     { value: "Next 365 Days", label: "Next 365 Days" }
   ]
-
   let selectValue = selectItems[0]
 
   let sliderItems = {
@@ -156,24 +170,18 @@
       { value: "widest", label: "Widest" }
     ]
   }
-
   let sliderValue = { movingAverageWindow: 10, xAxisDayWidth: 0 }
 
   let checkboxFilters = { displayObservations: true, displayModels: true }
 
-  let forecastDayCount = forecastRows.length
+  $: compactLayout = layoutWidth < 900
+  $: wideLayout = layoutWidth >= 1300
 
-  let firstDate = format(baseRows[0].parsedDate, "M/d/yy")
-
-  let hoverYear = null
-  let comparativeYear = null
-
-  let plotGroup
-
-  $: plotMargin =
-    windowWidth >= 900 ? { top: 20, right: 20, bottom: 79, left: 79 } : { top: 12, right: 12, bottom: 71, left: 74 }
+  $: plotMargin = compactLayout
+    ? { top: 12, right: 12, bottom: 71, left: 74 }
+    : { top: 20, right: 20, bottom: 79, left: 79 }
   $: yAxisMaskWidth = plotMargin.left - axisStrokeInset
-  $: yAxisTitleLeftPadding = windowWidth >= 900 ? 8 : 3
+  $: yAxisTitleLeftPadding = compactLayout ? 3 : 8
   $: yAxisInfoX = 12 + yAxisTitleLeftPadding
 
   function cachedComparativeSeriesRows(field, range) {
@@ -215,37 +223,28 @@
     })
   }
 
-  function syncViewportSize() {
-    let devicePixelRatio = window.devicePixelRatio
-    let dprChanged = lastDevicePixelRatio != null && devicePixelRatio !== lastDevicePixelRatio
-    // Browser zoom scales the reported viewport by the inverse DPR ratio; a real viewport change
-    // (e.g. moving to a monitor with a different scale factor) does not match that prediction.
-    let zoomOnly =
-      dprChanged &&
-      windowWidth != null &&
-      Math.abs(window.innerWidth - (windowWidth * lastDevicePixelRatio) / devicePixelRatio) <= 2
+  function syncLayoutSize(viewport) {
+    canvasPixelRatio = viewport.pixelRatio
 
-    if (!zoomOnly) {
-      windowWidth = window.innerWidth
-      viewportHeight = window.innerHeight
-    }
+    if (viewport.zoomOnly) return
 
-    lastDevicePixelRatio = devicePixelRatio
+    layoutWidth = toolRoot.clientWidth
+    viewportHeight = viewport.height
   }
 
-  onMount(syncViewportSize)
+  onMount(() => observeZoomStableViewport(syncLayoutSize, { element: toolRoot }))
+
   onMount(() => (chartColors = getCSSColors(chartColorProperties, toolRoot)))
 
   $: {
-    if (windowWidth && viewportHeight) {
-      let compactViewportWidth = Math.max(windowWidth - 24, 0)
+    if (layoutWidth && viewportHeight) {
+      let compactViewportWidth = Math.max(layoutWidth - 24, 0)
 
       chartLayout = {
-        viewportWidth: windowWidth >= 1300 ? windowWidth * 0.7 : compactViewportWidth,
-        height:
-          windowWidth >= 1300
-            ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (windowWidth * 0.7) / 2))
-            : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78))
+        viewportWidth: wideLayout ? layoutWidth * 0.7 : compactViewportWidth,
+        height: wideLayout
+          ? Math.max(plotMargin.top + plotMargin.bottom, Math.min(viewportHeight * 0.625, (layoutWidth * 0.7) / 2))
+          : Math.max(320, Math.min(viewportHeight * 0.5, compactViewportWidth * 0.78))
       }
       let defaultXAxisWidth = baseRows.length * 0.4
       let fittedXAxisWidth = Math.max(
@@ -414,7 +413,7 @@
       ? scaleLinear($animatedChartScene.yDomain, [chartLayout.height - plotMargin.bottom, plotMargin.top])
       : null
 
-  $: if (linesCanvas && svgWidth && chartLayout.height && chartColors.observations) {
+  $: if (canvasPixelRatio && linesCanvas && svgWidth && chartLayout.height && chartColors.observations) {
     drawLinesCanvas($animatedChartScene.lineRows, lineVisibility, hoverPoint)
   }
 
@@ -423,7 +422,7 @@
   $: yAxisTicks = yScale ? yScale.ticks() : []
   $: yAxisCenterY = chartLayout.height / 2
   // the distance from the y-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
-  $: yAxisTitleIconOffset = windowWidth >= 900 ? 65 : 59
+  $: yAxisTitleIconOffset = compactLayout ? 59 : 65
   $: forecastStartX = xScale ? xScale(parseLocalDate(forecastRows[0]?.date)) : 0
   $: forecastLabelRotated = xAxisWidth - forecastStartX < 144
   $: forecastLabelX = (forecastStartX + xAxisWidth) / 2
@@ -441,13 +440,14 @@
   $: xTickLabelBandTop = plotBottomY ? plotBottomY + xTickHeight + xTickVerticalOffset : 0
   $: xTickLabelBandBottom = xTickLabelBandTop + xTickLabelBandHeight
   $: xAxisTitleX = chartLayout.viewportWidth / 2
-  $: xAxisTitleBottomOffset = windowWidth >= 900 ? 18 : 10
+  $: xAxisTitleBottomOffset = compactLayout ? 10 : 18
   // the distance from the x-axis title's center to its info icon, tuned per breakpoint to match the title's font size.
-  $: xAxisTitleIconOffset = windowWidth >= 900 ? 34 : 31.5
+  $: xAxisTitleIconOffset = compactLayout ? 31.5 : 34
   $: xAxisClipWidth = xAxisWidth ? xAxisWidth + axisStrokeInset : 0
 
   $: {
-    let pointLayerReady = xScale && animatedYScale && svgWidth && chartLayout.height && chartColors.observations
+    let pointLayerReady =
+      canvasPixelRatio && xScale && animatedYScale && svgWidth && chartLayout.height && chartColors.observations
 
     if (pointLayerReady) {
       let pointIsPastHighlight = row => comparing && xScale(row.parsedDate) > comparativeHighlightWidth
@@ -580,15 +580,16 @@
   }
 </script>
 
-<svelte:window
-  on:resize={syncViewportSize}
-  on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))}
-/>
+<svelte:window on:palettechange={() => (chartColors = getCSSColors(chartColorProperties, toolRoot))} />
 <div class="data-palette flex h-full w-full flex-col items-center justify-center" bind:this={toolRoot}>
-  <div class="box-border w-full px-3 py-4 min-[1300px]:px-0 min-[1300px]:py-0">
+  <div
+    class="box-border self-start {wideLayout ? '' : 'px-3 py-4'}"
+    class:w-full={!layoutWidth}
+    style:width={layoutWidth ? `${layoutWidth}px` : null}
+  >
     {#if chartRows && svgWidth && chartLayout.height}
       <div
-        class="relative mx-auto mb-3 mt-4 flex flex-col gap-2 text-sm min-[1300px]:block"
+        class="relative mx-auto mb-3 mt-4 text-sm {wideLayout ? 'block' : 'flex flex-col gap-2'}"
         style="max-width:{chartLayout.viewportWidth}px"
       >
         <div class="flex flex-col items-start">
@@ -609,9 +610,9 @@
             on:update={({ detail: e }) => (checkboxFilters = { ...checkboxFilters, displayModels: !e.value })}
           />
         </div>
-        {#if !comparing}
+        {#if !comparing && wideLayout}
           <span
-            class="hidden text-sm font-medium min-[1300px]:pointer-events-none min-[1300px]:absolute min-[1300px]:bottom-0 min-[1300px]:left-1/2 min-[1300px]:block min-[1300px]:-translate-x-1/2 min-[1300px]:whitespace-nowrap"
+            class="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap text-sm font-medium"
           >
             Click a Region to Compare Historical Forecasts
           </span>
@@ -828,7 +829,7 @@
               {#each yAxisTicks as yTick, i (yTick)}
                 <g transform="translate(0, {animatedYScale ? animatedYScale(yTick) : yScale(yTick)})">
                   <line class="stroke-chart-line" x1={-xTickHeight} x2={0} />
-                  {#if windowWidth >= 900 || (yAxisTicks.length - 1 - i) % 2 === 0}
+                  {#if !compactLayout || (yAxisTicks.length - 1 - i) % 2 === 0}
                     <text class="fill-ui-text" x={-xTickHeight - 4} dy="0.32em" text-anchor="end">
                       {yTick.toLocaleString()}
                     </text>
@@ -837,7 +838,7 @@
               {/each}
             </g>
             <text
-              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text font-medium {compactLayout ? 'text-sm' : 'text-base'}"
               text-anchor="middle"
               transform="translate({16 + yAxisTitleLeftPadding}, {yAxisCenterY}) rotate(-90)"
             >
@@ -858,7 +859,7 @@
             height={chartLayout.height}
           >
             <text
-              class="non-reactive fill-ui-text text-sm font-medium min-[900px]:text-base"
+              class="non-reactive fill-ui-text font-medium {compactLayout ? 'text-sm' : 'text-base'}"
               text-anchor="middle"
               x={xAxisTitleX}
               y={chartLayout.height - xAxisTitleBottomOffset}
@@ -877,11 +878,13 @@
         </div>
       {/if}
       <div
-        class="mx-auto mt-5 grid w-full gap-y-5 text-sm min-[900px]:grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(max-content,1fr)_minmax(max-content,1fr)] min-[900px]:items-start min-[900px]:gap-x-6"
+        class="mx-auto mt-5 grid w-full gap-y-5 text-sm {compactLayout
+          ? ''
+          : 'grid-cols-[9.875rem_minmax(18rem,22rem)_minmax(max-content,1fr)_minmax(max-content,1fr)] items-start gap-x-6'}"
         style="max-width:{chartLayout.viewportWidth}px"
       >
-        {#if windowWidth >= 900}
-          <div class="min-[900px]:col-start-1 min-[900px]:row-start-1">
+        {#if !compactLayout}
+          <div class="col-start-1 row-start-1">
             <div class="mb-2 flex items-center gap-2 whitespace-nowrap font-medium">
               Prediction Timeframe
               <InfoIcon title={tooltipText.timeframe} tooltipClasses="max-w-80" />
@@ -899,7 +902,7 @@
               />
             </div>
           </div>
-          <div class="min-[900px]:col-start-4 min-[900px]:row-start-1">
+          <div class="col-start-4 row-start-1">
             <div class="ml-3.5 flex items-center gap-2 whitespace-nowrap font-medium">
               Moving Average Window
               <InfoIcon title={tooltipText.movingAverageWindow} tooltipClasses="max-w-80" />
@@ -957,12 +960,12 @@
             </div>
           </div>
         {/if}
-        <div class="overflow-x-auto min-[900px]:col-start-2 min-[900px]:row-start-1">
+        <div class="overflow-x-auto {compactLayout ? '' : 'col-start-2 row-start-1'}">
           <table class="metrics-table min-w-full border-collapse whitespace-nowrap">
             <colgroup>
-              <col class="w-[54%] min-[900px]:w-1/2" />
-              <col class="w-[22%] min-[900px]:w-[21%]" />
-              <col class="w-[24%] min-[900px]:w-[29%]" />
+              <col class={compactLayout ? "w-[54%]" : "w-1/2"} />
+              <col class={compactLayout ? "w-[22%]" : "w-[21%]"} />
+              <col class={compactLayout ? "w-[24%]" : "w-[29%]"} />
             </colgroup>
             <thead>
               <tr>
@@ -999,29 +1002,32 @@
             </tbody>
           </table>
         </div>
-        <div class="hidden min-[900px]:col-start-3 min-[900px]:row-start-1 min-[900px]:block">
-          <div class="ml-3.5 flex items-center gap-2 whitespace-nowrap font-medium">
-            Day Width
-            <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
+        {#if !compactLayout}
+          <div class="col-start-3 row-start-1">
+            <div class="ml-3.5 flex items-center gap-2 whitespace-nowrap font-medium">
+              Day Width
+              <InfoIcon title={tooltipText.xAxisDayWidth} tooltipClasses="max-w-80" />
+            </div>
+            <Slider
+              wrapperClasses="w-full"
+              items={sliderItems.xAxisDayWidth}
+              value={sliderValue.xAxisDayWidth}
+              min={0}
+              max={sliderItems.xAxisDayWidth.length - 1}
+              labelStep={2}
+              float={true}
+              labels={true}
+              middle={true}
+              on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
+            />
           </div>
-          <Slider
-            wrapperClasses="w-full"
-            items={sliderItems.xAxisDayWidth}
-            value={sliderValue.xAxisDayWidth}
-            min={0}
-            max={sliderItems.xAxisDayWidth.length - 1}
-            labelStep={2}
-            float={true}
-            labels={true}
-            middle={true}
-            on:valueChange={({ detail: e }) => (sliderValue = { ...sliderValue, xAxisDayWidth: e.d })}
-          />
-        </div>
+        {/if}
       </div>
       <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
         <p>
-          All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>,
-          a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
+          All data compiled by <a href="https://gunviolencearchive.org" target="_blank" rel="noopener noreferrer"
+            >Gun Violence Archive (GVA)</a
+          >, a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
           gun-related violence in the United States.
         </p>
       </div>
