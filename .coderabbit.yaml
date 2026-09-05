@@ -97,6 +97,16 @@ reviews:
         - Python packaging or dependency changes that are not reflected in pyproject.toml
         - Exceptions that would leave generated frontend data partially updated
 
+    - path: "frontend/src/lib/components/Tool.svelte"
+      instructions: |
+        Check for:
+        - Observed, forecast, and comparative series calculations that mix years, regions, prediction columns, or moving-average windows
+        - Click-committed comparative years and hover previews that overwrite each other, select the wrong axis band, or cannot be cleared
+        - Canvas line, point, animation, hit-testing, device-pixel-ratio, resize, or zoom changes that misalign marks with SVG axes and masks
+        - Cached series or reactive scene state that remains stale after filter, model, region, comparison, or viewport changes
+        - Comparative highlights, legends, metrics, labels, and table values that disagree about the active year or visibility state
+        - Responsive controls or chart overflow that regress keyboard, touch, screen-reader, or established desktop behavior
+
     - path: "**/.github/workflows/*.{yml,yaml}"
       instructions: |
         Check for:
@@ -105,7 +115,8 @@ reviews:
         - Unsafe use of pull_request_target
         - Incorrect branch or path filters
         - Deployment steps that could expose secrets
-        - Rollup upload workflows drifting from the shared svelte-lib composite action contract
+        - Rollup, upstream-watch, release, or validation callers drifting from shared-automation contracts
+        - Staged and production bundle names, metadata refresh files, dependency refs, or S3 prefixes diverging from repository guidance
 
     - path: "**/*.{md,markdown}"
       instructions: |
