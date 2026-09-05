@@ -145,6 +145,9 @@ The frontend uses these columns to show:
 - smoothed moving-average views
 - past and future metric summaries
 
+Moving-average values appear on the row that completes each window. Average yearly trend compares matching calendar
+dates; February 29 compares with February 28 in a non-leap prior year instead of shifting to March 1.
+
 ## Data Source
 
 The source shooting data comes from the Figshare dataset
@@ -165,6 +168,12 @@ Original incident data is credited to the non-profit <a href="https://www.gunvio
 These local wrappers inherit their reusable implementations from `cyaris/shared-automation`. The
 [shared-automation workflow reference](https://github.com/cyaris/shared-automation#workflows) documents shared
 behavior, inputs, and secrets.
+
+### `.github/workflows/frontend-ci.yml`
+
+Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` or `main` that affect
+the frontend or its CI wrapper. The shared workflow checks out the matching `svelte-lib` branch so staged and
+production validation use the corresponding upstream package.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 

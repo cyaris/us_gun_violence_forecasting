@@ -1025,8 +1025,9 @@
       </div>
       <div class="mx-auto mt-12" style="max-width:{chartLayout.viewportWidth}px">
         <p>
-          All data compiled by <a href="https://gunviolencearchive.org" target="_blank">Gun Violence Archive (GVA)</a>,
-          a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
+          All data compiled by <a href="https://gunviolencearchive.org" target="_blank" rel="noopener noreferrer"
+            >Gun Violence Archive (GVA)</a
+          >, a not-for-profit corporation formed in 2013 to provide online public access to accurate information about
           gun-related violence in the United States.
         </p>
       </div>
