@@ -32,7 +32,7 @@ export function movingAverage(rows, field, range) {
     range
   ).map(v => parseFloat(v))
 
-  finiteEntries.forEach(({ i }, averageIndex) => {
+  finiteEntries.slice(range - 1).forEach(({ i }, averageIndex) => {
     values[i] = averages[averageIndex]
   })
 
@@ -47,6 +47,16 @@ export function buildSeriesRows({ field, observedOnly = false, range = 0, rows }
     .filter(d => finiteValue(d.value))
 }
 
+export function previousCalendarYearDate(date) {
+  let [year, month, day] = date.split("-").map(Number)
+  let previousYear = year - 1
+  let lastDayOfMonth = new Date(previousYear, month, 0).getDate()
+
+  return [previousYear, String(month).padStart(2, "0"), String(Math.min(day, lastDayOfMonth)).padStart(2, "0")].join(
+    "-"
+  )
+}
+
 export function modelMetrics({
   chartRows,
   forecastIndexedRows,
@@ -59,12 +69,13 @@ export function modelMetrics({
 }) {
   let predictionColumnName = predictionColumn(year)
   let rows = isFutureTimeframe ? forecastIndexedRows : observedIndexedRows
+  let chartRowsByDate = new Map(chartRows.map(row => [row.date, row]))
 
   let predSum = rows.reduce((sum, { d }) => sum + (d[predictionColumnName] ?? 0), 0)
   let yearlyTrends = rows
-    .map(({ i }) => {
-      let current = chartRows[i]?.[predictionColumnName]
-      let previousYear = chartRows[i - 365]?.[predictionColumnName]
+    .map(({ d }) => {
+      let current = d[predictionColumnName]
+      let previousYear = chartRowsByDate.get(previousCalendarYearDate(d.date))?.[predictionColumnName]
 
       return current != null && previousYear != null ? current - previousYear : null
     })

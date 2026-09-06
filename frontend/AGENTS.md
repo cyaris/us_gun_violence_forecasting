@@ -18,6 +18,8 @@
 
 - Keep sorted/parsed time-series rows and indexed observed/forecast row lists as shared derived data instead of rebuilding them inside layout or pointer-driven reactive blocks.
 - Moving-average helpers must preserve row alignment and treat valid `0` values as data. Use finite-value checks rather than truthiness filters for chart paths, points, domains, and trends.
+- Compare yearly trend values by calendar date, not a fixed row offset. When the current date is February 29 and the
+  prior year has no leap day, use February 28 as the prior-year comparison.
 - Cache hover-derived comparative series and model metrics by stable inputs such as prediction column, moving-average window, year, and timeframe.
 
 ## Embedded Build
