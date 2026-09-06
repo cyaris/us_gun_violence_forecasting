@@ -171,9 +171,9 @@ behavior, inputs, and secrets.
 
 ### `.github/workflows/frontend-ci.yml`
 
-Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` or `main` that affect
-the frontend or its CI wrapper. The shared workflow checks out the matching `svelte-lib` branch so staged and
-production validation use the corresponding upstream package.
+Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` or `master` that
+affect the frontend or its CI wrapper. The shared workflow checks out `svelte-lib` `dev` for staged runs and `main` for
+production runs so each validation uses the corresponding upstream package.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
