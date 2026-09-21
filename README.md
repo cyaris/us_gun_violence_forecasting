@@ -171,9 +171,9 @@ behavior, inputs, and secrets.
 
 ### `.github/workflows/frontend-ci.yml`
 
-Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` or `master` that
-affect the frontend or its CI wrapper. The shared workflow checks out `svelte-lib` `dev` for staged runs and `main` for
-production runs so each validation uses the corresponding upstream package.
+Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` that affect the
+frontend or its CI wrapper, and on manual dispatch. The shared workflow checks out `svelte-lib` `dev` for development
+runs and `main` otherwise.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
@@ -185,7 +185,7 @@ Runs on pushes to `dev` and calls the
 Calls the [shared rollup workflow](https://github.com/cyaris/shared-automation#githubworkflowsrollupyml) with these
 local details:
 
-- triggers: pushes to `dev` and `master`, plus manual dispatch
+- triggers: pushes to `master`, plus manual and upstream-watch dispatches on `dev` or `master`
 - working directory: `frontend`
 - destination: `s3://cyaris.github.io/us_gun_violence_forecasting/`
 - production naming: unprefixed bundles from `master`
