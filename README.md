@@ -171,9 +171,8 @@ behavior, inputs, and secrets.
 
 ### `.github/workflows/frontend-ci.yml`
 
-Runs tests, linting, formatting checks, Svelte checks, and the frontend build on pushes to `dev` that affect the
-frontend or its CI wrapper, and on manual dispatch. The shared workflow checks out `svelte-lib` `dev` for development
-runs and `main` otherwise.
+Runs tests, linting, formatting checks, Svelte checks, and the frontend build on manual dispatch. The shared workflow
+checks out `svelte-lib` `dev` for development runs and `main` otherwise.
 
 ### `.github/workflows/auto-create-dev-pr.yml`
 
@@ -211,7 +210,7 @@ reviewing the generated plan and explicitly enabling publication for an approved
 
 ### `.github/workflows/workflow-validation.yml`
 
-Runs on `dev` and `master` pushes that change `.github/release-policy.yml`, `.github/workflows/**`, or `renovate.json`,
+Runs on `master` pushes that change `.github/release-policy.yml`, `.github/workflows/**`, or `renovate.json`,
 and on manual dispatch, then calls the
 [shared workflow-validation workflow](https://github.com/cyaris/shared-automation#githubworkflowsworkflow-validationyml)
 to validate rollup upload wrapper logic, release-policy configuration, and Renovate configuration.
