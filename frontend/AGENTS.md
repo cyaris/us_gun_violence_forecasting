@@ -10,6 +10,7 @@
   - `embedded-bundles.md`
   - `jekyll-hosting.md`
   - `charts.md`
+  - `web-pages.md`
 
 ## Routing And Hosting
 
@@ -24,11 +25,11 @@
 ## Chart Data Derivations
 
 - Keep sorted/parsed time-series rows and indexed observed/forecast row lists as shared derived data instead of rebuilding them inside layout or pointer-driven reactive blocks.
-- Moving-average helpers must preserve row alignment and treat valid `0` values as data. Use finite-value checks rather than truthiness filters for chart paths, points, domains, and trends.
+- Moving-average helpers must preserve row alignment.
 - Compare yearly trend values by calendar date, not a fixed row offset. When the current date is February 29 and the
   prior year has no leap day, use February 28 as the prior-year comparison.
 - Cache hover-derived comparative series and model metrics by stable inputs such as prediction column, moving-average window, year, and timeframe.
 
 ## Embedded Build
 
-- Run `npm run rollup` from `frontend` when changes must affect the Jekyll-rendered bundle; the artifacts are `dist/bundle.js` and `dist/bundle.css`.
+- The bundle outputs are `dist/bundle.js` and `dist/bundle.css`.
