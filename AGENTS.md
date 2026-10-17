@@ -1,11 +1,5 @@
 # Repository Guidance
 
-## Shared Conventions
-
-- Inherit README and Markdown style, GitHub Actions, reusable workflow wrapper, release policy, dispatch, pull-request
-  review, workflow failure, commit, and release-management rules from `../shared-automation/AGENTS.md`.
-- Inherit shared Python and SQL conventions from `../shared-automation/AGENTS.md`.
-
 ## Data Generation
 
 - Regenerate and commit `frontend/src/lib/static/data.json` after changing the source CSV or forecast settings.
